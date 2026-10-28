@@ -137,6 +137,7 @@ async function syncAll(manual, why){
       S.ids = ids; LS.set("ids", ids);
       if (!LS.get("email", "")) whoAmI();
     }
+    await fixTrajets();
     for (const p of S.pending.slice()){
       if (p.etat === "attente" || (manual && p.etat === "erreur")) await pushOp(p);
     }
@@ -194,7 +195,7 @@ function opLabel(op){
   return ({evenement:"Agenda : " + (x.titre || ""), "evenement-suppr":"Événement retiré", "evenement-fait":"Événement " + (x.fait ? "fait" : "à faire"), obligation:"Échéance " + (x.fait ? "faite" : "à faire"),
     operation:(x.type === "revenu" ? "Revenu : " : "Dépense : ") + (x.tiers || x.description || ""), photo:"Photo à traiter", trajet:"Trajet : " + (x.destination || "") + ", " + (x.km || 0) + " km",
     paiement:"Paiement reçu", facture:"Facture " + (x.numero || "") + ", " + (x.client || ""), devis:"Devis " + (x.numero || "") + ", " + (x.client || ""), "devis-statut":"Devis : " + (x.statut || ""),
-    envoye:"Marqué envoyé", entretien:"Entretien : " + ((x.entretien || {}).type || ""), odometre:"Odomètre : " + (x.km || ""), client:"Client : " + (x.nom || "")})[op.type] || op.type;
+    envoye:"Marqué envoyé", entretien:"Entretien : " + ((x.entretien || {}).type || ""), odometre:"Odomètre : " + (x.km || ""), client:"Client : " + (x.nom || ""), lieu:"Lieu : " + (x.nom || ""), "lieu-suppr":"Lieu retiré"})[op.type] || op.type;
 }
 /* Un ajout est d'abord gardé dans le téléphone (photos comprises), puis envoyé dès que possible */
 async function sendOp(type, data, files){
@@ -336,6 +337,8 @@ function vAccueil(){
     S.connErr === "login" ? '<div class="banner err"><b>' + esc(CONN_MSG.login[0]) + '</b><span class="small">Ta connexion à Google a expiré. Tes ajouts sont gardés dans le téléphone en attendant.</span><button class="btn sm primary" type="button" data-act="login" style="align-self:flex-start">Se connecter à Google</button></div>' :
     S.connErr ? '<div class="banner err"><b>' + esc((CONN_MSG[S.connErr] || ["Hors ligne"])[0]) + '</b><span class="small">Tu vois tes livres du ' + since + ". Tes ajouts partiront à la prochaine connexion.</span></div>" : "") +
     '<div><span class="eyebrow">' + esc(dFull(t0)) + "</span><h1>" + (h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir") + "</h1></div>";
+  const trip = tripNow();
+  if (trip) html += '<div class="banner info"><b>' + ico("i-car") + " Trajet en cours depuis " + esc(heure(trip.dep.t)) + "</b><span class=\"small\">" + esc((trip.depNom ? "Départ : " + trip.depNom + " · " : "") + kmVehNom(trip.vehicule)) + '</span><div class="row"><button class="btn sm primary" type="button" data-add="trajet">Je suis arrivé</button><button class="btn sm" type="button" data-act="trip-cancel">Annuler</button></div></div>';
   html += '<div class="card"><div class="card-h"><h2>' + ico("i-cal") + "Aujourd'hui</h2>" + '<button class="btn link" type="button" data-tabgo="agenda">Agenda</button></div>' + (todayEv.length ? '<div class="list" style="border:none">' + todayEv.map(e => kItem(e, {noDate:true})).join("") + "</div>" : '<p class="muted small">Rien de prévu aujourd\'hui.</p>') + (tom.length ? '<p class="muted small">Demain : ' + esc(tom.slice(0, 3).map(e => (e.heure ? fmtH(e.heure) + " " : "") + (e.short || e.title)).join(" · ")) + (tom.length > 3 ? "…" : "") + "</p>" : "") + '<button class="btn sm" type="button" data-add="evenement">' + ico("i-plus") + "Ajouter un événement</button></div>";
   html += '<div class="kpis">' +
     '<button class="kpi" type="button" data-tabgo="ventes"><span class="eyebrow">À encaisser</span><span class="val">' + fmt(arT) + "</span><small>" + ar.length + " facture" + (ar.length > 1 ? "s" : "") + (arLate ? ", " + arLate + " en retard" : "") + "</small></button>" +
@@ -381,14 +384,16 @@ function vVentes(){
 }
 function vPlus(){
   const el = $("v-plus"); if (!S.d){ put(el, connCard() + syncCard()); return; }
-  const y = new Date().getFullYear(), kl = kmCalc(y), kmT = kl.reduce((s, k) => s + (Number(k.km) || 0), 0), kmM = kl.reduce((s, k) => s + k.mt, 0);
+  const y = new Date().getFullYear(), kl = kmCalc(y), kp = kl.filter(k => !k.cie), kmT = kp.reduce((s, k) => s + (Number(k.km) || 0), 0), kmM = kp.reduce((s, k) => s + k.mt, 0), kmC = kl.filter(k => k.cie).reduce((s, k) => s + (Number(k.km) || 0), 0);
+  const lieux = (S.d.lieux || []).slice().sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   const eqs = S.d.equipements.filter(e => e.statut !== "vendu"), recent = S.d.transactions.filter(t => t.type === "depense" || t.type === "revenu").sort((a, b) => b.date.localeCompare(a.date) || String(b.creeLe || "").localeCompare(String(a.creeLe || ""))).slice(0, 12);
   let html = syncCard();
   html += '<div class="card"><div class="card-h"><h2>' + ico("i-truck") + 'Camion et équipement</h2></div>' + (eqs.length ? eqs.map(e => { const nx = nextMaint(e).map(n => ({n, s:maintState(e, n)})).sort((a, b) => ({late:0, due:1, ok:2})[a.s] - ({late:0, due:1, ok:2})[b.s])[0];
       return '<div class="line"><div class="row"><b style="flex:1">' + esc(e.nom) + "</b>" + (isRoad(e) && e.odometre ? '<span class="muted small">' + fmtKm(e.odometre) + "</span>" : "") + "</div>" + (nx ? '<span class="small"><span class="chip ' + (nx.s === "late" ? "late" : nx.s === "due" ? "due" : "open") + '">' + (nx.s === "late" ? "En retard" : nx.s === "due" ? "Bientôt" : "Prévu") + "</span> " + esc(maintTxt(e, nx.n)) + "</span>" : '<span class="muted small">Aucun entretien prévu.</span>') +
         '<div class="row"><button class="btn sm primary" type="button" data-add="entretien" data-eq="' + esc(e.id) + '">' + ico("i-wrench") + "Entretien</button>" + (isRoad(e) ? '<button class="btn sm" type="button" data-odo="' + esc(e.id) + '">Odomètre</button>' : "") + '<button class="btn sm" type="button" data-rdv="' + esc(e.id) + '">Rendez-vous</button></div></div>'; }).join("") : '<p class="muted small">Ajoute ton camion dans l\'application de l\'ordinateur (Inventaire) pour suivre ses entretiens ici.</p>') + "</div>";
-  html += '<div class="card"><div class="card-h"><h2>' + ico("i-car") + "Trajets " + y + '</h2><button class="btn sm primary" type="button" data-add="trajet">' + ico("i-plus") + 'Trajet</button></div><div class="kv"><div><span>Kilomètres</span><span class="v">' + fmtKm(kmT) + '</span></div><div><span>Allocation selon les taux de l\'ARC</span><span class="v">' + fmt(kmM) + "</span></div></div>" +
-    (kl.length ? '<div class="list">' + kl.slice().reverse().slice(0, 6).map(k => '<div class="item"><span class="t"><b>' + esc((k.depart || "—") + " → " + (k.destination || "—")) + "</b><small>" + esc(dShort(k.date) + (k.raison ? " · " + k.raison : "")) + '</small></span><span class="v">' + esc(String(k.km)) + " km</span></div>").join("") + "</div>" : "") + "</div>";
+  html += '<div class="card"><div class="card-h"><h2>' + ico("i-car") + "Trajets " + y + '</h2><button class="btn sm primary" type="button" data-add="trajet">' + ico("i-plus") + 'Trajet</button></div><div class="kv"><div><span>Auto personnelle</span><span class="v">' + fmtKm(kmT) + '</span></div><div><span>Allocation selon les taux de l\'ARC</span><span class="v">' + fmt(kmM) + "</span></div>" + (kmC ? '<div><span>Véhicules de la compagnie</span><span class="v">' + fmtKm(kmC) + "</span></div>" : "") + "</div>" +
+    (kl.length ? '<div class="list">' + kl.slice().reverse().slice(0, 6).map(k => '<div class="item"><span class="t"><b>' + esc((k.depart || "—") + " → " + (k.destination || "—")) + "</b><small>" + esc(dShort(k.date) + (k.raison ? " · " + k.raison : "") + (k.cie ? " · " + kmVehNom(k.vehicule) : "")) + '</small></span><span class="v">' + esc(kmTxt(k.km)) + " km" + (k.estime ? '<span class="chip due">Estimé</span>' : k.mode === "gps" ? '<span class="chip info">GPS</span>' : "") + "</span></div>").join("") + "</div>" : "") +
+    '<div class="group-h">Lieux enregistrés</div>' + (lieux.length ? '<div class="list">' + lieux.map(l => '<div class="item"><span class="t"><b>' + esc(l.nom) + "</b><small>" + esc(l.adresse || (l.lat != null ? "Position GPS enregistrée" : "Sans position")) + '</small></span><span class="v"><button class="btn sm" type="button" data-lieudel="' + esc(l.id) + '">Retirer</button></span></div>').join("") + "</div>" : '<p class="muted small">Les lieux que tu enregistres à la fin d\'un trajet GPS apparaissent ici. Ils sont reconnus tout seuls la fois suivante.</p>') + "</div>";
   html += '<div class="card"><div class="card-h"><h2>' + ico("i-list") + 'Dernières opérations</h2><button class="btn sm" type="button" data-add="depense">' + ico("i-plus") + "Dépense</button></div>" + (recent.length ? '<div class="list">' + recent.map(t => '<div class="item"><span class="t"><b>' + esc(t.tiers || t.description || catLabel(t)) + "</b><small>" + esc(dShort(t.date) + " · " + catLabel(t)) + '</small></span><span class="v" style="color:' + (t.type === "revenu" ? "var(--pos)" : "inherit") + '">' + (t.type === "revenu" ? "+" : "−") + fmt(txTotal(t)) + (unpaid(t) ? '<span class="chip due">' + (t.type === "revenu" ? "À recevoir" : "À payer") + "</span>" : "") + "</span></div>").join("") + "</div>" : '<p class="muted small">Aucune opération.</p>') + "</div>";
   put(el, html);
 }
@@ -407,6 +412,8 @@ document.querySelector("main").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return; const ds = b.dataset;
   if (ds.act === "connect" || ds.act === "refresh") syncAll(true);
   else if (ds.act === "login") authRedirect(true);
+  else if (ds.act === "trip-cancel"){ LS.set("trip", null); toast("Trajet annulé"); render(); }
+  else if (ds.lieudel){ const l = (S.d.lieux || []).find(x => x.id === ds.lieudel); if (l){ toast("Lieu retiré : " + l.nom); sendOp("lieu-suppr", {id:l.id}); } }
   else if (ds.act === "switch"){ if (!online()) return toast("Il faut du réseau pour changer de compte."); logout(); authRedirect(true); }
   else if (ds.act === "cfg"){ const v = ($("cfg-id").value || "").trim(); if (!/\.apps\.googleusercontent\.com$/.test(v)) return toast("Cet identifiant ne semble pas bon : il doit finir par .apps.googleusercontent.com"); LS.set("clientId", v); S.conn = "init"; render(); syncAll(true); }
   else if (ds.tabgo) showTab(ds.tabgo);
@@ -488,18 +495,150 @@ function fPhoto(){
   openSheet("Photo à traiter", '<p class="muted">La photo va dans le dossier « à traiter » de tes livres. Tu l\'inscriras sur l\'ordinateur, ou Claude le fera pour toi.</p>' + photoField(), {primary:"Envoyer", ready: bindPhotos,
     onSubmit: async () => { const ph = (S.form && S.form.photos) || []; if (!ph.length) return fail("Ajoute au moins une photo."); closeSheet(); toast(ph.length > 1 ? ph.length + " photos envoyées" : "Photo envoyée"); await sendOp("photo", {}, ph); }});
 }
-/* Trajet */
-function fTrajet(){
-  const last = S.d.km.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
-  openSheet("Nouveau trajet", dateField("k-date") + '<div class="two"><label class="field"><span>Départ</span><input class="ctl" id="k-dep" maxlength="100" value="' + esc(last ? last.depart : "Bureau") + '"></label><label class="field"><span>Km</span><input class="ctl" id="k-km" inputmode="decimal" placeholder="42"></label></div>' +
-    '<label class="field"><span>Destination</span><input class="ctl" id="k-dest" maxlength="100" placeholder="Ex. : Chantier, rue des Érables"></label><label class="field"><span>Raison d\'affaires</span><input class="ctl" id="k-raison" maxlength="160" placeholder="Ex. : Soumission chez M. Tremblay"></label>' +
-    '<label class="check"><input type="checkbox" id="k-ar"><span>Aller-retour (double les km)</span></label><p class="muted small">L\'ARC demande la date, la destination, la raison et les kilomètres de chaque trajet pour accepter l\'allocation.</p>',
-    {primary:"Envoyer", onClick: dateClick, ready: () => setTimeout(() => $("k-dest").focus(), 60), onSubmit: async () => {
+/* ===== Trajets : GPS (départ et arrivée) ou à la main ===== */
+const OSRM = window.__OSRM || "https://router.project-osrm.org";
+const tripNow = () => LS.get("trip", null);
+function gpsPos(fresh){
+  return new Promise((res0, rej0) => {
+    if (!navigator.geolocation) return rej0({message:"Le GPS n'est pas disponible sur cet appareil. Inscris le trajet à la main."});
+    let done = false; const res = v => { if (!done){ done = true; clearTimeout(tm); res0(v); } }, rej = v => { if (!done){ done = true; clearTimeout(tm); rej0(v); } };
+    const tm = setTimeout(() => rej({message:"Position introuvable pour l'instant. Réessaie dans un moment, ou inscris le trajet à la main."}), 60000);
+    navigator.geolocation.getCurrentPosition(
+      p => res({lat: +p.coords.latitude.toFixed(6), lng: +p.coords.longitude.toFixed(6), acc: Math.round(p.coords.accuracy || 0), t: new Date().toISOString()}),
+      e => rej({message: e && e.code === 1 ? "Le téléphone refuse l'accès à ta position. Autorise-la : Paramètres du téléphone › Applications › Chrome › Autorisations › Position, puis réessaie." : "Position introuvable pour l'instant. Réessaie dans un moment, idéalement à l'extérieur."}),
+      {enableHighAccuracy:true, timeout:30000, maximumAge: fresh ? 0 : 15000});
+  });
+}
+/* Distance par la route (OpenStreetMap / OSRM). Sans réseau : estimation à vol d'oiseau × 1,25, recalculée avant l'envoi. */
+async function routeKm(a, b){
+  if (!online()) return null;
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const r = await fetch(OSRM + "/route/v1/driving/" + a.lng + "," + a.lat + ";" + b.lng + "," + b.lat + "?overview=false&alternatives=false&steps=false", {signal: ctl.signal});
+    if (!r.ok) return null; const j = await r.json();
+    return j && j.code === "Ok" && j.routes && j.routes[0] ? Math.round(j.routes[0].distance / 100) / 10 : null;
+  } catch(e){ return null; } finally { clearTimeout(tm); }
+}
+const estKm = (a, b) => Math.max(0.1, Math.round(distGeo([a.lat, a.lng], [b.lat, b.lng]) * 1.25 * 10) / 10);
+const kmTxt = v => String(v).replace(".", ",");
+const vehPicks = cur => kmVehicules().map(([k, l]) => '<button type="button" class="pick" data-veh="' + esc(k) + '" aria-pressed="' + (k === cur) + '">' + ico(k === KM_PERSO ? "i-car" : "i-truck") + esc(l) + "</button>").join("");
+const lieuxDL = () => '<datalist id="k-dl">' + kmLieuxNoms().map(n => '<option value="' + esc(n) + '">').join("") + "</datalist>";
+const lieuNomm = nom => (S.d.lieux || []).find(l => norm(l.nom) === norm(nom));
+const modeSeg = m => '<div class="seg" role="group" aria-label="Façon d\'inscrire le trajet"><button type="button" data-kmode="gps" aria-pressed="' + (m === "gps") + '">' + ico("i-map") + 'GPS</button><button type="button" data-kmode="manuel" aria-pressed="' + (m === "manuel") + '">' + ico("i-edit") + "À la main</button></div>";
+function fTrajet(force){
+  const trip = tripNow();
+  if (trip && force !== "manuel") return fArrivee(trip);
+  const mode = force || LS.get("kmMode", "gps"); LS.set("kmMode", mode);
+  return mode === "gps" ? fDepart() : fManuel();
+}
+function trajetClick(e){
+  if (dateClick(e)) return true;
+  const m = e.target.closest("[data-kmode]"); if (m){ fTrajet(m.dataset.kmode); return true; }
+  const v = e.target.closest("[data-veh]"); if (v){ S.form.veh = v.dataset.veh; pressSet("[data-veh]", "data-veh", v.dataset.veh); return true; }
+  return false;
+}
+function fDepart(){
+  const veh = LS.get("kmVeh", KM_PERSO), vOk = kmVehicules().some(([k]) => k === veh) ? veh : KM_PERSO;
+  openSheet("Nouveau trajet", modeSeg("gps") +
+    '<p class="muted">Touche <b>Je pars</b> au départ, puis <b>Je suis arrivé</b> en arrivant. Pas besoin de garder l\'application ouverte pendant que tu conduis, et ça marche sans réseau.</p>' +
+    '<div class="field"><span>Véhicule</span><div class="picks">' + vehPicks(vOk) + "</div></div>" +
+    '<p class="muted small">La distance est calculée par le chemin le plus court sur la route. Tu pourras la corriger, par exemple après un détour.</p>',
+    {primary:"Je pars", state:{veh:vOk}, onClick: trajetClick, onSubmit: async () => {
+      const b = $("sh-ok"); if (b) b.textContent = "Recherche de ta position…";
+      let pos; try { pos = await gpsPos(); } catch(e){ if (b) b.textContent = "Je pars"; return e.message; }
+      const l = lieuPres([pos.lat, pos.lng]);
+      LS.set("trip", {dep:pos, depNom: l ? l.nom : "", vehicule:S.form.veh}); LS.set("kmVeh", S.form.veh);
+      toast("Bon trajet ! " + (l ? "Départ : " + l.nom + ". " : "") + "Touche « Je suis arrivé » à destination.");
+      setTimeout(render, 0);
+    }});
+}
+function fArrivee(trip){
+  const since = heure(trip.dep.t) + (dLoc(trip.dep.t) !== today() ? " le " + dShort(dLoc(trip.dep.t)) : "");
+  openSheet("Trajet en cours", '<div class="kv"><div><span>Départ</span><span class="v">' + esc((trip.depNom || "Position GPS") + " à " + since) + '</span></div><div><span>Véhicule</span><span class="v">' + esc(kmVehNom(trip.vehicule)) + "</span></div></div>" +
+    '<p class="muted small">Touche <b>Je suis arrivé</b> une fois à destination : je note ta position et je calcule la distance.</p>',
+    {primary:"Je suis arrivé", secondary:'<button class="btn" type="button" data-trip-cancel>Annuler le trajet</button>',
+     onClick: e => { if (e.target.closest("[data-trip-cancel]")){ LS.set("trip", null); closeSheet(); toast("Trajet annulé"); render(); } },
+     onSubmit: async () => {
+      const b = $("sh-ok"); if (b) b.textContent = "Recherche de ta position…";
+      let pos; try { pos = await gpsPos(true); } catch(e){ if (b) b.textContent = "Je suis arrivé"; return e.message; }
+      fFinTrajet(trip, pos); return false;
+    }});
+}
+function fFinTrajet(trip, arr){
+  const lA = lieuPres([arr.lat, arr.lng]), est = estKm(trip.dep, arr);
+  openSheet("Fin du trajet", lieuxDL() +
+    '<div class="two"><label class="field"><span>Départ</span><input class="ctl" id="k-dep" list="k-dl" maxlength="100" value="' + esc(trip.depNom) + '" placeholder="Ex. : Maison"></label><label class="field"><span>Destination</span><input class="ctl" id="k-dest" list="k-dl" maxlength="100" value="' + esc(lA ? lA.nom : "") + '" placeholder="Ex. : Chantier Gagnon"></label></div>' +
+    '<label class="field"><span>Raison d\'affaires</span><input class="ctl" id="k-raison" maxlength="160" placeholder="Ex. : Soumission chez M. Tremblay"></label>' +
+    '<div class="field"><span>Kilomètres</span><span class="money"><input id="k-km" inputmode="decimal" value="' + kmTxt(est) + '"><span>km</span></span><p class="calc" id="k-kmnote">Calcul de la distance par la route…</p></div>' +
+    '<div class="field"><span>Véhicule</span><div class="picks">' + vehPicks(trip.vehicule || KM_PERSO) + "</div></div>" +
+    '<label class="check" id="k-savel-w" hidden><input type="checkbox" id="k-savel" checked><span id="k-savel-t">Enregistrer les nouveaux lieux pour les reconnaître la prochaine fois</span></label>',
+    {primary:"Enregistrer le trajet", state:{veh: trip.vehicule || KM_PERSO, routed:false, edited:false, km:est}, onClick: trajetClick,
+     ready: async () => {
+       const showSave = () => { const n = [$("k-dep").value, $("k-dest").value].filter(x => x.trim() && !lieuNomm(x)); $("k-savel-w").hidden = !n.length; $("k-savel-t").textContent = "Enregistrer " + n.map(x => "« " + x.trim() + " »").join(" et ") + " pour les reconnaître la prochaine fois"; };
+       showSave(); setTimeout(() => (trip.depNom ? $("k-dest") : $("k-dep")).focus(), 60);
+       const f = S.form, km = await routeKm(trip.dep, arr); if (S.form !== f) return;
+       if (km != null){ f.routed = true; f.km = km; if (!f.edited) $("k-km").value = kmTxt(km); $("k-kmnote").textContent = "Par la route : " + kmTxt(km) + " km (OpenStreetMap)."; }
+       else $("k-kmnote").textContent = online() ? "Distance par la route indisponible : estimation de " + kmTxt(est) + " km. Corrige-la au besoin." : "Sans réseau : estimation de " + kmTxt(est) + " km. Elle sera recalculée par la route avant l'envoi.";
+     },
+     onInput: e => { if (e.target.id === "k-km") S.form.edited = true; if (e.target.id === "k-dep" || e.target.id === "k-dest"){ const n = [$("k-dep").value, $("k-dest").value].filter(x => x.trim() && !lieuNomm(x)); $("k-savel-w").hidden = !n.length; $("k-savel-t").textContent = "Enregistrer " + n.map(x => "« " + x.trim() + " »").join(" et ") + " pour les reconnaître la prochaine fois"; } },
+     onSubmit: async () => {
+      const km = num($("k-km").value); if (!isFinite(km) || km <= 0) return fail("Entre le nombre de kilomètres.");
+      const dest = $("k-dest").value.trim(), dep = $("k-dep").value.trim(); if (!dest) return fail("Indique la destination.");
+      const raison = $("k-raison").value.trim(); if (!raison) return fail("Indique la raison d'affaires : l'ARC la demande pour chaque trajet.");
+      const f = S.form, data = {id: uid("k"), date: dLoc(trip.dep.t), depart: dep, destination: dest, raison, km: Math.round(km * 10) / 10, projet:"", vehicule: f.veh, mode:"gps", gps:{dep:[trip.dep.lat, trip.dep.lng], arr:[arr.lat, arr.lng]}};
+      if (f.edited) data.kmManuel = true; else if (!f.routed) data.estime = true;
+      const saveL = !$("k-savel-w").hidden && $("k-savel").checked;
+      LS.set("trip", null); LS.set("kmVeh", f.veh); closeSheet(); toast("Trajet enregistré : " + kmTxt(data.km) + " km");
+      if (saveL){
+        if (dep && !lieuNomm(dep)) await sendOp("lieu", {id: uid("l"), nom: dep, adresse:"", lat: trip.dep.lat, lng: trip.dep.lng});
+        if (dest && !lieuNomm(dest) && norm(dest) !== norm(dep)) await sendOp("lieu", {id: uid("l"), nom: dest, adresse:"", lat: arr.lat, lng: arr.lng});
+      }
+      await sendOp("trajet", data);
+    }});
+}
+function fManuel(){
+  const veh = LS.get("kmVeh", KM_PERSO), vOk = kmVehicules().some(([k]) => k === veh) ? veh : KM_PERSO, fr = kmFrequents(6), last = S.d.km.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+  openSheet("Nouveau trajet", modeSeg("manuel") + lieuxDL() +
+    (fr.length ? '<div class="field"><span>Trajets fréquents</span><div class="chips">' + fr.map((k, i) => '<button type="button" class="fchip" data-kfreq="' + i + '">' + esc((k.depart || "—") + " → " + k.destination) + " · " + kmTxt(k.km) + " km</button>").join("") + "</div></div>" : "") +
+    dateField("k-date") +
+    '<div class="two"><label class="field"><span>Départ</span><input class="ctl" id="k-dep" list="k-dl" maxlength="100" value="' + esc(last ? last.depart : "") + '" placeholder="Ex. : Maison"></label><label class="field"><span>Destination</span><input class="ctl" id="k-dest" list="k-dl" maxlength="100" placeholder="Ex. : Chantier Gagnon"></label></div>' +
+    '<label class="field"><span>Raison d\'affaires</span><input class="ctl" id="k-raison" maxlength="160" placeholder="Ex. : Soumission chez M. Tremblay"></label>' +
+    '<div class="field"><span>Kilomètres</span><div class="row"><span class="money" style="flex:1"><input id="k-km" inputmode="decimal" placeholder="42"><span>km</span></span><button class="btn" type="button" id="k-calc" hidden>' + ico("i-map") + 'Calculer</button></div><p class="calc" id="k-kmnote" hidden></p></div>' +
+    '<label class="check"><input type="checkbox" id="k-ar"><span>Aller-retour (double les km)</span></label>' +
+    '<div class="field"><span>Véhicule</span><div class="picks">' + vehPicks(vOk) + "</div></div>" +
+    '<p class="muted small">L\'ARC demande la date, la destination, la raison et les kilomètres de chaque trajet. Seuls les trajets avec ton auto personnelle donnent droit à l\'allocation.</p>',
+    {primary:"Enregistrer", state:{veh:vOk},
+     ready: () => { setTimeout(() => $("k-dest").focus(), 60); calcBtn(); },
+     onInput: e => { if (e.target.id === "k-dep" || e.target.id === "k-dest") calcBtn(); },
+     onClick: async e => {
+      if (trajetClick(e)) return;
+      const q = e.target.closest("[data-kfreq]");
+      if (q){ const k = fr[Number(q.dataset.kfreq)]; if (!k) return; $("k-dep").value = k.depart || ""; $("k-dest").value = k.destination || ""; $("k-raison").value = k.raison || ""; $("k-km").value = kmTxt(k.km); $("k-ar").checked = false; S.form.veh = k.vehicule || KM_PERSO; pressSet("[data-veh]", "data-veh", S.form.veh); pressSet("[data-kfreq]", "data-kfreq", q.dataset.kfreq); calcBtn(); $("k-raison").focus(); return; }
+      if (e.target.closest("#k-calc")){
+        const a = lieuNomm($("k-dep").value), b = lieuNomm($("k-dest").value); if (!a || !b || a.lat == null || b.lat == null) return;
+        $("k-kmnote").hidden = false; $("k-kmnote").textContent = "Calcul par la route…";
+        const km = await routeKm({lat:a.lat, lng:a.lng}, {lat:b.lat, lng:b.lng});
+        if (km != null){ $("k-km").value = kmTxt(km); $("k-kmnote").textContent = "Par la route : " + kmTxt(km) + " km (OpenStreetMap)."; }
+        else $("k-kmnote").textContent = "Calcul impossible pour l'instant (réseau). Entre les kilomètres à la main.";
+      }
+     },
+     onSubmit: async () => {
       let km = num($("k-km").value); if (!isFinite(km) || km <= 0) return fail("Entre le nombre de kilomètres, par exemple 42.");
       if (!$("k-dest").value.trim()) return fail("Indique la destination.");
       if ($("k-ar").checked) km *= 2;
-      const data = {id: uid("k"), date: $("k-date").value || today(), depart: $("k-dep").value.trim(), destination: $("k-dest").value.trim(), raison: $("k-raison").value.trim(), km: Math.round(km * 10) / 10, projet:""};
-      closeSheet(); toast("Trajet envoyé : " + data.km + " km"); await sendOp("trajet", data); }});
+      const data = {id: uid("k"), date: $("k-date").value || today(), depart: $("k-dep").value.trim(), destination: $("k-dest").value.trim(), raison: $("k-raison").value.trim(), km: Math.round(km * 10) / 10, projet:"", vehicule:S.form.veh, mode:"manuel"};
+      LS.set("kmVeh", S.form.veh); closeSheet(); toast("Trajet enregistré : " + kmTxt(data.km) + " km"); await sendOp("trajet", data); }});
+}
+function calcBtn(){ const a = lieuNomm($("k-dep").value), b = lieuNomm($("k-dest").value), ok = !!(a && b && a.lat != null && b.lat != null && a.id !== b.id); $("k-calc").hidden = !ok; }
+/* Avant l'envoi : une distance estimée sans réseau est recalculée par la route */
+async function fixTrajets(){
+  for (const p of S.pending){
+    const x = p.op.data || {};
+    if (p.op.type !== "trajet" || p.etat !== "attente" || (p.tries || 0) > 0 || !x.estime || x.kmManuel || !x.gps) continue;
+    const km = await routeKm({lat:x.gps.dep[0], lng:x.gps.dep[1]}, {lat:x.gps.arr[0], lng:x.gps.arr[1]});
+    if (km == null) return;
+    x.km = km; delete x.estime; p.label = opLabel(p.op); savePending(); recompute();
+  }
 }
 /* Odomètre */
 function fOdometre(id){

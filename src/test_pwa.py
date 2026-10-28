@@ -64,13 +64,13 @@ async def main():
         print("5b idb after:", await pg.evaluate("new Promise(r => { const q = indexedDB.open('comptabilite'); q.onsuccess = () => { const g = q.result.transaction('photos').objectStore('photos').getAllKeys(); g.onsuccess = () => r(g.result); }; })"))
         # 6. Jeton expiré pendant que l'app est ouverte : un ajout déclenche une reconnexion silencieuse, puis l'envoi
         post("/__mode", {"expire": True}); await pg.evaluate("localStorage.setItem('cm-authTry', '0')")
-        await pg.click("#tab-add"); await pg.click('[data-addk="trajet"]'); await pg.fill("#k-dest", "Beaumont"); await pg.fill("#k-raison", "Soumission"); await pg.fill("#k-km", "18")
+        await pg.click("#tab-add"); await pg.click('[data-addk="trajet"]'); await pg.click('[data-kmode="manuel"]'); await pg.fill("#k-dest", "Beaumont"); await pg.fill("#k-raison", "Soumission"); await pg.fill("#k-km", "18")
         await pg.click('#sh-foot button[type=submit]')
         await pg.wait_for_timeout(2500)
         print("6 after expire:", await sync_t(pg), "| auth prompts:", [l["prompt"] for l in state()["log"]], "| tel:", len(telfiles()))
         # 7. Google refuse la connexion silencieuse : bandeau, ajouts gardés, bouton Se connecter
         post("/__mode", {"expire": True, "auth": "deny"}); await pg.evaluate("localStorage.setItem('cm-authTry', '0')")
-        await pg.click("#tab-add"); await pg.click('[data-addk="trajet"]'); await pg.fill("#k-dest", "Lévis"); await pg.fill("#k-raison", "Garage"); await pg.fill("#k-km", "9")
+        await pg.click("#tab-add"); await pg.click('[data-addk="trajet"]'); await pg.click('[data-kmode="manuel"]'); await pg.fill("#k-dest", "Lévis"); await pg.fill("#k-raison", "Garage"); await pg.fill("#k-km", "9")
         await pg.click('#sh-foot button[type=submit]'); await pg.wait_for_timeout(2500)
         await pg.click('[data-tab="accueil"]'); await pg.wait_for_timeout(100)
         print("7 denied:", await sync_t(pg), "| banner:", (await lines(pg, "#v-accueil .banner", 3)))

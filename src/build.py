@@ -7,7 +7,6 @@ src = open('Comptabilite/Comptabilite.html', encoding='utf-8').read()
 i = src.index('<svg width="0" height="0"'); sprite = src[i:src.index('</svg>', i)]
 sprite += '''  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
-  <symbol id="i-map" viewBox="0 0 24 24"><path d="M12 21s-6-5.4-6-11a6 6 0 1 1 12 0c0 5.6-6 11-6 11z"/><path d="M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></symbol>
 </svg>'''
 head = open('phone/head.html', encoding='utf-8').read()
 head = head.replace('<title>Comptabilité mobile</title>', '<title>Comptabilité</title>').replace('<meta name="claude:viewport-fit-sides" content="cover">\n', '')

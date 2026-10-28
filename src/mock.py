@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist")
 FOLDER = "application/vnd.google-apps.folder"
-STATE = {"files": {}, "n": 0, "auth": "ok", "tok": 0, "valid": set(), "log": [], "calls": 0}
+STATE = {"files": {}, "n": 0, "auth": "ok", "tok": 0, "valid": set(), "log": [], "calls": 0, "osrm": "ok", "routes": 0}
 
 def reset(reg_text):
     F = STATE["files"] = {}
@@ -47,7 +47,7 @@ class G(BaseHTTPRequestHandler):
             self.out(401, {"error": {"code": 401, "message": "Invalid Credentials"}}); return False
         STATE["calls"] += 1; return True
     def do_GET(self):
-        u = urllib.parse.urlparse(self.path); q = dict(urllib.parse.parse_qsl(u.query))
+        u = urllib.parse.urlsplit(self.path); q = dict(urllib.parse.parse_qsl(u.query))
         if u.path == "/o/oauth2/v2/auth":
             STATE["log"].append({"prompt": q.get("prompt"), "hint": q.get("login_hint", ""), "scope": q.get("scope"), "client": q.get("client_id"), "redirect": q.get("redirect_uri")})
             mode = STATE["auth"]
@@ -56,8 +56,16 @@ class G(BaseHTTPRequestHandler):
                 STATE["tok"] += 1; t = "tok%d" % STATE["tok"]; STATE["valid"].add(t)
                 frag = {"access_token": t, "expires_in": "3599", "token_type": "Bearer", "scope": q.get("scope", ""), "state": q.get("state", "")}
             self.send_response(302); self.send_header("Location", q["redirect_uri"] + "#" + urllib.parse.urlencode(frag)); self.end_headers(); return
+        m0 = re.match(r"^/route/v1/driving/([-\d.]+),([-\d.]+);([-\d.]+),([-\d.]+)$", u.path)
+        if m0:
+            if STATE["osrm"] != "ok": return self.out(503, {"code": "Error"})
+            import math
+            lo1, la1, lo2, la2 = map(float, m0.groups()); r = math.radians
+            h = math.sin(r(la2 - la1) / 2) ** 2 + math.cos(r(la1)) * math.cos(r(la2)) * math.sin(r(lo2 - lo1) / 2) ** 2
+            STATE["routes"] += 1
+            return self.out(200, {"code": "Ok", "routes": [{"distance": round(2 * 6371000 * math.asin(math.sqrt(h)) * 1.3, 1), "duration": 900}]})
         if u.path == "/__state":
-            return self.out(200, {"files": [{k: (base64.b64encode(v).decode() if k == "content" else v) for k, v in f.items()} for f in STATE["files"].values()], "log": STATE["log"], "calls": STATE["calls"]})
+            return self.out(200, {"files": [{k: (base64.b64encode(v).decode() if k == "content" else v) for k, v in f.items()} for f in STATE["files"].values()], "log": STATE["log"], "calls": STATE["calls"], "routes": STATE["routes"]})
         if u.path == "/drive/v3/about":
             if not self.authed(): return
             return self.out(200, {"user": {"emailAddress": "emondagehamel@gmail.com", "displayName": "Emondage Hamel"}})
@@ -79,7 +87,7 @@ class G(BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
         if u.path == "/__mode":
-            o = json.loads(body); STATE.update({k: v for k, v in o.items() if k in ("auth",)})
+            o = json.loads(body); STATE.update({k: v for k, v in o.items() if k in ("auth", "osrm")})
             if o.get("expire"): STATE["valid"] = set()
             return self.out(200, {"ok": True})
         if u.path == "/__setreg":
