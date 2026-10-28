@@ -1,0 +1,30 @@
+<header class="top">
+  <div class="wrap">
+    <span class="logo"><svg class="ic"><use href="#i-book"/></svg></span>
+    <div class="who"><b id="h-nom">Comptabilité</b><button class="sync busy" id="h-sync" type="button"><i></i><span id="h-sync-t">Connexion à tes livres…</span></button></div>
+    <button class="icon-btn" id="h-refresh" type="button" aria-label="Actualiser"><svg class="ic"><use href="#i-refresh"/></svg></button>
+  </div>
+</header>
+<main class="wrap" id="main">
+  <section class="view" id="v-accueil"></section>
+  <section class="view" id="v-agenda" hidden></section>
+  <section class="view" id="v-ventes" hidden></section>
+  <section class="view" id="v-plus" hidden></section>
+</main>
+<nav class="tabbar" aria-label="Sections">
+  <div class="wrap">
+    <button type="button" data-tab="accueil" aria-current="page"><svg class="ic"><use href="#i-home"/></svg>Accueil</button>
+    <button type="button" data-tab="agenda"><svg class="ic"><use href="#i-cal"/></svg>Agenda<span class="badge" id="b-agenda" hidden></span></button>
+    <button type="button" class="add" id="tab-add" aria-label="Ajouter"><svg class="ic"><use href="#i-plus"/></svg></button>
+    <button type="button" data-tab="ventes"><svg class="ic"><use href="#i-invoice"/></svg>Ventes<span class="badge" id="b-ventes" hidden></span></button>
+    <button type="button" data-tab="plus"><svg class="ic"><use href="#i-grid"/></svg>Plus<span class="badge" id="b-plus" hidden></span></button>
+  </div>
+</nav>
+<div class="sheet-ov" id="sheet" hidden>
+  <form class="sheet" id="sheet-f" novalidate>
+    <header class="sheet-h"><h2 id="sh-title"></h2><button class="icon-btn" type="button" id="sh-x" aria-label="Fermer"><svg class="ic"><use href="#i-x"/></svg></button></header>
+    <div class="sheet-b" id="sh-body"></div>
+    <footer class="sheet-f" id="sh-foot"></footer>
+  </form>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
