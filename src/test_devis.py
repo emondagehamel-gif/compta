@@ -31,7 +31,7 @@ async def main():
         print("1 titre:", await pg.inner_text("#d-title"), "| ttc visible:", await pg.is_visible("#d-ttc"), "| chips:", await pg.eval_on_selector_all("#d-lt-add [data-addlt]", "a => a.map(x => x.textContent)"))
         # 1. La soumission de Michel Auger, prix forfaitaire taxes incluses (400 $)
         await pg.fill("#d-client", "Michel Auger"); await pg.dispatch_event("#d-client", "input")
-        await pg.click('#d-ttc [data-ttc="1"]')
+        await pg.click('#d-ttc [data-ttc="incl"]')
         await line(pg, 0, description="Travaux d'émondage\n1600, rue Saint-François, L'Ancienne-Lorette", qte="1", unite="forfait", prix="400")
         tot = await pg.inner_text("#d-tot"); print("2 totaux taxes incluses:", tot.replace("\n", " | "))
         # 2. Ajouts : location, déplacement, consommables, rabais
@@ -55,7 +55,7 @@ async def main():
         await pg.keyboard.press("Escape"); await pg.wait_for_timeout(300)
         # 4. Facturer la soumission : les lignes et les taxes incluses suivent
         await pg.click('[data-dfac="' + v["id"] + '"]'); await pg.wait_for_selector("#ov-doc:not([hidden])")
-        print("7 facture du devis: ttc", await pg.get_attribute('#d-ttc [data-ttc="1"]', "aria-pressed"), "| lignes", await pg.eval_on_selector_all('#d-lines [data-f="type"]', "a => a.map(x => x.value)"), "| lieu", await pg.input_value("#d-lieu"))
+        print("7 facture du devis: ttc", await pg.get_attribute('#d-ttc [data-ttc="incl"]', "aria-pressed"), "| lignes", await pg.eval_on_selector_all('#d-lines [data-f="type"]', "a => a.map(x => x.value)"), "| lieu", await pg.input_value("#d-lieu"))
         await pg.fill("#d-dtrav", "2026-11-05")
         await pg.click("#d-save-pdf"); await pg.wait_for_timeout(1200)
         d = await data(pg); f = d["factures"][-1]; t = [t for t in d["transactions"] if t.get("facture") == f["id"]][0]
@@ -64,10 +64,15 @@ async def main():
         await pg.keyboard.press("Escape"); await pg.wait_for_timeout(300)
         # 5. Facture simple avant taxes, avec un tarif enregistré
         await pg.click('[data-vt="factures"]'); await pg.click('#vt-actions [data-new-doc="facture"]'); await pg.wait_for_selector("#ov-doc:not([hidden])")
-        await pg.click('#d-ttc [data-ttc="0"]')
+        await pg.click('#d-ttc [data-ttc="plus"]')
         await pg.fill("#d-client", "Michel Auger"); await pg.select_option("#d-add-tarif", index=1); await pg.wait_for_timeout(200)
         print("9 tarif ajouté:", await pg.eval_on_selector_all('#d-lines [data-l]', "a => a.map(r => [r.querySelector('[data-f=description]').value, r.querySelector('[data-f=prix]').value, r.querySelector('[data-f=unite]').value])"), "| attendu prix", round(450 * 100 / 114.975, 2))
         await line(pg, 0, qte="2"); tot = await pg.inner_text("#d-tot"); print("   totaux:", tot.replace("\n", " | "))
+        await pg.click('#d-ttc [data-ttc="aucune"]'); print("9b sans taxes:", await pg.input_value("#d-code"), "|", (await pg.inner_text("#d-tot")).replace("\n", " | "), "|", await pg.inner_text("#d-ttc-txt"), "| bouton:", await pg.get_attribute('#d-ttc [data-ttc="aucune"]', "aria-pressed"))
+        await pg.click('#d-ttc [data-ttc="incl"]'); print("9c taxes incluses:", await pg.input_value("#d-code"), "|", (await pg.inner_text("#d-tot")).replace("\n", " | "), "|", await pg.inner_text("#d-ttc-txt"))
+        await pg.select_option("#d-code", "AUCUNE"); print("9d menu Aucune:", await pg.get_attribute('#d-ttc [data-ttc="aucune"]', "aria-pressed"), await pg.get_attribute('#d-ttc [data-ttc="incl"]', "aria-pressed"))
+        await pg.click('#d-ttc [data-ttc="plus"]'); print("9e taxes en plus:", await pg.input_value("#d-code"), "|", (await pg.inner_text("#d-tot")).replace("\n", " | "))
+        await pg.screenshot(path=OUT + "/devis-taxes.png")
         await pg.keyboard.press("Escape")
         # 6. Envoyer : options
         await pg.click('[data-vt="devis"]'); await pg.click('[data-dmail="' + v["id"] + '"]'); await pg.wait_for_selector("#ent-form .send-opts")

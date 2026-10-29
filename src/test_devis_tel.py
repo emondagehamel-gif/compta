@@ -26,9 +26,13 @@ async def run(ops, label):
         await pg.goto(URL); await pg.wait_for_function("document.getElementById('h-sync-t').textContent.startsWith('À jour')", timeout=10000)
         await pg.click('[data-tab="ventes"]'); await pg.click('#v-ventes [data-vt="devis"]'); await pg.click('#v-ventes [data-add="devis"]'); await pg.wait_for_selector("#d-lines .line")
         print(label, "1 titre:", await pg.inner_text("#sh-title"), "| ttc:", await pg.locator("[data-ttc]").count(), "| options:", await pg.eval_on_selector_all("#d-add option", "a => a.map(x => x.textContent).slice(0, 14)"))
+        print(label, "1b taxes:", await pg.eval_on_selector_all("[data-ttc]", "a => a.map(x => x.dataset.ttc + (x.disabled ? ' (désactivé)' : '') + (x.getAttribute('aria-pressed') === 'true' ? ' *' : ''))"), "|", await pg.inner_text("#d-txt"))
+        await pg.fill('[data-li="0"] [data-lf="prix"]', "100"); await pg.click('[data-ttc="aucune"]'); print(label, "1c sans taxes:", await pg.input_value("#d-code"), (await pg.inner_text("#d-tot")).replace("\n", " | "))
+        await pg.click('[data-ttc="plus"]'); print(label, "1d en plus:", await pg.input_value("#d-code"), (await pg.inner_text("#d-tot")).replace("\n", " | "))
+        await pg.screenshot(path=OUT + "/devis-tel-taxes-" + ("v2" if "doc-v2" in ops else "ancien") + ".png")
         if "doc-v2" not in ops:
             print(label, "hint:", await pg.inner_text("#sh-body .hint")); await b.close(); return
-        await pg.fill("#d-cli", "Michel Auger"); await pg.click('[data-ttc="1"]')
+        await pg.fill("#d-cli", "Michel Auger"); await pg.click('[data-ttc="incl"]')
         await pg.fill('[data-li="0"] [data-lf="description"]', "Travaux d'émondage"); await pg.fill('[data-li="0"] [data-lf="prix"]', "400")
         await pg.select_option("#d-add", "f:tf-1"); await pg.select_option("#d-add", "t:deplacement")
         await pg.fill('[data-li="2"] [data-lf="description"]', "Aller-retour"); await pg.fill('[data-li="2"] [data-lf="qte"]', "40"); await pg.fill('[data-li="2"] [data-lf="prix"]', "1,25")
@@ -52,7 +56,7 @@ async def run(ops, label):
         await pg.click("#sh-x"); await pg.wait_for_timeout(500); print(label, "url:", pg.url, await pg.evaluate("[...document.querySelectorAll('section[id^=v-]')].filter(x => !x.hidden).map(x => x.id)"))
         await pg.click('[data-tab="ventes"]'); await pg.wait_for_timeout(300)
         await pg.click('#v-ventes [data-vt="factures"]'); await pg.click('#v-ventes [data-add="facture"]'); await pg.wait_for_selector("#d-lines .line")
-        await pg.fill("#d-cli", "Michel Auger"); await pg.click('[data-ttc="1"]')
+        await pg.fill("#d-cli", "Michel Auger"); await pg.click('[data-ttc="incl"]')
         await pg.fill('[data-li="0"] [data-lf="description"]', "Travaux d'émondage\n1600, rue Saint-François"); await pg.fill('[data-li="0"] [data-lf="prix"]', "400")
         await pg.select_option("#d-add", "t:rabais"); await pg.fill('[data-li="1"] [data-lf="description"]', "Rabais"); await pg.fill('[data-li="1"] [data-lf="prix"]', "25")
         await pg.fill("#d-dtrav", "2026-10-28")

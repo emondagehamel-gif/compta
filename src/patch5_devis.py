@@ -105,7 +105,8 @@ rep('''      <div class="field"><span>Produits et services</span>
           <select id="d-add-prod" class="ctl auto" hidden></select>
         </div>
       </div>''', '''      <label class="field full"><span>Description des travaux (sur le document, facultatif)</span><textarea id="d-travaux" class="ctl" rows="2" maxlength="1500" placeholder="Ex. : Émondage de 3 érables argentés en façade, dégagement de la toiture et ramassage des branches."></textarea></label>
-      <div class="field"><div class="lines-top"><span>Services et frais</span><div class="seg" id="d-ttc" role="group" aria-label="Les prix entrés sont"><button type="button" data-ttc="0">Prix avant taxes</button><button type="button" data-ttc="1">Prix taxes incluses</button></div></div>
+      <div class="field"><div class="lines-top"><span>Services et frais</span><div class="seg" id="d-ttc" role="group" aria-label="Taxes"><button type="button" data-ttc="plus">Taxes en plus</button><button type="button" data-ttc="incl">Taxes incluses</button><button type="button" data-ttc="aucune">Sans taxes</button></div></div>
+        <p class="muted small" id="d-ttc-txt" style="margin:0 0 8px"></p>
         <div class="lines-ed" id="d-lines"></div>
         <div class="lt-add" id="d-lt-add"></div>
         <div class="inline-form" style="margin-top:8px">
@@ -127,7 +128,7 @@ rep('''  S.doc = {kind, orig: doc || null, lignes: doc ? clone(doc.lignes) : (p.
   S.doc.lignes.forEach(l => { if (!l.type) l.type = "service"; });
   $("d-travaux").value = doc ? (doc.travaux || "") : (p.travaux || ""); $("d-lieu").value = doc ? (doc.lieu || "") : (p.lieu || ""); $("d-dtrav").value = doc ? (doc.dateTravaux || "") : (p.dateTravaux || "");
   $("d-dtrav-lbl").textContent = isF ? "Date des travaux" : "Date prévue des travaux";
-  $("d-ttc").hidden = !docV2(); docTTCset();
+  $("d-ttc").querySelector('[data-ttc="incl"]').disabled = !docV2(); $("d-ttc").querySelector('[data-ttc="incl"]').title = docV2() ? "" : "Ouvre une fois l'application de l'ordinateur (nouvelle version) pour l'activer";
   $("dl-unites").innerHTML = LUNITES.map(u => '<option value="' + esc(u) + '">').join("");
   $("d-lt-add").innerHTML = LT.filter(t => t.k !== "rabais" || docV2()).map(t => '<button type="button" class="chip-btn' + (t.k === "rabais" ? " alt" : "") + '" data-addlt="' + t.k + '">' + ico("i-plus") + esc(t.k === "service" ? "Service" : t.l) + "</button>").join("");
   const tfs = (r.tarifs || []);
@@ -160,7 +161,10 @@ rep('''function renderLines(){
 const autoGrow = el => { el.style.height = "auto"; el.style.height = Math.min(220, el.scrollHeight + 2) + "px"; };
 /* Les nouveautés des factures (types de frais, rabais, taxes incluses) demandent que l'ordinateur soit en version 3.7 */
 const docV2 = () => { if (!CLOUD) return true; const t = (NU.base && NU.base.telephone) || (S.d && S.d.telephone) || {}; return Array.isArray(t.ops) && t.ops.includes("doc-v2"); };
-function docTTCset(){ $("d-ttc").querySelectorAll("[data-ttc]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.ttc === "1") === !!S.doc.ttc))); }
+/* Taxes : en plus du prix, incluses dans le prix, ou aucune */
+const docTxMode = () => $("d-code").value === "AUCUNE" ? "aucune" : S.doc.ttc ? "incl" : "plus";
+function docTTCset(){ const m = docTxMode(); $("d-ttc").querySelectorAll("[data-ttc]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ttc === m)));
+  $("d-ttc-txt").textContent = m === "aucune" ? "Aucune taxe sur ce document." : m === "incl" ? "Les prix entrés comprennent déjà la TPS et la TVQ : elles sont calculées à l'intérieur du total." : "Les prix entrés sont avant taxes : la TPS et la TVQ s'ajoutent au total."; }
 function ligneDe(type, extra){ return Object.assign({type, description:"", qte:1, unite:(LTM[type] || {}).u || "", prix:0}, extra || {}); }
 function addLigne(line){ const L = S.doc.lignes, empty = L.length === 1 && !L[0].description && !L[0].prix; if (empty) L[0] = line; else L.push(line); renderLines(); docRecalc(); const ins = $("d-lines").querySelectorAll('[data-f="description"]'); const el = ins[empty ? 0 : ins.length - 1]; if (el && !line.description) el.focus(); }''')
 rep('''  const doc = {lignes:S.doc.lignes, codeTaxe:$("d-code").value}, t = docTotals(doc);
@@ -183,7 +187,11 @@ $("d-lines").addEventListener("input", e => {
   if (f === "description") l.description = el.value; else { const v = num(el.value); l[f] = isFinite(v) ? v : 0; }
   docRecalc();
 });''', '''$("d-lt-add").addEventListener("click", e => { const b = e.target.closest("[data-addlt]"); if (b) addLigne(ligneDe(b.dataset.addlt)); });
-$("d-ttc").addEventListener("click", e => { const b = e.target.closest("[data-ttc]"); if (!b) return; S.doc.ttc = b.dataset.ttc === "1"; docTTCset(); renderLines(); docRecalc(); });
+$("d-ttc").addEventListener("click", e => { const b = e.target.closest("[data-ttc]"); if (!b || b.disabled) return; const m = b.dataset.ttc, code = $("d-code");
+  if (m === "aucune"){ if (code.value !== "AUCUNE") S.doc.codeAvant = code.value; code.value = "AUCUNE"; S.doc.ttc = false; }
+  else { if (code.value === "AUCUNE") code.value = S.doc.codeAvant || (quebec() ? "QC" : defCode() !== "AUCUNE" ? defCode() : "QC"); S.doc.ttc = m === "incl"; }
+  docTTCset(); renderLines(); docRecalc(); });
+$("d-code").addEventListener("change", () => { if ($("d-code").value === "AUCUNE") S.doc.ttc = false; docTTCset(); renderLines(); docRecalc(); });
 /* Prix d'un tarif ou d'un produit dans le mode de prix de la facture (avant taxes ou taxes incluses) */
 function prixPour(prix, ttc){ const [a, b] = taxRates($("d-code").value || "AUCUNE"); if (!!ttc === !!S.doc.ttc || !(a || b)) return r2(prix); return ttc ? r2(prix * 100 / (100 + a + b)) : r2(prix * (100 + a + b) / 100); }
 $("d-add-tarif").addEventListener("change", e => {
@@ -239,7 +247,8 @@ rep('''  if (withPdf || doc.pdf) await makeDocPDF(kind, doc.id, withPdf);
 rep('''  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id});''',
     '''  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});''')
 rep('''  setOptions($("d-code"), TAXCODES.map(c => [c, taxLabel(c)]), doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE")));''',
-    '''  setOptions($("d-code"), TAXCODES.map(c => [c, taxLabel(c)]), doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE")));''')
+    '''  setOptions($("d-code"), TAXCODES.map(c => [c, taxLabel(c)]), doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE")));
+  if ($("d-code").value === "AUCUNE") S.doc.ttc = false; S.doc.codeAvant = ""; docTTCset();''')
 
 # ---------- Envoi : courriel, texto, Messenger, Snapchat… ----------
 rep('''async function mailDoc(kind, id){''', '''/* Envoyer une facture ou une soumission : PDF ou image par le partage du téléphone ou de Windows, courriel, texte à copier */
@@ -286,6 +295,7 @@ rep('''title="Envoyer par courriel" aria-label="Envoyer par courriel">' + ico("i
 rep('''title="Envoyer par courriel" aria-label="Envoyer par courriel">' + ico("i-mail") + "</button></div></td></tr>").join("") + "</tbody></table>"''',
     '''title="Envoyer (courriel, texto, Messenger…)" aria-label="Envoyer">' + ico("i-send") + "</button></div></td></tr>").join("") + "</tbody></table>"''')
 
+rep('''        <label class="field"><span>Taxes</span><select id="d-code" class="ctl"></select></label>''', '''        <label class="field"><span>Taxes applicables</span><select id="d-code" class="ctl"></select></label>''')
 # ---------- Divers ----------
 i = s.index('<symbol id="i-pdf"'); j = s.index('</symbol>', i) + len('</symbol>')
 s = s[:j] + '''
@@ -301,6 +311,8 @@ rep('''</style>''', '''/* Éditeur de factures et soumissions : lignes sur deux 
 .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:999px;overflow:hidden}
 .seg button{border:0;background:var(--surface);padding:6px 12px;font:inherit;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
 .le-row.le2{grid-template-columns:176px 70px 96px 124px minmax(0,1fr) 64px;grid-template-areas:"desc desc desc desc desc desc" "type qte unit prix amt acts";row-gap:6px;align-items:end}
 .le2 .le-desc{grid-area:desc;resize:none;min-height:36px;line-height:1.35}
 .le2 .le-type{grid-area:type}

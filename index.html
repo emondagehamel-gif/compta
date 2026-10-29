@@ -208,6 +208,7 @@ details.more>div{display:flex;flex-direction:column;gap:12px}
 .toast-a{background:none;border:none;color:var(--bg);font-weight:700;text-decoration:underline;padding:2px 4px}
 .sheet-open .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .line.rabais [data-amt]{color:var(--pos)}
+.pick:disabled{opacity:.45;cursor:not-allowed}
 .line .three.q3{grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.3fr)}
 .lt-sel{flex:1;min-height:36px;padding:6px 8px;font-weight:600}
 .doc-lines td.grp{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);padding-top:12px}
@@ -1804,7 +1805,8 @@ function fDoc(kind, doc, p){
   const cli = S.d.clients.find(c => norm(c.nom) === norm(doc ? doc.client : p.client || "")) || {};
   const date0 = doc ? doc.date : today(), n0 = String(doc ? daysBetween(doc.date, doc.echeance || doc.date) : (isF ? (r.termes != null ? r.termes : 30) : (r.validiteDevis || 30)));
   const terms = isF ? TERMS_F : TERMS_D, termVal = terms.some(t => t[0] === n0) ? n0 : "autre";
-  const prods = S.d.produits, tfs = r.tarifs || [], ttc0 = v2 && !!(doc ? doc.taxesIncluses : (p.taxesIncluses != null ? p.taxesIncluses : r.docTTC));
+  const code0 = doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE"));
+  const prods = S.d.produits, tfs = r.tarifs || [], ttc0 = v2 && code0 !== "AUCUNE" && !!(doc ? doc.taxesIncluses : (p.taxesIncluses != null ? p.taxesIncluses : r.docTTC)), mode0 = code0 === "AUCUNE" ? "aucune" : ttc0 ? "incl" : "plus";
   const addOpts = '<option value="">+ Ajouter une ligne…</option><optgroup label="Nouvelle ligne">' + LT.filter(t => t.k !== "rabais" || v2).map(t => '<option value="t:' + t.k + '">' + esc(t.l) + "</option>").join("") + "</optgroup>" +
     (tfs.length ? '<optgroup label="Tarifs enregistrés">' + tfs.map(t => '<option value="f:' + esc(t.id) + '">' + esc(t.description + " · " + fmt(t.prix) + (t.unite ? " / " + t.unite : "")) + "</option>").join("") + "</optgroup>" : "") +
     (prods.length ? '<optgroup label="Produits du stock">' + prods.map(x => '<option value="p:' + esc(x.id) + '">' + esc(x.nom + " (" + fq(stockOf(x)) + ")") + "</option>").join("") + "</optgroup>" : "");
@@ -1814,13 +1816,14 @@ function fDoc(kind, doc, p){
     '<label class="field" id="d-ech-f"' + (termVal === "autre" ? "" : " hidden") + '><span>' + (isF ? "Échéance" : "Valide jusqu'au") + '</span><input class="ctl" type="date" id="d-ech" value="' + esc(doc ? doc.echeance : addDays(date0, Number(n0) || 0)) + '"></label>' +
     '<label class="field"><span>Description des travaux (facultatif)</span><textarea class="ctl" id="d-trav" rows="2" maxlength="1500" placeholder="Ex. : Émondage de 3 érables en façade et ramassage des branches">' + esc(doc ? doc.travaux || "" : p.travaux || "") + "</textarea></label>" +
     '<div class="two"><label class="field"><span>Lieu des travaux</span><input class="ctl" id="d-lieu" maxlength="200" value="' + esc(doc ? doc.lieu || "" : p.lieu || "") + '" placeholder="Si différent"></label><label class="field"><span>' + (isF ? "Date des travaux" : "Date prévue") + '</span><input class="ctl" type="date" id="d-dtrav" value="' + esc(doc ? doc.dateTravaux || "" : p.dateTravaux || "") + '"></label></div>' +
-    '<div class="field"><span>Services et frais</span>' + (v2 ? '<div class="picks" style="margin-bottom:8px"><button type="button" class="pick" data-ttc="0" aria-pressed="' + !ttc0 + '">Prix avant taxes</button><button type="button" class="pick" data-ttc="1" aria-pressed="' + ttc0 + '">Prix taxes incluses</button></div>' : "") +
+    '<div class="field"><span>Taxes</span><div class="picks" id="d-txp">' + [["plus","Taxes en plus"],["incl","Taxes incluses"],["aucune","Sans taxes"]].map(([k, l]) => '<button type="button" class="pick" data-ttc="' + k + '" aria-pressed="' + (k === mode0) + '"' + (k === "incl" && !v2 ? " disabled" : "") + ">" + l + "</button>").join("") + '</div><small id="d-txt" class="muted"></small></div>' +
+    '<div class="field"><span>Services et frais</span>' +
     '<div id="d-lines" style="display:flex;flex-direction:column;gap:8px"></div><select class="ctl" id="d-add" style="margin-top:8px">' + addOpts + "</select></div>" +
     '<div class="tot" id="d-tot"></div>' +
-    '<label class="field"><span>Taxes</span><select class="ctl" id="d-code">' + TAXCODES.map(c => '<option value="' + c + '"' + ((doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE"))) === c ? " selected" : "") + ">" + esc(taxLabel(c)) + "</option>").join("") + "</select></label>" +
+    '<label class="field"><span>Taxes applicables</span><select class="ctl" id="d-code">' + TAXCODES.map(c => '<option value="' + c + '"' + (code0 === c ? " selected" : "") + ">" + esc(taxLabel(c)) + "</option>").join("") + "</select></label>" +
     (isF && !doc ? '<div class="field"><span>Paiement</span><div class="picks"><button type="button" class="pick" data-dpay="" aria-pressed="true">' + ico("i-cal") + "À encaisser</button>" + S.d.comptes.filter(c => c.sorte === "banque" || c.sorte === "caisse").map(c => '<button type="button" class="pick" data-dpay="' + esc(c.id) + '" aria-pressed="false">' + ico("i-bank") + "Déjà payée : " + esc(c.nom) + "</button>").join("") + "</div></div>" : "") +
     '<label class="field"><span>Message sur le document</span><textarea class="ctl" id="d-msg" rows="2" maxlength="600">' + esc(doc ? doc.message || "" : (p.message != null ? p.message : r.messageFacture || "")) + "</textarea></label>" +
-    (v2 ? "" : '<p class="hint">Les rabais et les prix taxes incluses seront offerts quand l\'application de l\'ordinateur aura été ouverte une fois après sa mise à jour.</p>') +
+    (v2 ? "" : '<p class="hint">« Taxes incluses » et les rabais seront offerts dès que l\'application de l\'ordinateur, dans sa nouvelle version, aura été ouverte une fois.</p>') +
     '<p class="hint" id="d-hint" hidden></p>';
   const types = LT.filter(t => t.k !== "rabais" || v2 || lignes.some(l => l.type === "rabais"));
   const mtTxt = l => { const m = ligneMt(l); return (m < 0 ? "−" : "") + fmt(Math.abs(m)); };
@@ -1833,7 +1836,9 @@ function fDoc(kind, doc, p){
     $("d-tot").innerHTML = "<div><span>" + (t.ttc ? "Montant avant taxes" : "Sous-total") + "</span><span>" + fmt(t.st) + "</span></div>" + taxLines($("d-code").value, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total' + (t.ttc ? " (taxes incl.)" : "") + "</span><span>" + fmt(t.total) + "</span></div>";
     S.form.lignes.forEach((l, i) => { const a = document.querySelector('[data-amt="' + i + '"]'); if (a) a.textContent = mtTxt(l); });
     const msgs = []; if (isF && t.total >= 100 && (t.tx || t.tq) && (!r.noTPS || (t.tq && !r.noTVQ))) msgs.push("Ajoute tes numéros de TPS et de TVQ dans les Réglages de l'application de l'ordinateur : ils doivent figurer sur les factures de 100 $ et plus."); $("d-hint").innerHTML = msgs.map(esc).join("<br>"); $("d-hint").hidden = !msgs.length; return t; };
-  const drawLines = () => { $("d-lines").innerHTML = linesHTML(); recalc(); };
+  const txMode = () => $("d-code").value === "AUCUNE" ? "aucune" : S.form.ttc ? "incl" : "plus";
+  const txSet = () => { const m = txMode(); pressSet("[data-ttc]", "data-ttc", m); $("d-txt").textContent = m === "aucune" ? "Aucune taxe sur ce document." : m === "incl" ? "Les prix entrés comprennent déjà la TPS et la TVQ." : "Les prix entrés sont avant taxes : la TPS et la TVQ s'ajoutent."; };
+  const drawLines = () => { $("d-lines").innerHTML = linesHTML(); recalc(); txSet(); };
   const prixPour = (prix, ttc) => { const [a, b] = taxRates($("d-code").value || "AUCUNE"); if (!!ttc === !!S.form.ttc || !(a || b)) return r2(prix); return ttc ? r2(prix * 100 / (100 + a + b)) : r2(prix * (100 + a + b) / 100); };
   const addLine = ln => { const L = S.form.lignes; if (L.length === 1 && !L[0].description && !L[0].prix) L[0] = ln; else L.push(ln); drawLines(); if (!ln.description){ const t = document.querySelectorAll('[data-lf="description"]'); t[t.length - 1].focus(); } };
   const title = doc ? titre + " " + doc.numero : isF ? (p.fromDevis ? "Facture " + docGenre("devis").de : "Nouvelle facture") : (titre === "Devis" ? "Nouveau devis" : "Nouvelle " + titre.toLowerCase());
@@ -1842,7 +1847,7 @@ function fDoc(kind, doc, p){
     ready: drawLines,
     onInput: e => { const f = e.target.closest("[data-lf]"); if (f && f.dataset.lf !== "type"){ const l = S.form.lignes[Number(f.closest("[data-li]").dataset.li)]; if (f.dataset.lf === "description") l.description = f.value; else if (f.dataset.lf === "unite") l.unite = f.value; else { const v = num(f.value); l[f.dataset.lf] = isFinite(v) ? v : 0; } recalc(); } },
     onChange: e => { const id = e.target.id;
-      if (id === "d-code") recalc();
+      if (id === "d-code"){ if (e.target.value === "AUCUNE") S.form.ttc = false; drawLines(); }
       if (e.target.dataset && e.target.dataset.lf === "type"){ const l = S.form.lignes[Number(e.target.closest("[data-li]").dataset.li)], was = LTM[ligneType(l)]; l.type = e.target.value; if (!l.unite || l.unite === was.u) l.unite = (LTM[l.type] || {}).u || ""; drawLines(); }
       if (id === "d-terms" || id === "d-date"){ const t = $("d-terms").value; $("d-ech-f").hidden = t !== "autre"; if (t !== "autre") $("d-ech").value = addDays($("d-date").value || today(), Number(t) || 0); }
       if (id === "d-cli"){ const c = S.d.clients.find(x => norm(x.nom) === norm(e.target.value)) || {}; $("d-tel").value = c.telephone || ""; $("d-mail").value = c.courriel || ""; $("d-adr").value = c.adresse || ""; }
@@ -1852,7 +1857,10 @@ function fDoc(kind, doc, p){
         else if (v[0] === "p"){ const x = S.d.produits.find(q => q.id === k); if (x) addLine({type:"materiaux", description:x.nom + (x.code ? " (" + x.code + ")" : ""), qte:1, unite:x.unite || "unité", prix:prixPour(Number(x.prix) || 0, false), produit:x.id}); } } },
     onClick: e => { const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.dl === "rm"){ S.form.lignes.splice(Number(b.dataset.i), 1); drawLines(); }
-      else if (b.dataset.ttc != null){ S.form.ttc = b.dataset.ttc === "1"; pressSet("[data-ttc]", "data-ttc", b.dataset.ttc); drawLines(); }
+      else if (b.dataset.ttc != null){ const m = b.dataset.ttc, code = $("d-code");
+        if (m === "aucune"){ if (code.value !== "AUCUNE") S.form.codeAvant = code.value; code.value = "AUCUNE"; S.form.ttc = false; }
+        else { if (code.value === "AUCUNE") code.value = S.form.codeAvant || (quebec() ? "QC" : defCode() !== "AUCUNE" ? defCode() : "QC"); S.form.ttc = m === "incl"; }
+        drawLines(); }
       else if (b.dataset.dpay != null){ S.form.pay = b.dataset.dpay; pressSet("[data-dpay]", "data-dpay", b.dataset.dpay); }
       else if (b.dataset.dsave){ S.form.withSend = true; $("sheet-f").requestSubmit(); } },
     onSubmit: async () => {
