@@ -65,7 +65,7 @@ async def main():
         # 6. Document « à traiter » déjà dans Google Drive -> dépense
         await pg.evaluate("location.hash='documents'"); await pg.wait_for_timeout(1500)
         print("6 inbox:", (await pg.inner_text("#dc-inbox")).replace("\n", " | ")[-260:])
-        await pg.click('[data-ib="depense"][data-i="0"]'); await pg.wait_for_selector("#m-montant"); await pg.fill("#m-montant", "212,30"); await pg.fill("#m-tiers", "Hydro-Québec"); await pg.click("#m-save"); await pg.wait_for_timeout(800)
+        await pg.click('[data-ib="depense"][data-i="0"]'); await pg.wait_for_selector("#m-montant"); await pg.fill("#m-montant", "212,30"); await pg.fill("#m-tiers", "Hydro-Québec"); await pg.click("#m-save"); await pg.wait_for_timeout(800); print("6b toast:", await pg.inner_text("#toast"), "| drawer ouvert:", await pg.is_visible("#ov-tx"), "| err:", await pg.evaluate("(document.getElementById('m-err') || {}).textContent"))
         # 7. Kilométrage : trajet + allocation
         await pg.evaluate("location.hash='km'"); await pg.wait_for_timeout(300)
         await pg.fill("#km-dest", "Saint-Henri"); await pg.fill("#km-raison", "Élagage chez M. Roy"); await pg.fill("#km-km", "24"); await pg.click("#km-submit"); await pg.wait_for_timeout(500)
