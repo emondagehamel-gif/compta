@@ -384,18 +384,7 @@ function vVentes(){
 }
 function vPlus(){
   const el = $("v-plus"); if (!S.d){ put(el, connCard() + syncCard()); return; }
-  const y = new Date().getFullYear(), kl = kmCalc(y), kp = kl.filter(k => !k.cie), kmT = kp.reduce((s, k) => s + (Number(k.km) || 0), 0), kmM = kp.reduce((s, k) => s + k.mt, 0), kmC = kl.filter(k => k.cie).reduce((s, k) => s + (Number(k.km) || 0), 0);
-  const lieux = (S.d.lieux || []).slice().sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-  const eqs = S.d.equipements.filter(e => e.statut !== "vendu"), recent = S.d.transactions.filter(t => t.type === "depense" || t.type === "revenu").sort((a, b) => b.date.localeCompare(a.date) || String(b.creeLe || "").localeCompare(String(a.creeLe || ""))).slice(0, 12);
-  let html = '<a class="card full-link" href="complet.html"><span class="fl-ic">' + ico("i-grid") + '</span><span class="t"><b>Version complète</b><small>Toutes les fonctions de l\'ordinateur : opérations, documents, fournisseurs, banque, taxes, kilométrage, projets, rapports, réglages…</small></span>' + ico("i-chev") + "</a>" + syncCard();
-  html += '<div class="card"><div class="card-h"><h2>' + ico("i-truck") + 'Camion et équipement</h2></div>' + (eqs.length ? eqs.map(e => { const nx = nextMaint(e).map(n => ({n, s:maintState(e, n)})).sort((a, b) => ({late:0, due:1, ok:2})[a.s] - ({late:0, due:1, ok:2})[b.s])[0];
-      return '<div class="line"><div class="row"><b style="flex:1">' + esc(e.nom) + "</b>" + (isRoad(e) && e.odometre ? '<span class="muted small">' + fmtKm(e.odometre) + "</span>" : "") + "</div>" + (nx ? '<span class="small"><span class="chip ' + (nx.s === "late" ? "late" : nx.s === "due" ? "due" : "open") + '">' + (nx.s === "late" ? "En retard" : nx.s === "due" ? "Bientôt" : "Prévu") + "</span> " + esc(maintTxt(e, nx.n)) + "</span>" : '<span class="muted small">Aucun entretien prévu.</span>') +
-        '<div class="row"><button class="btn sm primary" type="button" data-add="entretien" data-eq="' + esc(e.id) + '">' + ico("i-wrench") + "Entretien</button>" + (isRoad(e) ? '<button class="btn sm" type="button" data-odo="' + esc(e.id) + '">Odomètre</button>' : "") + '<button class="btn sm" type="button" data-rdv="' + esc(e.id) + '">Rendez-vous</button></div></div>'; }).join("") : '<p class="muted small">Ajoute ton camion dans l\'application de l\'ordinateur (Inventaire) pour suivre ses entretiens ici.</p>') + "</div>";
-  html += '<div class="card"><div class="card-h"><h2>' + ico("i-car") + "Trajets " + y + '</h2><button class="btn sm primary" type="button" data-add="trajet">' + ico("i-plus") + 'Trajet</button></div><div class="kv"><div><span>Auto personnelle</span><span class="v">' + fmtKm(kmT) + '</span></div><div><span>Allocation selon les taux de l\'ARC</span><span class="v">' + fmt(kmM) + "</span></div>" + (kmC ? '<div><span>Véhicules de la compagnie</span><span class="v">' + fmtKm(kmC) + "</span></div>" : "") + "</div>" +
-    (kl.length ? '<div class="list">' + kl.slice().reverse().slice(0, 6).map(k => '<div class="item"><span class="t"><b>' + esc((k.depart || "—") + " → " + (k.destination || "—")) + "</b><small>" + esc(dShort(k.date) + (k.raison ? " · " + k.raison : "") + (k.cie ? " · " + kmVehNom(k.vehicule) : "")) + '</small></span><span class="v">' + esc(kmTxt(k.km)) + " km" + (k.estime ? '<span class="chip due">Estimé</span>' : k.mode === "gps" ? '<span class="chip info">GPS</span>' : "") + "</span></div>").join("") + "</div>" : "") +
-    '<div class="group-h">Lieux enregistrés</div>' + (lieux.length ? '<div class="list">' + lieux.map(l => '<div class="item"><span class="t"><b>' + esc(l.nom) + "</b><small>" + esc(l.adresse || (l.lat != null ? "Position GPS enregistrée" : "Sans position")) + '</small></span><span class="v"><button class="btn sm" type="button" data-lieudel="' + esc(l.id) + '">Retirer</button></span></div>').join("") + "</div>" : '<p class="muted small">Les lieux que tu enregistres à la fin d\'un trajet GPS apparaissent ici. Ils sont reconnus tout seuls la fois suivante.</p>') + "</div>";
-  html += '<div class="card"><div class="card-h"><h2>' + ico("i-list") + 'Dernières opérations</h2><button class="btn sm" type="button" data-add="depense">' + ico("i-plus") + "Dépense</button></div>" + (recent.length ? '<div class="list">' + recent.map(t => '<div class="item"><span class="t"><b>' + esc(t.tiers || t.description || catLabel(t)) + "</b><small>" + esc(dShort(t.date) + " · " + catLabel(t)) + '</small></span><span class="v" style="color:' + (t.type === "revenu" ? "var(--pos)" : "inherit") + '">' + (t.type === "revenu" ? "+" : "−") + fmt(txTotal(t)) + (unpaid(t) ? '<span class="chip due">' + (t.type === "revenu" ? "À recevoir" : "À payer") + "</span>" : "") + "</span></div>").join("") + "</div>" : '<p class="muted small">Aucune opération.</p>') + "</div>";
-  put(el, html);
+  put(el, '<div><span class="eyebrow">' + esc(R().nom || "") + "</span><h1>Menu</h1></div>" + menuTelHtml("t", menuTelBadges()) + '<div class="mt-h">Synchronisation</div>' + syncCard());
 }
 function syncCard(){
   const P = S.pending, off = !online(), st = {attente: off ? ["due","Gardé, hors réseau"] : ["info","À envoyer"], envoi:["info","Envoi…"], envoye:["due","En attente de l'ordinateur"], erreur:["late","Non envoyé"]};
@@ -435,7 +424,7 @@ document.querySelector("main").addEventListener("click", e => {
 const ADDS = [["depense","i-camera","Reçu ou dépense","Photo du reçu et montant"],["evenement","i-cal","Événement","Rendez-vous, soumission, garage"],["facture","i-invoice","Facture","Avec TPS et TVQ, en PDF"],["devis","i-quote","Devis","Chez le client"],["trajet","i-car","Trajet","Pour le kilométrage"],["entretien","i-wrench","Entretien","Camion ou équipement"],["revenu","i-in","Revenu","Paiement reçu sans facture"],["photo","i-inbox","Photo à traiter","Je l'inscrirai plus tard"]];
 function openAdd(){
   if (!S.d){ toast("Connecte d'abord tes livres."); return; }
-  openSheet("Ajouter", '<div class="addgrid">' + ADDS.map(([k, i, l, s]) => '<button type="button" data-addk="' + k + '">' + ico(i) + "<b>" + esc(l) + "</b><small>" + esc(s) + "</small></button>").join("") + "</div>", {onClick: e => { const b = e.target.closest("[data-addk]"); if (b) startAdd(b.dataset.addk, {}); }});
+  openSheet("Ajouter", '<div class="addgrid">' + ADDS.map(([k, i, l, s]) => '<button type="button" data-addk="' + k + '">' + ico(i) + "<b>" + esc(l) + "</b><small>" + esc(s) + "</small></button>").join("") + '</div><div class="mt-h">Autres</div><div class="m-list">' + ADD_TEL2.map(([k, i, l]) => '<a href="complet.html#nouveau=' + k + '">' + ico(i) + "<span>" + esc(l) + "</span>" + ico("i-chev") + "</a>").join("") + "</div>", {onClick: e => { const b = e.target.closest("[data-addk]"); if (b) startAdd(b.dataset.addk, {}); }});
 }
 function startAdd(k, p){
   if (!S.d) return;
@@ -879,6 +868,7 @@ async function savePDF(kind, x){
   if (auth && auth.err){ S.connErr = "login"; if (!S.d) S.conn = "login"; }
   if (auth && auth.ok) whoAmI();
   const h = location.hash.slice(1); showTab(TABS.includes(h) ? h : "accueil");
+  if (h === "ajout-trajet" && S.d) setTimeout(() => fTrajet(), 60);
   syncLabel();
   syncAll(false, "start");
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(e => console.warn("sw", e));
