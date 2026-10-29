@@ -23,3 +23,7 @@ Format des changements déposés dans `Comptabilite/telephone/` : voir `POUR-CLA
 ## Signature du client (v3.8)
 
 `sigPad` (dans `devis_core.js`) : pavé de signature à l'écran (doigt, stylet, souris) qui rend une image JPEG. `patch7_signature.py` l'ajoute à l'ordinateur et à la version complète (signature du client, signature de l'entreprise, op `signature`) ; `patch8_tel_sig.py` à l'app terrain. Tests : `test_signature.py`, `test_signature_tel.py`, `test_integ_signature.py`.
+
+## Styles des documents (v3.9)
+
+`style_core.js` (inséré par `patch9_style.py`) : styles « Nature » (par défaut), « Moderne » et « Épuré » des factures et soumissions, en plus du modèle d'origine (`docLayoutOrigine`). Le moteur PDF dessine maintenant des chemins, des rectangles arrondis et des cercles (emblème feuille). Le style se choisit dans Réglages (`reglages.styleDoc`), avec un aperçu.

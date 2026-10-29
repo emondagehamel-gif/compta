@@ -2,12 +2,12 @@
 import asyncio, json, os, base64, subprocess
 from playwright.async_api import async_playwright
 exec(open('test4.py').read().split('OUT = ')[0].split('from playwright.async_api import async_playwright')[1])
-OUT = "nuage/exemples"; os.makedirs(OUT, exist_ok=True)
+STYLE = os.environ.get("STYLE", "origine"); OUT = "nuage/exemples-" + STYLE; os.makedirs(OUT, exist_ok=True)
 reg = json.load(open("phone/fixture.json", encoding="utf-8"))
 for k in ["transactions", "factures", "devis", "clients"]: reg[k] = []
 reg["reglages"].update({"nom": "Émondage Hamel", "telephone": "581-991-4738", "courriel": "emondagehamel@gmail.com", "noTPS": "70622 0357 RT 0001", "noTVQ": "12 3214 0824 TQ 0001",
   "neq": "1180262769", "slogan": "Élagage · Abattage · Entretien d'arbres", "modePaiement": "virement Interac à emondagehamel@gmail.com", "titreDevis": "Soumission", "termes": 0, "validiteDevis": 30,
-  "messageFacture": "Il nous fera plaisir de vous accompagner pour vos prochains besoins en émondage et en entretien d'arbres.", "adresse": "", "logo": ""})
+  "messageFacture": "Il nous fera plaisir de vous accompagner pour vos prochains besoins en émondage et en entretien d'arbres.", "adresse": "", "logo": "", "styleDoc": STYLE})
 reg["clients"] = [{"id": "c-ma", "nom": "Michel Auger", "courriel": "", "telephone": "", "adresse": "1600, rue Saint-François\nL'Ancienne-Lorette (Québec)  G2E 3G7", "note": ""}]
 L1 = [{"type": "service", "description": "Travaux d'émondage\n1600, rue Saint-François, L'Ancienne-Lorette", "qte": 1, "unite": "", "prix": 400}]
 reg["devis"] = [{"id": "dv-ex1", "numero": "D-2026-001", "date": "2026-09-23", "echeance": "2026-10-23", "client": "Michel Auger", "clientId": "c-ma", "lignes": L1, "codeTaxe": "QC", "taxesIncluses": True, "message": reg["reglages"]["messageFacture"], "statut": "ouvert", "projet": ""},
