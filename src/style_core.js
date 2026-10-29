@@ -133,20 +133,22 @@ function docLayoutStyle(kind, doc, logo, sigs, st){
       need(112); y += 12; h2("Confirmation du client");
       wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
       y += 6; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw - 8, 32); ligneSig(M, y + 34, cw);
-      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5}); T(M, y + 58, "Signé électroniquement" + (sg.appareil ? ", sur " + sg.appareil : ""), {size:7.5, italic:true, color:C.mut}); y += 62;
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5}); T(M, y + 58, "Signé électroniquement" + sigVia(sg), {size:7.5, italic:true, color:C.mut}); y += 62;
     }
   } else {
     need(64); y += 8; h2("Modalités");
     String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
     const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
     if (pay) bullet([["Mode de paiement : "], [pay, true]]);
+    const lien = sg ? "" : signLien(kind, doc);
     need(114); y += 6; h2("Acceptation " + G.de);
     wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
     y += 8;
-    const bloc = (x, tt, img, date, pied) => { T(x, y, tt, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); ligneSig(x, y + 40, cw); T(x, y + 52, "Signature", {size:8.5, color:C.mut});
+    const bloc = (x, tt, img, date, pied) => { T(x, y, tt, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); ligneSig(x, y + 40, cw); T(x, y + 52, lien && x === x2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
       T(x, y + 66, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 79, pied, {size:7.5, italic:true, color:C.mut}); };
     bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
-    bloc(x2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? "Signé électroniquement" + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil ? ", sur " + sg.appareil : "") : "");
+    bloc(x2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
+    if (lien) sigBoutonPDF(P, x2 + 4, y + 9, lien, C.g);
     y += sg ? 84 : 72;
   }
   /* ---------- Remerciements ---------- */

@@ -46,10 +46,10 @@ function docGroupes(doc){
 }
 /* Texte prêt à envoyer avec le document (courriel, texto, Messenger…) */
 function docMessage(kind, doc){
-  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind);
+  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind), lien = isF ? "" : signLien(kind, doc);
   return "Bonjour" + (cli ? " " + cli : "") + ",\n\nVoici " + G.la + " " + doc.numero + (r.nom ? (/^[aeiouyàâäéèêëîïôöûüù]/i.test(r.nom) ? " d'" : " de ") + r.nom : "") + " : " + fmt(t.total) + (t.tx || t.tq ? " taxes incluses" : "") +
     (isF ? (doc.echeance && doc.echeance > doc.date ? ", payable d'ici le " + dLong(doc.echeance) : ", payable à réception") : ", valide jusqu'au " + dLong(doc.echeance)) + "." +
-    (!isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
+    (lien ? "\n\nPour l'accepter, signez-" + (G.t === "Devis" ? "le" : "la") + " en ligne, avec le doigt (1 minute) :\n" + lien + "\n\nVous pouvez aussi simplement répondre à ce message." : !isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
 }
 /* Mise en page d'une facture ou d'une soumission : style simple et rassurant, d'après le modèle d'Émondage Hamel */
 const DOC_COUL = {g:"#2F6B3B", tint:"#EDF4EE", ink:"#1E2622", mut:"#67716B", line:"#D2DBD4"};
@@ -146,7 +146,7 @@ function docLayoutOrigine(kind, doc, logo, sigs){
       need(116); y += 14; h2("Confirmation du client");
       wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
       y += 6; const cw2 = (W - 30) / 2; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw2 - 8, 32); P.line(M, y + 34, M + cw2, y + 34, {color:"#8A948E", w:0.7});
-      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + (sg.appareil ? ", sur " + sg.appareil : ""), {size:7.5, italic:true, color:C.mut}); y += 62;
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + sigVia(sg), {size:7.5, italic:true, color:C.mut}); y += 62;
     }
   } else {
     need(70); y += 14; h2("Modalités");
@@ -154,13 +154,15 @@ function docLayoutOrigine(kind, doc, logo, sigs){
     const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
     if (pay) bullet([["Mode de paiement : "], [pay, true]]);
     /* Acceptation */
+    const lien = sg ? "" : signLien(kind, doc);
     need(120); y += 8; h2("Acceptation " + G.de);
     wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
     y += 8;
-    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut});
+    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, lien && x === rx2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
       T(x, y + 67, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 80, pied, {size:7.5, italic:true, color:C.mut}); };
     bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
-    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? "Signé électroniquement" + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil ? ", sur " + sg.appareil : "") : "");
+    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
+    if (lien) sigBoutonPDF(P, rx2 + 4, y + 9, lien, C.g);
     y += sg ? 84 : 72;
   }
   /* Remerciements */

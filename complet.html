@@ -710,6 +710,7 @@ details.more .form-grid{padding-bottom:14px}
 .send-opt .ic{flex:none;margin-top:2px;color:var(--accent)}
 .send-opt span{min-width:0;overflow-wrap:anywhere}
 .send-opt.prim{grid-column:1/-1;border-color:var(--accent);background:var(--accent-soft, var(--surface))}
+.sg-steps{margin:4px 0 12px;padding-left:22px;display:flex;flex-direction:column;gap:12px}.sg-steps li{line-height:1.45}.sg-steps li>div,.sg-steps li>input{margin-top:6px}.sg-steps code{font-size:.85em;background:var(--sunk);padding:1px 4px;border-radius:4px}
 #snd-guide{flex-direction:column;align-items:stretch}#snd-guide small{color:var(--muted)}.snd-acts{margin-top:8px}
 #snd-guide{margin-top:10px}
 .tarifs{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px}
@@ -1177,6 +1178,7 @@ body.sig-open{overflow:hidden}
             <div class="inline-form tarif-add"><select id="r-tf-type" class="ctl auto"></select><input id="r-tf-desc" class="ctl" type="text" maxlength="200" placeholder="Description, ex. : Taux horaire, émondeur"><select id="r-tf-unite" class="ctl auto" aria-label="Unité"></select><input id="r-tf-prix" class="ctl fig" type="text" inputmode="decimal" placeholder="Prix" style="width:100px"><label class="check"><input id="r-tf-ttc" type="checkbox"><span>Taxes incluses</span></label><button class="btn sm" type="button" id="r-tf-ok"><svg class="ic"><use href="#i-plus"/></svg>Ajouter</button></div>
             <small>Tes prix habituels (taux horaire, location, déplacement…) : ils s'ajoutent en un clic dans une facture ou une soumission. Tu peux aussi enregistrer une ligne avec l'étoile dans l'éditeur.</small></div>
           <div class="field full"><span>Signature de l'entreprise (sur les soumissions, facultatif)</span><div class="inline-form"><span class="muted small" id="r-sigcie-st">Aucune</span><button class="btn sm" type="button" id="r-sigcie"><svg class="ic"><use href="#i-pen"/></svg>Dessiner ma signature</button><button class="btn link" type="button" id="r-sigcie-rm" hidden>Retirer</button></div></div>
+          <div class="field full"><span>Signature en ligne des soumissions (facultatif)</span><div class="inline-form"><span class="muted small" id="r-sg-st">Pas activée</span><button class="btn sm" type="button" id="r-sg"><svg class="ic"><use href="#i-pen"/></svg>Activer</button><button class="btn link" type="button" id="r-sg-rm" hidden>Désactiver</button></div><small>Le client reçoit un bouton « Signer en ligne » dans le courriel et dans le PDF. Il signe avec le doigt sur son cellulaire, et la soumission passe à « acceptée » toute seule.</small></div>
           <div class="field full"><span>Logo (facultatif)</span><div class="inline-form"><span class="muted small" id="r-logo-st">Aucun logo</span><label class="btn sm"><svg class="ic"><use href="#i-upload"/></svg>Choisir une image<input id="r-logo" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only"></label><button class="btn link" type="button" id="r-logo-rm" hidden>Retirer</button></div></div>
         </div>
         <h2>Taxes de vente</h2>
@@ -1498,7 +1500,7 @@ const TYPES = {depense:"Dépense", revenu:"Revenu", transfert:"Transfert", tvh:"
 const DEF_REGLAGES = {nom:"Mon entreprise", numero:"", structure:"societe", province:"QC", regime:"federal", dateConstitution:"", obligations:{}, finExercice:12, exerciceConfirme:false, inscritTVH:true, inscritTVQ:true, tauxTPS:5, tauxTVQ:9.975, tauxTVH:13, frequence:"trimestrielle",
   dateOuverture:"2026-01-01", tvhOuverture:0, capitalActions:0, tauxKm:{"2025":[0.72,0.66], "2026":[0.73,0.67]}, compteKm:"c-actionnaire", declarations:{},
   adresse:"", telephone:"", courriel:"", noTPS:"", noTVQ:"", termes:30, validiteDevis:30, messageFacture:"Merci de votre confiance!", logo:"",
-  slogan:"", neq:"", modePaiement:"", signatureCie:"", styleDoc:"nature", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
+  slogan:"", neq:"", modePaiement:"", signatureCie:"", signerUrl:"", signerCle:"", styleDoc:"nature", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
 const COLLECTIONS = ["comptes","transactions","fournisseurs","projets","km","rapprochements","clients","factures","devis","agenda","equipements","produits","lieux"];
 
 function defaultData(){
@@ -3640,14 +3642,15 @@ function wrapText(s, size, bold, maxW){
   return out;
 }
 function PDF(){
-  const W = 612, H = 792, pages = [], imgs = [], draws = [];
-  let ops = null, cv = null;
+  const W = 612, H = 792, pages = [], imgs = [], draws = [], links = [];
+  let ops = null, cv = null, lk = null;
   const n = v => String(Math.round(v * 100) / 100);
   const col = c => { const h = String(c).replace("#", ""); return [0, 2, 4].map(i => n(parseInt(h.slice(i, i + 2), 16) / 255)).join(" "); };
   const P = {
     W, H, pages, draws,
-    page(){ ops = []; pages.push(ops); cv = []; draws.push(cv); return P; },
-    at(i){ ops = pages[i]; cv = draws[i]; return P; },
+    page(){ ops = []; pages.push(ops); cv = []; draws.push(cv); lk = []; links.push(lk); return P; },
+    at(i){ ops = pages[i]; cv = draws[i]; lk = links[i]; return P; },
+    link(x, y, w, h, url){ if (lk && url) lk.push({x, y, w, h, url:String(url)}); },
     text(x, y, s, o){ o = o || {}; const size = o.size || 10, bold = !!o.bold, ls = Number(o.ls) || 0, nc = [...pdfChars(s)].length, w = textW(s, size, bold) + (nc > 1 ? ls * (nc - 1) : 0); let tx = x; if (o.align === "right") tx = x - w; else if (o.align === "center") tx = x - w / 2;
       ops.push((o.color ? col(o.color) + " rg " : "") + "BT /" + (bold ? "F2" : o.italic ? "F3" : "F1") + " " + n(size) + " Tf " + (ls ? n(ls) + " Tc " : "") + n(tx) + " " + n(H - y) + " Td (" + pdfStr(s) + ") Tj " + (ls ? "0 Tc " : "") + "ET" + (o.color ? " 0 0 0 rg" : ""));
       cv.push({k:"t", x:tx, y, s:pdfChars(s), size, bold, italic:!!o.italic, ls, color:o.color || "#000000"}); return w; },
@@ -3673,10 +3676,13 @@ function PDF(){
       obj(5, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>"]);
       imgs.forEach((im, i) => obj(6 + i, ["<< /Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + im.data.length + " >>\nstream\n", im.data, "\nendstream"]));
       const xo = imgs.length ? " /XObject << " + imgs.map((_, i) => "/Im" + (i + 1) + " " + (6 + i) + " 0 R").join(" ") + " >>" : "";
-      pages.forEach((o, i) => { const pn = first + i * 2, c = o.join("\n");
-        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>" + xo + " >> /Contents " + (pn + 1) + " 0 R >>"]);
+      const annBase = first + pages.length * 2, ann = []; links.forEach((L, i) => L.forEach(l => ann.push({i, l})));
+      pages.forEach((o, i) => { const pn = first + i * 2, c = o.join("\n"), my = ann.map((a, k) => a.i === i ? (annBase + k) + " 0 R" : "").filter(Boolean);
+        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>" + xo + " >>" + (my.length ? " /Annots [" + my.join(" ") + "]" : "") + " /Contents " + (pn + 1) + " 0 R >>"]);
         obj(pn + 1, ["<< /Length " + c.length + " >>\nstream\n" + c + "\nendstream"]); });
-      const total = first + pages.length * 2, xref = len;
+      ann.forEach((a, k) => { const l = a.l, u = l.url.replace(/[^\x21-\x7e]/g, ch => encodeURIComponent(ch)).replace(/[\\()]/g, "\\$&");
+        obj(annBase + k, ["<< /Type /Annot /Subtype /Link /Rect [" + [l.x, H - l.y - l.h, l.x + l.w, H - l.y].map(n).join(" ") + "] /Border [0 0 0] /F 4 /A << /Type /Action /S /URI /URI (" + u + ") >> >>"]); });
+      const total = annBase + ann.length, xref = len;
       let x = "xref\n0 " + total + "\n0000000000 65535 f \n"; for (let i = 1; i < total; i++) x += String(offs[i]).padStart(10, "0") + " 00000 n \n";
       push(x + "trailer\n<< /Size " + total + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF\n");
       const out = new Uint8Array(len); let p = 0; chunks.forEach(c => { out.set(c, p); p += c.length; }); return out;
@@ -3743,10 +3749,10 @@ function docGroupes(doc){
 }
 /* Texte prêt à envoyer avec le document (courriel, texto, Messenger…) */
 function docMessage(kind, doc){
-  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind);
+  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind), lien = isF ? "" : signLien(kind, doc);
   return "Bonjour" + (cli ? " " + cli : "") + ",\n\nVoici " + G.la + " " + doc.numero + (r.nom ? (/^[aeiouyàâäéèêëîïôöûüù]/i.test(r.nom) ? " d'" : " de ") + r.nom : "") + " : " + fmt(t.total) + (t.tx || t.tq ? " taxes incluses" : "") +
     (isF ? (doc.echeance && doc.echeance > doc.date ? ", payable d'ici le " + dLong(doc.echeance) : ", payable à réception") : ", valide jusqu'au " + dLong(doc.echeance)) + "." +
-    (!isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
+    (lien ? "\n\nPour l'accepter, signez-" + (G.t === "Devis" ? "le" : "la") + " en ligne, avec le doigt (1 minute) :\n" + lien + "\n\nVous pouvez aussi simplement répondre à ce message." : !isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
 }
 /* Mise en page d'une facture ou d'une soumission : style simple et rassurant, d'après le modèle d'Émondage Hamel */
 const DOC_COUL = {g:"#2F6B3B", tint:"#EDF4EE", ink:"#1E2622", mut:"#67716B", line:"#D2DBD4"};
@@ -3843,7 +3849,7 @@ function docLayoutOrigine(kind, doc, logo, sigs){
       need(116); y += 14; h2("Confirmation du client");
       wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
       y += 6; const cw2 = (W - 30) / 2; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw2 - 8, 32); P.line(M, y + 34, M + cw2, y + 34, {color:"#8A948E", w:0.7});
-      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + (sg.appareil ? ", sur " + sg.appareil : ""), {size:7.5, italic:true, color:C.mut}); y += 62;
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + sigVia(sg), {size:7.5, italic:true, color:C.mut}); y += 62;
     }
   } else {
     need(70); y += 14; h2("Modalités");
@@ -3851,13 +3857,15 @@ function docLayoutOrigine(kind, doc, logo, sigs){
     const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
     if (pay) bullet([["Mode de paiement : "], [pay, true]]);
     /* Acceptation */
+    const lien = sg ? "" : signLien(kind, doc);
     need(120); y += 8; h2("Acceptation " + G.de);
     wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
     y += 8;
-    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut});
+    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, lien && x === rx2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
       T(x, y + 67, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 80, pied, {size:7.5, italic:true, color:C.mut}); };
     bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
-    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? "Signé électroniquement" + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil ? ", sur " + sg.appareil : "") : "");
+    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
+    if (lien) sigBoutonPDF(P, rx2 + 4, y + 9, lien, C.g);
     y += sg ? 84 : 72;
   }
   /* Remerciements */
@@ -4004,20 +4012,22 @@ function docLayoutStyle(kind, doc, logo, sigs, st){
       need(112); y += 12; h2("Confirmation du client");
       wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
       y += 6; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw - 8, 32); ligneSig(M, y + 34, cw);
-      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5}); T(M, y + 58, "Signé électroniquement" + (sg.appareil ? ", sur " + sg.appareil : ""), {size:7.5, italic:true, color:C.mut}); y += 62;
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5}); T(M, y + 58, "Signé électroniquement" + sigVia(sg), {size:7.5, italic:true, color:C.mut}); y += 62;
     }
   } else {
     need(64); y += 8; h2("Modalités");
     String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
     const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
     if (pay) bullet([["Mode de paiement : "], [pay, true]]);
+    const lien = sg ? "" : signLien(kind, doc);
     need(114); y += 6; h2("Acceptation " + G.de);
     wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
     y += 8;
-    const bloc = (x, tt, img, date, pied) => { T(x, y, tt, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); ligneSig(x, y + 40, cw); T(x, y + 52, "Signature", {size:8.5, color:C.mut});
+    const bloc = (x, tt, img, date, pied) => { T(x, y, tt, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); ligneSig(x, y + 40, cw); T(x, y + 52, lien && x === x2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
       T(x, y + 66, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 79, pied, {size:7.5, italic:true, color:C.mut}); };
     bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
-    bloc(x2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? "Signé électroniquement" + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil ? ", sur " + sg.appareil : "") : "");
+    bloc(x2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
+    if (lien) sigBoutonPDF(P, x2 + 4, y + 9, lien, C.g);
     y += sg ? 84 : 72;
   }
   /* ---------- Remerciements ---------- */
@@ -4030,6 +4040,63 @@ function docLayoutStyle(kind, doc, logo, sigs, st){
     if (MOD){ P.rect(0, P.H - 34, P.W, 34, C.g); T(P.W / 2, P.H - 14, pied, {size:8.5, color:"#FFFFFF", align:"center"}); if (pg) T(RX, P.H - 14, pg, {size:7.5, color:C.pale, align:"right"}); }
     else { if (!EPU) P.line(M, P.H - 46, RX, P.H - 46, {color:C.pale, w:0.8}); T(P.W / 2, P.H - 30, pied, {size:8.3, color:C.mut, align:"center"}); if (pg) T(RX, P.H - 30, pg, {size:7.5, color:C.mut, align:"right"}); } });
   return P;
+}
+/* ===== Signature en ligne des soumissions (v3.12) =====
+   Le client reçoit un lien (dans le courriel et sur un bouton du PDF). La page signer.html lui montre la soumission,
+   il signe avec le doigt, et le service Google Apps Script de l'entreprise dépose la signature dans le dossier
+   « telephone » (op « signature », appareil « en ligne »). Le lien est protégé par une clé secrète (reglages.signerCle) :
+   on ne peut pas changer le montant ni signer une autre soumission. */
+const SIGN_PAGE = (typeof window !== "undefined" && window.__SIGNER) || "https://emondagehamel-gif.github.io/compta/signer.html";
+const SCRIPT_BASE = (typeof window !== "undefined" && window.__SCRIPT) || "https://script.google.com/macros/s/";
+/* SHA-256 et HMAC (calcul immédiat, pour garder docMessage et docPDF simples) */
+const SHA256 = (() => {
+  const primes = []; for (let n = 2; primes.length < 64; n++){ if (primes.every(p => n % p)) primes.push(n); }
+  const frac = x => (x - Math.floor(x)) * 4294967296 >>> 0;
+  const K = primes.map(p => frac(Math.cbrt(p))), H0 = primes.slice(0, 8).map(p => frac(Math.sqrt(p)));
+  return bytes => {
+    const l = bytes.length, nb = ((l + 9 + 63) >> 6) << 6, m = new Uint8Array(nb); m.set(bytes); m[l] = 0x80;
+    const dv = new DataView(m.buffer); dv.setUint32(nb - 4, (l * 8) >>> 0); dv.setUint32(nb - 8, Math.floor(l / 536870912));
+    const h = H0.slice(), w = new Uint32Array(64), r = (x, k) => (x >>> k) | (x << (32 - k));
+    for (let o = 0; o < nb; o += 64){
+      for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+      for (let i = 16; i < 64; i++){ const a = w[i - 15], b = w[i - 2]; w[i] = (w[i - 16] + (r(a, 7) ^ r(a, 18) ^ (a >>> 3)) + w[i - 7] + (r(b, 17) ^ r(b, 19) ^ (b >>> 10))) >>> 0; }
+      let [a, b, c, d, e, f, g, hh] = h;
+      for (let i = 0; i < 64; i++){
+        const t1 = (hh + (r(e, 6) ^ r(e, 11) ^ r(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) >>> 0, t2 = ((r(a, 2) ^ r(a, 13) ^ r(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+        hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      [a, b, c, d, e, f, g, hh].forEach((v, i) => { h[i] = (h[i] + v) >>> 0; });
+    }
+    const out = new Uint8Array(32), ov = new DataView(out.buffer); h.forEach((v, i) => ov.setUint32(i * 4, v)); return out;
+  };
+})();
+function hmacHex(key, msg){
+  const enc = new TextEncoder(); let k = enc.encode(key); if (k.length > 64) k = SHA256(k);
+  const kb = new Uint8Array(64); kb.set(k); const m = enc.encode(msg), a = new Uint8Array(64 + m.length), b = new Uint8Array(96);
+  a.set(kb.map(x => x ^ 0x36)); a.set(m, 64); b.set(kb.map(x => x ^ 0x5c)); b.set(SHA256(a), 64);
+  return Array.from(SHA256(b), x => x.toString(16).padStart(2, "0")).join("");
+}
+/* Identifiant du service (adresse « …/macros/s/IDENTIFIANT/exec » collée dans Réglages) */
+function signerId(url){
+  const u = String(url == null ? R().signerUrl || "" : url).trim(), b = SCRIPT_BASE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = u.match(new RegExp("^" + b + "([\\w-]{20,200})/exec/?(?:[?#].*)?$")); return m ? m[1] : "";
+}
+const signerPret = () => !!(signerId() && /^[0-9a-f]{32,}$/.test(String(R().signerCle || "")));
+const signMsg = o => ["v1", o.i, o.n, encodeURIComponent(o.c), o.t, o.e, encodeURIComponent(o.en)].join("|");
+/* Lien de signature d'une soumission ouverte, ou "" (déjà signée, facturée, refusée, ou service pas activé) */
+function signLien(kind, doc){
+  if (kind !== "devis" || !doc || !doc.id || doc.signature || ["facture", "refuse"].includes(doc.statut) || !signerPret()) return "";
+  const r = R(), o = {i: String(doc.id), n: String(doc.numero || ""), c: String(doc.client || "").trim(), t: String(Math.round(docTotals(doc).total * 100)), e: String(doc.echeance || ""), en: String(r.nom || "").trim()};
+  const q = new URLSearchParams({s: signerId(), i: o.i, n: o.n, c: o.c, t: o.t, e: o.e, en: o.en, k: hmacHex(String(r.signerCle), signMsg(o)).slice(0, 32)});
+  return SIGN_PAGE + "#" + q.toString();
+}
+/* Mention sous la signature : « Signé électroniquement en ligne » ou « …, sur téléphone » */
+const sigVia = sg => sg && sg.appareil ? (sg.appareil === "en ligne" ? " en ligne" : ", sur " + sg.appareil) : "";
+const sigPied = sg => "Signé électroniquement" + (sg.appareil === "en ligne" ? " en ligne" : "") + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil && sg.appareil !== "en ligne" ? ", sur " + sg.appareil : "");
+/* Bouton vert « Signer en ligne » (lien cliquable du PDF), dans la case de signature du client */
+function sigBoutonPDF(P, x, y, url, g){
+  const w = 152, h = 26;
+  P.rrect(x, y, w, h, 6, {fill: g}); P.text(x + w / 2, y + 17, "Signer en ligne  ›", {size: 10.5, bold: true, color: "#FFFFFF", align: "center"}); P.link(x, y, w, h, url);
 }
 function docPDF(kind, doc, logo, sigs){ return docLayout(kind, doc, logo, sigs).bytes(); }
 /* Signature : image centrée dans sa case, sans la déformer */
@@ -5407,12 +5474,15 @@ function applyOp(d, op){
       });
       res.msg = x.msg || "Modification faite au téléphone"; break; }
     case "signature": {
-      const L = x.kind === "devis" ? d.devis : d.factures, e = L.find(v => v.id === x.id); if (!e || !photos[0]) break;
+      const L = x.kind === "devis" ? d.devis : d.factures, e = L.find(v => v.id === x.id), web = x.appareil === "en ligne";
+      if (!e && web && photos[0] && Date.now() - new Date(now).getTime() < 3 * 864e5){ res.attendre = true; break; }
+      if (!e || !photos[0]) break;
+      if (web && e.signature){ res.msg = "Signature en ligne ignorée : " + e.numero + " était déjà signée"; break; }
       const to = "signatures/" + fileSafe(e.numero + " " + (e.client || "")) + "-" + String(op.id).slice(-4) + (extOf(photos[0]) || ".jpg");
       res.moves.push({from:"telephone/" + photos[0], to});
-      e.signature = {fichier: to, nom: String(x.nom || e.client || "").trim().slice(0, 80), date: x.date || today(), heure: String(x.heure || "").slice(0, 5), signeLe: x.signeLe || now, appareil: "téléphone"};
+      e.signature = {fichier: to, nom: String(x.nom || e.client || "").trim().slice(0, 80), date: x.date || today(), heure: String(x.heure || "").slice(0, 5), signeLe: x.signeLe || now, appareil: web ? "en ligne" : "téléphone"};
       if (x.kind === "devis" && (!e.statut || e.statut === "ouvert")) e.statut = "accepte";
-      res.pdfs.push([x.kind === "devis" ? "devis" : "facture", e.id]); res.msg = "Signature du client : " + e.numero + " (" + e.signature.nom + ")"; break; }
+      res.pdfs.push([x.kind === "devis" ? "devis" : "facture", e.id]); res.msg = (web ? "Signée en ligne par le client : " : "Signature du client : ") + e.numero + " (" + e.signature.nom + ")"; break; }
     case "fichier": { const to = safePath(x.to); if (to && photos[0]) res.moves.push({from:"telephone/" + photos[0], to}); break; }
     case "deplacer": { const a = safePath(x.from), b = safePath(x.to); if (a && b) res.moves.push({from:a, to:b}); break; }
     case "fichier-suppr": { const p = safePath(x.path); if (p) res.removes.push(p); break; }
@@ -5455,14 +5525,15 @@ async function phoneSync(){
     const now = Date.now(), ready = ops.filter(o => (o.op.photos || []).every(p => files.has(p)) || now - o.mod > 10 * 60000)
       .sort((a, b) => String(a.op.creeLe).localeCompare(String(b.op.creeLe)) || a.name.localeCompare(b.name));
     if (!ready.length) return;
-    const msgs = [], pdfs = [], unknown = new Set(); let count = 0;
+    const msgs = [], pdfs = [], unknown = new Set(), later = new Set(); let count = 0;
     const ok = await mutate(async d => {
       d.telephone = d.telephone && typeof d.telephone === "object" ? d.telephone : {};
       const seen = new Set(d.telephone.appliques || []);
       for (const o of ready){
         if (seen.has(o.op.id)) continue;
         let r; try { r = applyOp(d, o.op); } catch(e){ console.error(e); continue; }
-        if (r.unknown){ unknown.add(o.name); continue; }   // version plus récente du téléphone : on garde le fichier pour une mise à jour
+        if (r.unknown){ unknown.add(o.name); continue; }
+        if (r.attendre){ unknown.add(o.name); later.add(o.name); continue; }   // la soumission n'est pas encore arrivée : on réessaie plus tard   // version plus récente du téléphone : on garde le fichier pour une mise à jour
         for (const m of r.moves){ try { await moveFile(m.from, m.to); } catch(e){} }
         for (const p of r.removes || []){ try { await removeFile(p); } catch(e){} }
         if (r.pdf) pdfs.push(r.pdf); (r.pdfs || []).forEach(p => pdfs.push(p)); if (r.msg) msgs.push(r.msg); seen.add(o.op.id); count++;
@@ -5472,7 +5543,7 @@ async function phoneSync(){
     if (!ok) return;
     for (const o of ready){ if (unknown.has(o.name)) continue; try { await dir.removeEntry(o.name); } catch(e){} }
     const pk = new Set(); for (const [k, id] of pdfs){ if (pk.has(k + id)) continue; pk.add(k + id); try { await makeDocPDF(k, id, false, true); } catch(e){} }
-    if (unknown.size) toast(unknown.size + " changement(s) du téléphone attendent une mise à jour de cette application");
+    if (unknown.size > later.size) toast((unknown.size - later.size) + " changement(s) du téléphone attendent une mise à jour de cette application");
     if (count) toast(count > 1 ? count + " changements reçus du téléphone" : "Du téléphone : " + (msgs[0] || "1 changement"));
     refreshInbox();
   } catch(e){ console.error(e); }
@@ -5507,6 +5578,7 @@ function renderReglages(){
   $("r-slogan").value = r.slogan || ""; $("r-neq").value = r.neq || ""; $("r-paiement").value = r.modePaiement || ""; $("r-titredevis").value = r.titreDevis === "Soumission" ? "Soumission" : "Devis"; $("r-condev").value = r.conditionsDevis || "";
   setOptions($("r-tf-type"), LT.map(t => [t.k, t.l])); if (!$("r-tf-unite").options.length){ $("r-tf-unite").innerHTML = uniteOptions("h"); } renderTarifsReglages();
   $("r-logo-st").textContent = r.logo ? "Logo : " + r.logo.split("/").pop() : "Aucun logo"; $("r-logo-rm").hidden = !r.logo;
+  { const ok = signerPret(); $("r-sg-st").textContent = ok ? "Activée : le bouton « Signer en ligne » est dans les soumissions" : (r.signerUrl ? "À vérifier" : "Pas activée"); $("r-sg-rm").hidden = !r.signerUrl; $("r-sg").lastChild.textContent = ok ? "Vérifier" : "Activer"; }
   $("r-sigcie-st").textContent = r.signatureCie ? "Enregistrée : elle s'imprime sur chaque soumission" : "Aucune : la case de l'entreprise reste à signer à la main"; $("r-sigcie-rm").hidden = !r.signatureCie; $("r-sigcie").lastChild.textContent = r.signatureCie ? "Refaire ma signature" : "Dessiner ma signature";
 }
 $("r-logo").addEventListener("change", async e => {
@@ -5534,6 +5606,40 @@ $("r-style-voir").addEventListener("click", async () => {
   finally { r.styleDoc = was; }
 });
 $("r-sigcie-rm").addEventListener("click", () => mutate(d => { d.reglages.signatureCie = ""; }, "Signature de l'entreprise retirée"));
+/* Signature en ligne : code du service Google Apps Script à coller dans script.google.com */
+const SIGNER_GS = "/* Comptabilité : signature en ligne des soumissions. Version 1.\n   Ce petit service tourne dans TON compte Google. Quand un client signe une soumission sur la page\n   « Signer en ligne », il dépose la signature dans ton dossier Comptabilite/telephone (Google Drive)\n   et t'envoie un courriel. L'application Comptabilité ajoute ensuite la signature à la soumission.\n   Il ne fait rien d'autre : il lit registre.json pour vérifier le lien, et n'envoie qu'un avis à toi. */\nconst VERSION = 1, TZ = \"America/Toronto\";\nconst MOIS = [\"janvier\", \"février\", \"mars\", \"avril\", \"mai\", \"juin\", \"juillet\", \"août\", \"septembre\", \"octobre\", \"novembre\", \"décembre\"];\n\nfunction doGet(e){ return reponse(traiter((e && e.parameter) || {}, false)); }\nfunction doPost(e){\n  let b = null; try { b = JSON.parse(e.postData.contents); } catch(er){}\n  return reponse(b && typeof b === \"object\" ? traiter(b, true) : {ok:false, err:\"donnees\"});\n}\nfunction reponse(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }\n\n/* Le dossier Comptabilite (celui qui contient registre.json et le dossier telephone) */\nfunction dossier(){\n  const P = PropertiesService.getScriptProperties(), id = P.getProperty(\"dossier\");\n  if (id){ try { const f = DriveApp.getFolderById(id); if (!f.isTrashed() && f.getFilesByName(\"registre.json\").hasNext()) return f; } catch(e){} }\n  let best = null, t = -1; const it = DriveApp.getFoldersByName(\"Comptabilite\");\n  while (it.hasNext()){\n    const f = it.next(); if (f.isTrashed()) continue;\n    const r = f.getFilesByName(\"registre.json\"); if (!r.hasNext() || !f.getFoldersByName(\"telephone\").hasNext()) continue;\n    const m = r.next().getLastUpdated().getTime(); if (m > t){ t = m; best = f; }\n  }\n  if (best) P.setProperty(\"dossier\", best.getId());\n  return best;\n}\nfunction lire(d){ try { return JSON.parse(d.getFilesByName(\"registre.json\").next().getBlob().getDataAsString(\"UTF-8\")) || {}; } catch(e){ return {}; } }\nconst hex = bytes => bytes.map(b => (\"0\" + ((b + 256) % 256).toString(16)).slice(-2)).join(\"\");\nconst jour = d => Utilities.formatDate(d, TZ, \"yyyy-MM-dd\");\nconst dLong = s => { const m = String(s).match(/^(\\d{4})-(\\d\\d)-(\\d\\d)$/); return m ? Number(m[3]) + (m[3] === \"01\" ? \"er\" : \"\") + \" \" + MOIS[Number(m[2]) - 1] + \" \" + m[1] : s; };\nconst argent = c => (Number(c) / 100).toFixed(2).replace(\".\", \",\").replace(/\\B(?=(\\d{3})+(?!\\d))/g, \" \") + \" $\";\n\nfunction traiter(b, signer){\n  const d = dossier(); if (!d) return {ok:false, err:\"dossier\"};\n  const reg = lire(d), R = reg.reglages || {}, cle = String(R.signerCle || \"\");\n  if (b.a === \"ping\") return {ok:true, v:VERSION, nom:R.nom || \"\", cle:!!cle};\n  if (!cle) return {ok:false, err:\"config\"};\n  const o = {i:String(b.i || \"\"), n:String(b.n || \"\"), c:String(b.c || \"\"), t:String(b.t || \"\"), e:String(b.e || \"\"), en:String(b.en || \"\")};\n  const msg = [\"v1\", o.i, o.n, encodeURIComponent(o.c), o.t, o.e, encodeURIComponent(o.en)].join(\"|\");\n  if (!o.i || String(b.k || \"\") !== hex(Utilities.computeHmacSha256Signature(msg, cle)).slice(0, 32)) return {ok:false, err:\"lien\"};\n  const P = PropertiesService.getScriptProperties(), tel = R.telephone || \"\";\n  const etat = () => {\n    const v = (reg.devis || []).filter(x => x && x.id === o.i)[0];\n    if (v && v.signature) return {ok:false, err:\"deja\", nom:v.signature.nom || \"\", date:v.signature.date || \"\", heure:v.signature.heure || \"\"};\n    const s = P.getProperty(\"signe-\" + o.i);\n    if (s){ const x = JSON.parse(s), faits = ((reg.telephone || {}).appliques) || [];\n      /* signature déjà reçue, sauf si l'application l'a appliquée puis retirée (on peut alors signer de nouveau) */\n      if (!(v && faits.indexOf(x.op) >= 0)) return {ok:false, err:\"deja\", nom:x.nom, date:x.date, heure:x.heure};\n      P.deleteProperty(\"signe-\" + o.i); }\n    if (v && (v.statut === \"refuse\" || v.statut === \"facture\")) return {ok:false, err:\"ferme\", statut:v.statut, tel};\n    /* la soumission a été modifiée depuis l'envoi du lien : le montant signé doit être le bon */\n    if (v && typeof v.total === \"number\" && Math.round(v.total * 100) !== Number(o.t)) return {ok:false, err:\"modifiee\", tel};\n    if (o.e && o.e < jour(new Date())) return {ok:false, err:\"expire\", e:o.e, tel};\n    return null;\n  };\n  let x = etat(); if (x) return x;\n  if (!signer) return {ok:true, etat:\"ouvert\", tel};\n  const nom = String(b.nom || \"\").replace(/\\s+/g, \" \").trim().slice(0, 80), m = String(b.sig || \"\").match(/^data:image\\/jpeg;base64,([A-Za-z0-9+\\/=]+)$/);\n  if (!nom || !m || m[1].length > 3000000) return {ok:false, err:\"signature\"};\n  const lock = LockService.getScriptLock(); if (!lock.tryLock(25000)) return {ok:false, err:\"occupe\"};\n  try {\n    x = etat(); if (x) return x;\n    const now = new Date(), date = jour(now), heure = Utilities.formatDate(now, TZ, \"HH:mm\"), img = Utilities.base64Decode(m[1]);\n    const opid = \"op-\" + now.getTime().toString(36) + \"-\" + Math.random().toString(36).slice(2, 7), photo = \"photo-\" + opid.slice(3) + \"-1.jpg\";\n    const dt = d.getFoldersByName(\"telephone\").next();\n    dt.createFile(Utilities.newBlob(img, \"image/jpeg\", photo));\n    const op = {format:\"tel-op-1\", id:opid, type:\"signature\", creeLe:now.toISOString(), photos:[photo],\n      data:{kind:\"devis\", id:o.i, numero:o.n, nom, date, heure, signeLe:now.toISOString(), appareil:\"en ligne\", total:Number(o.t) / 100}};\n    dt.createFile(Utilities.newBlob(JSON.stringify(op), \"application/json\", opid + \".json\"));\n    P.setProperty(\"signe-\" + o.i, JSON.stringify({nom, date, heure, op:opid}));\n    try { avis(R, o, nom, date, heure, img); } catch(er){ console.warn(\"avis : \" + er); }\n    return {ok:true, etat:\"signe\", nom, date, heure};\n  } finally { lock.releaseLock(); }\n}\n\n/* Courriel à l'entreprise : qui a signé, quand, et l'image de la signature */\nfunction avis(R, o, nom, date, heure, img){\n  const to = String(R.courriel || \"\").trim() || Session.getEffectiveUser().getEmail(); if (!to) return;\n  const titre = R.titreDevis || \"Soumission\";\n  MailApp.sendEmail({to, name:\"Comptabilité\", subject:titre + \" \" + o.n + \" signée par \" + nom,\n    body:nom + \" a signé en ligne \" + (titre === \"Devis\" ? \"le devis \" : \"la soumission \") + o.n + (o.c && o.c.toLowerCase() !== nom.toLowerCase() ? \" (client : \" + o.c + \")\" : \"\") +\n      \", au montant de \" + argent(o.t) + \", le \" + dLong(date) + \" à \" + heure.replace(\":\", \" h \") + \".\\n\\n\" +\n      \"Elle passera à « acceptée » dans ton application Comptabilité, avec la signature sur le PDF, la prochaine fois que tu l'ouvriras.\\n\\nL'image de la signature est jointe.\",\n    attachments:[Utilities.newBlob(img, \"image/jpeg\", \"signature \" + o.n + \".jpg\")]});\n}\n\n/* Pour vérifier l'installation dans l'éditeur : choisis « test » puis clique Exécuter. Google te demande les autorisations. */\nfunction test(){ const d = dossier(); console.log(d ? \"Dossier trouvé : \" + d.getName() + \" (\" + d.getId() + \")\" : \"Dossier Comptabilite introuvable\"); MailApp.getRemainingDailyQuota(); }\n";
+async function signerPing(url){
+  try { const r = await fetch(url.replace(/[?#].*$/, "") + "?a=ping", {cache:"no-store"}); if (!r.ok) return {ok:false, err:"http", code:r.status}; return await r.json(); }
+  catch(e){ return {ok:false, err:"reseau"}; }
+}
+function openSigner(){
+  const r = R(), compte = r.courriel ? "<b>" + esc(r.courriel) + "</b>" : "le compte Google de l'entreprise";
+  openForm("Signature en ligne des soumissions", '<p class="muted small">Un petit service Google, dans ton propre compte, reçoit les signatures de tes clients et les dépose dans ton dossier Comptabilite. C\'est gratuit. À faire une seule fois, environ 3 minutes.</p>' +
+    '<ol class="sg-steps">' +
+    '<li><b>Copie le code du service.</b><div><button class="btn sm" type="button" id="sg-copy">' + ico("i-copy") + "Copier le code</button></div></li>" +
+    '<li><b>Ouvre Google Apps Script</b> avec ' + compte + ' : <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">nouveau projet sur script.google.com</a>. Efface le texte déjà écrit, colle le code (Ctrl+V), puis clique sur l\'icône 💾 <b>Enregistrer</b>.</li>' +
+    '<li><b>Mets-le en ligne.</b> En haut à droite : <b>Déployer</b> › <b>Nouveau déploiement</b>. Clique la roue dentée ⚙ à côté de « Sélectionner le type » › <b>Application Web</b>. « Exécuter en tant que » : <b>Moi</b>. « Qui a accès » : <b>Tout le monde</b>. Clique <b>Déployer</b>, puis <b>Autoriser l\'accès</b> : choisis ton compte, clique <b>Paramètres avancés</b> › <b>Accéder à … (non sécurisé)</b> › <b>Autoriser</b>. C\'est ton propre service.</li>' +
+    '<li><b>Copie l\'URL de l\'application Web</b> (elle se termine par <code>/exec</code>) et colle-la ici :<input id="sg-url" class="ctl" type="url" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></li></ol>' +
+    '<div class="banner info" id="sg-res" hidden></div>',
+    async () => {
+      const url = $("sg-url").value.trim(), res = $("sg-res"), say = h => { res.innerHTML = "<span>" + h + "</span>"; res.hidden = false; };
+      if (!signerId(url)) return "Colle l'URL de l'application Web : elle commence par https://script.google.com/macros/s/ et se termine par /exec.";
+      const ok = await mutate(d => { d.reglages.signerUrl = url; if (!/^[0-9a-f]{32,}$/.test(String(d.reglages.signerCle || ""))) d.reglages.signerCle = Array.from(crypto.getRandomValues(new Uint8Array(24)), b => b.toString(16).padStart(2, "0")).join(""); });
+      if (!ok) return "Enregistrement impossible.";
+      say("Vérification du service…");
+      const p = await signerPing(url);
+      if (p && p.ok && p.cle){ toast("Signature en ligne activée"); say("<b>✓ Service vérifié.</b> Les prochaines soumissions envoyées auront le bouton « Signer en ligne »."); return false; }
+      if (p && p.ok) { say("<b>✓ Service trouvé.</b> Google Drive est en train d'enregistrer la clé dans tes livres : le service sera prêt dans une minute. Les prochaines soumissions auront le bouton « Signer en ligne »."); toast("Signature en ligne activée"); return false; }
+      say(p && p.err === "dossier" ? "<b>Le service ne trouve pas ton dossier Comptabilite.</b> Vérifie qu'il est déployé avec le compte Google où se trouve ton dossier Comptabilite (Google Drive)." :
+        "<b>Le service ne répond pas encore.</b> Vérifie l'étape 3 : « Qui a accès » doit être <b>Tout le monde</b>. L'adresse est quand même enregistrée ; reviens cliquer « Vérifier » dans un moment.");
+      return false;
+    }, {wide:true, ok:"Vérifier et activer", cancel:"Fermer", ready: () => {
+      $("sg-url").value = r.signerUrl || "";
+      $("sg-copy").onclick = async () => { try { await navigator.clipboard.writeText(SIGNER_GS); toast("Code copié : colle-le dans Apps Script avec Ctrl+V"); } catch(e){ toast("Copie impossible"); } };
+    }});
+}
+$("r-sg").addEventListener("click", openSigner);
+$("r-sg-rm").addEventListener("click", () => mutate(d => { d.reglages.signerUrl = ""; }, "Signature en ligne désactivée : les soumissions n'auront plus le bouton"));
 /* Tarifs enregistrés */
 const tarifTxt = t => (LTM[t.type] || LTM.service).l + " · " + t.description + " · " + fmt(t.prix) + (t.unite ? " / " + t.unite : "") + (t.ttc ? " (taxes incl.)" : "");
 function renderTarifsReglages(){

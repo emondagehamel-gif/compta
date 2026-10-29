@@ -447,7 +447,7 @@ const TYPES = {depense:"Dépense", revenu:"Revenu", transfert:"Transfert", tvh:"
 const DEF_REGLAGES = {nom:"Mon entreprise", numero:"", structure:"societe", province:"QC", regime:"federal", dateConstitution:"", obligations:{}, finExercice:12, exerciceConfirme:false, inscritTVH:true, inscritTVQ:true, tauxTPS:5, tauxTVQ:9.975, tauxTVH:13, frequence:"trimestrielle",
   dateOuverture:"2026-01-01", tvhOuverture:0, capitalActions:0, tauxKm:{"2025":[0.72,0.66], "2026":[0.73,0.67]}, compteKm:"c-actionnaire", declarations:{},
   adresse:"", telephone:"", courriel:"", noTPS:"", noTVQ:"", termes:30, validiteDevis:30, messageFacture:"Merci de votre confiance!", logo:"",
-  slogan:"", neq:"", modePaiement:"", signatureCie:"", styleDoc:"nature", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
+  slogan:"", neq:"", modePaiement:"", signatureCie:"", signerUrl:"", signerCle:"", styleDoc:"nature", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
 const COLLECTIONS = ["comptes","transactions","fournisseurs","projets","km","rapprochements","clients","factures","devis","agenda","equipements","produits","lieux"];
 function normalize(d){
   d = d && typeof d === "object" ? d : {};
@@ -658,14 +658,15 @@ function wrapText(s, size, bold, maxW){
   return out;
 }
 function PDF(){
-  const W = 612, H = 792, pages = [], imgs = [], draws = [];
-  let ops = null, cv = null;
+  const W = 612, H = 792, pages = [], imgs = [], draws = [], links = [];
+  let ops = null, cv = null, lk = null;
   const n = v => String(Math.round(v * 100) / 100);
   const col = c => { const h = String(c).replace("#", ""); return [0, 2, 4].map(i => n(parseInt(h.slice(i, i + 2), 16) / 255)).join(" "); };
   const P = {
     W, H, pages, draws,
-    page(){ ops = []; pages.push(ops); cv = []; draws.push(cv); return P; },
-    at(i){ ops = pages[i]; cv = draws[i]; return P; },
+    page(){ ops = []; pages.push(ops); cv = []; draws.push(cv); lk = []; links.push(lk); return P; },
+    at(i){ ops = pages[i]; cv = draws[i]; lk = links[i]; return P; },
+    link(x, y, w, h, url){ if (lk && url) lk.push({x, y, w, h, url:String(url)}); },
     text(x, y, s, o){ o = o || {}; const size = o.size || 10, bold = !!o.bold, ls = Number(o.ls) || 0, nc = [...pdfChars(s)].length, w = textW(s, size, bold) + (nc > 1 ? ls * (nc - 1) : 0); let tx = x; if (o.align === "right") tx = x - w; else if (o.align === "center") tx = x - w / 2;
       ops.push((o.color ? col(o.color) + " rg " : "") + "BT /" + (bold ? "F2" : o.italic ? "F3" : "F1") + " " + n(size) + " Tf " + (ls ? n(ls) + " Tc " : "") + n(tx) + " " + n(H - y) + " Td (" + pdfStr(s) + ") Tj " + (ls ? "0 Tc " : "") + "ET" + (o.color ? " 0 0 0 rg" : ""));
       cv.push({k:"t", x:tx, y, s:pdfChars(s), size, bold, italic:!!o.italic, ls, color:o.color || "#000000"}); return w; },
@@ -691,10 +692,13 @@ function PDF(){
       obj(5, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>"]);
       imgs.forEach((im, i) => obj(6 + i, ["<< /Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + im.data.length + " >>\nstream\n", im.data, "\nendstream"]));
       const xo = imgs.length ? " /XObject << " + imgs.map((_, i) => "/Im" + (i + 1) + " " + (6 + i) + " 0 R").join(" ") + " >>" : "";
-      pages.forEach((o, i) => { const pn = first + i * 2, c = o.join("\n");
-        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>" + xo + " >> /Contents " + (pn + 1) + " 0 R >>"]);
+      const annBase = first + pages.length * 2, ann = []; links.forEach((L, i) => L.forEach(l => ann.push({i, l})));
+      pages.forEach((o, i) => { const pn = first + i * 2, c = o.join("\n"), my = ann.map((a, k) => a.i === i ? (annBase + k) + " 0 R" : "").filter(Boolean);
+        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>" + xo + " >>" + (my.length ? " /Annots [" + my.join(" ") + "]" : "") + " /Contents " + (pn + 1) + " 0 R >>"]);
         obj(pn + 1, ["<< /Length " + c.length + " >>\nstream\n" + c + "\nendstream"]); });
-      const total = first + pages.length * 2, xref = len;
+      ann.forEach((a, k) => { const l = a.l, u = l.url.replace(/[^\x21-\x7e]/g, ch => encodeURIComponent(ch)).replace(/[\\()]/g, "\\$&");
+        obj(annBase + k, ["<< /Type /Annot /Subtype /Link /Rect [" + [l.x, H - l.y - l.h, l.x + l.w, H - l.y].map(n).join(" ") + "] /Border [0 0 0] /F 4 /A << /Type /Action /S /URI /URI (" + u + ") >> >>"]); });
+      const total = annBase + ann.length, xref = len;
       let x = "xref\n0 " + total + "\n0000000000 65535 f \n"; for (let i = 1; i < total; i++) x += String(offs[i]).padStart(10, "0") + " 00000 n \n";
       push(x + "trailer\n<< /Size " + total + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF\n");
       const out = new Uint8Array(len); let p = 0; chunks.forEach(c => { out.set(c, p); p += c.length; }); return out;
@@ -744,10 +748,10 @@ function docGroupes(doc){
   const out = []; LT.forEach(t => { const L = (doc.lignes || []).filter(l => ligneType(l) === t.k); if (L.length) out.push({t, lignes: L, mt: r2(L.reduce((s, l) => s + ligneMt(l), 0))}); }); return out;
 }
 function docMessage(kind, doc){
-  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind);
+  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind), lien = isF ? "" : signLien(kind, doc);
   return "Bonjour" + (cli ? " " + cli : "") + ",\n\nVoici " + G.la + " " + doc.numero + (r.nom ? (/^[aeiouyàâäéèêëîïôöûüù]/i.test(r.nom) ? " d'" : " de ") + r.nom : "") + " : " + fmt(t.total) + (t.tx || t.tq ? " taxes incluses" : "") +
     (isF ? (doc.echeance && doc.echeance > doc.date ? ", payable d'ici le " + dLong(doc.echeance) : ", payable à réception") : ", valide jusqu'au " + dLong(doc.echeance)) + "." +
-    (!isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
+    (lien ? "\n\nPour l'accepter, signez-" + (G.t === "Devis" ? "le" : "la") + " en ligne, avec le doigt (1 minute) :\n" + lien + "\n\nVous pouvez aussi simplement répondre à ce message." : !isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
 }
 const DOC_COUL = {g:"#2F6B3B", tint:"#EDF4EE", ink:"#1E2622", mut:"#67716B", line:"#D2DBD4"};
 function docTitre(kind){ return kind === "facture" ? "Facture" : (R().titreDevis || "Devis"); }
@@ -842,7 +846,7 @@ function docLayoutOrigine(kind, doc, logo, sigs){
       need(116); y += 14; h2("Confirmation du client");
       wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
       y += 6; const cw2 = (W - 30) / 2; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw2 - 8, 32); P.line(M, y + 34, M + cw2, y + 34, {color:"#8A948E", w:0.7});
-      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + (sg.appareil ? ", sur " + sg.appareil : ""), {size:7.5, italic:true, color:C.mut}); y += 62;
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + sigVia(sg), {size:7.5, italic:true, color:C.mut}); y += 62;
     }
   } else {
     need(70); y += 14; h2("Modalités");
@@ -850,13 +854,15 @@ function docLayoutOrigine(kind, doc, logo, sigs){
     const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
     if (pay) bullet([["Mode de paiement : "], [pay, true]]);
     /* Acceptation */
+    const lien = sg ? "" : signLien(kind, doc);
     need(120); y += 8; h2("Acceptation " + G.de);
     wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
     y += 8;
-    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut});
+    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, lien && x === rx2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
       T(x, y + 67, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 80, pied, {size:7.5, italic:true, color:C.mut}); };
     bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
-    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? "Signé électroniquement" + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil ? ", sur " + sg.appareil : "") : "");
+    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
+    if (lien) sigBoutonPDF(P, rx2 + 4, y + 9, lien, C.g);
     y += sg ? 84 : 72;
   }
   /* Remerciements */
@@ -1001,20 +1007,22 @@ function docLayoutStyle(kind, doc, logo, sigs, st){
       need(112); y += 12; h2("Confirmation du client");
       wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
       y += 6; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw - 8, 32); ligneSig(M, y + 34, cw);
-      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5}); T(M, y + 58, "Signé électroniquement" + (sg.appareil ? ", sur " + sg.appareil : ""), {size:7.5, italic:true, color:C.mut}); y += 62;
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5}); T(M, y + 58, "Signé électroniquement" + sigVia(sg), {size:7.5, italic:true, color:C.mut}); y += 62;
     }
   } else {
     need(64); y += 8; h2("Modalités");
     String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
     const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
     if (pay) bullet([["Mode de paiement : "], [pay, true]]);
+    const lien = sg ? "" : signLien(kind, doc);
     need(114); y += 6; h2("Acceptation " + G.de);
     wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
     y += 8;
-    const bloc = (x, tt, img, date, pied) => { T(x, y, tt, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); ligneSig(x, y + 40, cw); T(x, y + 52, "Signature", {size:8.5, color:C.mut});
+    const bloc = (x, tt, img, date, pied) => { T(x, y, tt, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); ligneSig(x, y + 40, cw); T(x, y + 52, lien && x === x2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
       T(x, y + 66, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 79, pied, {size:7.5, italic:true, color:C.mut}); };
     bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
-    bloc(x2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? "Signé électroniquement" + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil ? ", sur " + sg.appareil : "") : "");
+    bloc(x2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
+    if (lien) sigBoutonPDF(P, x2 + 4, y + 9, lien, C.g);
     y += sg ? 84 : 72;
   }
   /* ---------- Remerciements ---------- */
@@ -1027,6 +1035,53 @@ function docLayoutStyle(kind, doc, logo, sigs, st){
     if (MOD){ P.rect(0, P.H - 34, P.W, 34, C.g); T(P.W / 2, P.H - 14, pied, {size:8.5, color:"#FFFFFF", align:"center"}); if (pg) T(RX, P.H - 14, pg, {size:7.5, color:C.pale, align:"right"}); }
     else { if (!EPU) P.line(M, P.H - 46, RX, P.H - 46, {color:C.pale, w:0.8}); T(P.W / 2, P.H - 30, pied, {size:8.3, color:C.mut, align:"center"}); if (pg) T(RX, P.H - 30, pg, {size:7.5, color:C.mut, align:"right"}); } });
   return P;
+}
+const SIGN_PAGE = (typeof window !== "undefined" && window.__SIGNER) || "https://emondagehamel-gif.github.io/compta/signer.html";
+const SCRIPT_BASE = (typeof window !== "undefined" && window.__SCRIPT) || "https://script.google.com/macros/s/";
+const SHA256 = (() => {
+  const primes = []; for (let n = 2; primes.length < 64; n++){ if (primes.every(p => n % p)) primes.push(n); }
+  const frac = x => (x - Math.floor(x)) * 4294967296 >>> 0;
+  const K = primes.map(p => frac(Math.cbrt(p))), H0 = primes.slice(0, 8).map(p => frac(Math.sqrt(p)));
+  return bytes => {
+    const l = bytes.length, nb = ((l + 9 + 63) >> 6) << 6, m = new Uint8Array(nb); m.set(bytes); m[l] = 0x80;
+    const dv = new DataView(m.buffer); dv.setUint32(nb - 4, (l * 8) >>> 0); dv.setUint32(nb - 8, Math.floor(l / 536870912));
+    const h = H0.slice(), w = new Uint32Array(64), r = (x, k) => (x >>> k) | (x << (32 - k));
+    for (let o = 0; o < nb; o += 64){
+      for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+      for (let i = 16; i < 64; i++){ const a = w[i - 15], b = w[i - 2]; w[i] = (w[i - 16] + (r(a, 7) ^ r(a, 18) ^ (a >>> 3)) + w[i - 7] + (r(b, 17) ^ r(b, 19) ^ (b >>> 10))) >>> 0; }
+      let [a, b, c, d, e, f, g, hh] = h;
+      for (let i = 0; i < 64; i++){
+        const t1 = (hh + (r(e, 6) ^ r(e, 11) ^ r(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) >>> 0, t2 = ((r(a, 2) ^ r(a, 13) ^ r(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+        hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      [a, b, c, d, e, f, g, hh].forEach((v, i) => { h[i] = (h[i] + v) >>> 0; });
+    }
+    const out = new Uint8Array(32), ov = new DataView(out.buffer); h.forEach((v, i) => ov.setUint32(i * 4, v)); return out;
+  };
+})();
+function hmacHex(key, msg){
+  const enc = new TextEncoder(); let k = enc.encode(key); if (k.length > 64) k = SHA256(k);
+  const kb = new Uint8Array(64); kb.set(k); const m = enc.encode(msg), a = new Uint8Array(64 + m.length), b = new Uint8Array(96);
+  a.set(kb.map(x => x ^ 0x36)); a.set(m, 64); b.set(kb.map(x => x ^ 0x5c)); b.set(SHA256(a), 64);
+  return Array.from(SHA256(b), x => x.toString(16).padStart(2, "0")).join("");
+}
+function signerId(url){
+  const u = String(url == null ? R().signerUrl || "" : url).trim(), b = SCRIPT_BASE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = u.match(new RegExp("^" + b + "([\\w-]{20,200})/exec/?(?:[?#].*)?$")); return m ? m[1] : "";
+}
+const signerPret = () => !!(signerId() && /^[0-9a-f]{32,}$/.test(String(R().signerCle || "")));
+const signMsg = o => ["v1", o.i, o.n, encodeURIComponent(o.c), o.t, o.e, encodeURIComponent(o.en)].join("|");
+function signLien(kind, doc){
+  if (kind !== "devis" || !doc || !doc.id || doc.signature || ["facture", "refuse"].includes(doc.statut) || !signerPret()) return "";
+  const r = R(), o = {i: String(doc.id), n: String(doc.numero || ""), c: String(doc.client || "").trim(), t: String(Math.round(docTotals(doc).total * 100)), e: String(doc.echeance || ""), en: String(r.nom || "").trim()};
+  const q = new URLSearchParams({s: signerId(), i: o.i, n: o.n, c: o.c, t: o.t, e: o.e, en: o.en, k: hmacHex(String(r.signerCle), signMsg(o)).slice(0, 32)});
+  return SIGN_PAGE + "#" + q.toString();
+}
+const sigVia = sg => sg && sg.appareil ? (sg.appareil === "en ligne" ? " en ligne" : ", sur " + sg.appareil) : "";
+const sigPied = sg => "Signé électroniquement" + (sg.appareil === "en ligne" ? " en ligne" : "") + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil && sg.appareil !== "en ligne" ? ", sur " + sg.appareil : "");
+function sigBoutonPDF(P, x, y, url, g){
+  const w = 152, h = 26;
+  P.rrect(x, y, w, h, 6, {fill: g}); P.text(x + w / 2, y + 17, "Signer en ligne  ›", {size: 10.5, bold: true, color: "#FFFFFF", align: "center"}); P.link(x, y, w, h, url);
 }
 function docPDF(kind, doc, logo, sigs){ return docLayout(kind, doc, logo, sigs).bytes(); }
 function sigImage(P, img, x, y, w, h){ let iw = img.w, ih = img.h, k = Math.min(w / iw, h / ih); iw *= k; ih *= k; P.image(img, x, y + (h - ih), iw, ih); }
@@ -1326,12 +1381,15 @@ function applyOp(d, op){
       });
       res.msg = x.msg || "Modification faite au téléphone"; break; }
     case "signature": {
-      const L = x.kind === "devis" ? d.devis : d.factures, e = L.find(v => v.id === x.id); if (!e || !photos[0]) break;
+      const L = x.kind === "devis" ? d.devis : d.factures, e = L.find(v => v.id === x.id), web = x.appareil === "en ligne";
+      if (!e && web && photos[0] && Date.now() - new Date(now).getTime() < 3 * 864e5){ res.attendre = true; break; }
+      if (!e || !photos[0]) break;
+      if (web && e.signature){ res.msg = "Signature en ligne ignorée : " + e.numero + " était déjà signée"; break; }
       const to = "signatures/" + fileSafe(e.numero + " " + (e.client || "")) + "-" + String(op.id).slice(-4) + (extOf(photos[0]) || ".jpg");
       res.moves.push({from:"telephone/" + photos[0], to});
-      e.signature = {fichier: to, nom: String(x.nom || e.client || "").trim().slice(0, 80), date: x.date || today(), heure: String(x.heure || "").slice(0, 5), signeLe: x.signeLe || now, appareil: "téléphone"};
+      e.signature = {fichier: to, nom: String(x.nom || e.client || "").trim().slice(0, 80), date: x.date || today(), heure: String(x.heure || "").slice(0, 5), signeLe: x.signeLe || now, appareil: web ? "en ligne" : "téléphone"};
       if (x.kind === "devis" && (!e.statut || e.statut === "ouvert")) e.statut = "accepte";
-      res.pdfs.push([x.kind === "devis" ? "devis" : "facture", e.id]); res.msg = "Signature du client : " + e.numero + " (" + e.signature.nom + ")"; break; }
+      res.pdfs.push([x.kind === "devis" ? "devis" : "facture", e.id]); res.msg = (web ? "Signée en ligne par le client : " : "Signature du client : ") + e.numero + " (" + e.signature.nom + ")"; break; }
     case "fichier": { const to = safePath(x.to); if (to && photos[0]) res.moves.push({from:"telephone/" + photos[0], to}); break; }
     case "deplacer": { const a = safePath(x.from), b = safePath(x.to); if (a && b) res.moves.push({from:a, to:b}); break; }
     case "fichier-suppr": { const p = safePath(x.path); if (p) res.removes.push(p); break; }

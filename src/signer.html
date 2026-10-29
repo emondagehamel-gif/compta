@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151D19" media="(prefers-color-scheme: dark)">
+<title>Signer la soumission</title>
+<link rel="icon" href="icon-feuille-192.png" type="image/png">
+<style>
+:root{
+  --bg:#F2F5F1; --surface:#FFFFFF; --sunk:#F5F8F4; --ink:#16221D; --ink-2:#33423B; --muted:#5F6F67; --line:#E0E7E1; --line-strong:#C7D1C9;
+  --accent:#2C6B39; --accent-2:#3F8C4D; --accent-ink:#FFFFFF; --accent-soft:#E5F1E6;
+  --neg:#B23A2E; --neg-soft:#FBE8E4; --warn:#8F5E00; --warn-soft:#FBF0D6;
+  --font:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-d:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --r:14px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E1411; --surface:#151D19; --sunk:#111814; --ink:#E5EDE7; --ink-2:#C4D0C9; --muted:#93A49B; --line:#25302A; --line-strong:#37453E;
+  --accent:#8FD09C; --accent-2:#6DB87C; --accent-ink:#0C1A10; --accent-soft:#18301F;
+  --neg:#F2958A; --neg-soft:#3A1F1B; --warn:#EAC06A; --warn-soft:#352A12; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh;padding:20px 16px calc(28px + env(safe-area-inset-bottom,0px))}
+main{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--font-d);font-size:1.3rem;font-weight:650;margin:0;letter-spacing:-.005em}
+.head{display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(160deg,#3F8C4D,#235A2F);color:#FFFFFF;display:grid;place-items:center;flex:none;box-shadow:0 1px 2px rgba(20,60,30,.25)}
+.head p{margin:2px 0 0;color:var(--muted);font-size:.92rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(16,40,24,.04)}
+.kv{display:flex;flex-direction:column;gap:8px;margin:0}
+.kv div{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.kv dt{color:var(--muted);font-size:.92rem}
+.kv dd{margin:0;font-weight:600;text-align:right;overflow-wrap:anywhere}
+.total{border-top:1px solid var(--line);padding-top:10px}
+.total dd{font-size:1.35rem;color:var(--accent);font-family:var(--font-d)}
+.note{margin:0;color:var(--muted);font-size:.88rem}
+.lab{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;display:block;margin-bottom:6px}
+input[type=text]{width:100%;font:inherit;color:var(--ink);background:var(--sunk);border:1px solid var(--line-strong);border-radius:10px;padding:11px 12px}
+input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.pad{position:relative;border:1.5px dashed var(--line-strong);border-radius:12px;background:#FFFFFF;touch-action:none;height:190px;overflow:hidden}
+.pad canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.pad .ph{position:absolute;inset:auto 0 18px;text-align:center;color:#9AA59E;font-size:.9rem;pointer-events:none}
+.pad .base{position:absolute;left:18px;right:18px;bottom:44px;border-bottom:1px solid #CBD3CD;pointer-events:none}
+.pad.on .ph{display:none}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.check{display:flex;gap:12px;align-items:flex-start;font-size:.95rem;cursor:pointer}
+.check input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:600;border-radius:12px;padding:12px 18px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer;text-decoration:none;min-height:46px}
+.btn.prim{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);width:100%;font-size:1.05rem;min-height:52px}
+.btn.prim[disabled]{opacity:.45;cursor:default}
+.btn.link{border:none;background:none;color:var(--accent);padding:4px 2px;min-height:0}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.banner{border-radius:12px;padding:12px 14px;font-size:.95rem}
+.banner.err{background:var(--neg-soft)}
+.banner.warn{background:var(--warn-soft)}
+.banner b{display:block;margin-bottom:2px}
+.status{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 8px}
+.status p{margin:0;color:var(--muted);max-width:420px}
+.status b{font-size:1.1rem}
+.spin{width:30px;height:30px;border-radius:50%;border:3px solid var(--accent-soft);border-top-color:var(--accent);animation:sp .9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.done{width:60px;height:60px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.foot{color:var(--muted);font-size:.8rem;text-align:center;margin:0}
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <div class="logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 100 100"><g transform="translate(50 50) scale(1.42) translate(-48 -52)"><path d="M30 70C17.6 40 55.9 29.9 74 26C70.1 44.1 60 82.4 30 70Z" fill="currentColor"/><path d="M30.5 69.5L21 79" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"/><path d="M33 67C44 56 55 45 66.5 33.5" fill="none" stroke="#2C6B39" stroke-width="3.2" stroke-linecap="round"/></g></svg></div>
+    <div><h1 id="titre">Signer la soumission</h1><p id="en"></p></div>
+  </div>
+
+  <section class="card" id="resume" hidden>
+    <dl class="kv">
+      <div><dt>Soumission</dt><dd id="r-num"></dd></div>
+      <div><dt>Client</dt><dd id="r-cli"></dd></div>
+      <div id="r-val-l"><dt>Valide jusqu'au</dt><dd id="r-val"></dd></div>
+      <div class="total"><dt>Montant total</dt><dd id="r-tot"></dd></div>
+    </dl>
+    <p class="note">Le détail des travaux et des prix est dans le PDF joint au courriel.</p>
+  </section>
+
+  <section class="card" id="st"><div class="status"><div class="spin"></div><b>Ouverture de la soumission…</b></div></section>
+
+  <form class="card" id="f" hidden novalidate>
+    <label><span class="lab">Votre nom</span><input id="nom" type="text" autocomplete="name" maxlength="80"></label>
+    <div>
+      <div class="row"><span class="lab">Votre signature</span><button type="button" class="btn link" id="effacer" hidden>Effacer</button></div>
+      <div class="pad" id="pad"><div class="base"></div><div class="ph">Signez ici avec le doigt</div><canvas id="cv" aria-label="Zone de signature"></canvas></div>
+    </div>
+    <label class="check"><input type="checkbox" id="ok"><span id="ok-t"></span></label>
+    <div class="banner err" id="err" hidden></div>
+    <button type="submit" class="btn prim" id="go" disabled>Signer et accepter</button>
+  </form>
+
+  <section class="card" id="fini" hidden><div class="status"><div class="done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><b id="fini-b">Merci, c'est signé!</b><p id="fini-t"></p></div></section>
+
+  <p class="foot" id="pied">Signature électronique sécurisée. Votre signature est transmise uniquement à l'entreprise.</p>
+</main>
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[c]));
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const dLong = s => { const m = String(s || "").match(/^(\d{4})-(\d\d)-(\d\d)$/); return m ? Number(m[3]) + (m[3] === "01" ? "er" : "") + " " + MOIS[Number(m[2]) - 1] + " " + m[1] : ""; };
+const heure = s => String(s || "").replace(/^0?(\d+):(\d\d)$/, "$1 h $2");
+const argent = c => (Number(c) / 100).toLocaleString("fr-CA", {minimumFractionDigits:2, maximumFractionDigits:2}) + " $";
+const q = new URLSearchParams(location.hash.slice(1));
+const L = {s:q.get("s") || "", i:q.get("i") || "", n:q.get("n") || "", c:q.get("c") || "", t:q.get("t") || "", e:q.get("e") || "", en:q.get("en") || "", k:q.get("k") || ""};
+const BASE = window.__SCRIPT || "https://script.google.com/macros/s/";
+const URL_S = /^[\w-]{20,200}$/.test(L.s) ? BASE + L.s + "/exec" : "";
+const quoi = "la soumission";
+let tel = "", busy = false;
+
+function show(id){ ["st", "f", "fini"].forEach(x => { $(x).hidden = x !== id; }); }
+function status(title, text){ $("st").innerHTML = '<div class="status"><b>' + title + "</b>" + (text ? "<p>" + text + "</p>" : "") + "</div>"; show("st"); }
+const appel = tel => tel ? " Appelez-nous au <a href=\"tel:" + esc(tel.replace(/[^\d+]/g, "")) + "\">" + esc(tel) + "</a>." : "";
+function erreur(r){
+  const en = esc(L.en || "l'entreprise");
+  if (r.err === "deja") return status("Cette soumission est déjà signée", "Signée par " + esc(r.nom) + (r.date ? " le " + dLong(r.date) + (r.heure ? " à " + heure(r.heure) : "") : "") + ". Merci! " + en + " a bien reçu la signature.");
+  if (r.err === "expire") return status("Cette soumission est expirée", "Elle était valide jusqu'au " + dLong(r.e || L.e) + ". Communiquez avec " + en + " pour une soumission à jour." + appel(r.tel || tel));
+  if (r.err === "modifiee") return status("Cette soumission a été modifiée", "Le montant a changé depuis l'envoi de ce lien. Utilisez le lien du courriel le plus récent, ou communiquez avec " + en + "." + appel(r.tel || tel));
+  if (r.err === "ferme") return status("Cette soumission n'est plus ouverte", "Communiquez avec " + en + " pour en parler." + appel(r.tel || tel));
+  if (r.err === "lien") return status("Ce lien n'est pas valide", "Il a peut-être été coupé ou modifié. Ouvrez le lien directement depuis le courriel reçu, ou communiquez avec " + en + ".");
+  if (r.err === "dossier" || r.err === "config") return status("Signature en ligne indisponible", "Le service de signature de " + en + " n'est pas prêt. Communiquez avec l'entreprise, ou répondez au courriel pour accepter la soumission.");
+  return null;
+}
+
+/* Résumé de la soumission (tiré du lien) */
+if (!URL_S || !L.i || !L.k || !/^\d+$/.test(L.t)){ status("Ce lien n'est pas complet", "Ouvrez le lien directement depuis le courriel reçu, ou utilisez le bouton « Signer en ligne » du PDF."); $("pied").hidden = true; return; }
+document.title = "Signer la soumission " + L.n;
+$("en").textContent = L.en; $("titre").textContent = "Signer la soumission";
+$("r-num").textContent = L.n; $("r-cli").textContent = L.c || "—"; $("r-tot").textContent = argent(L.t);
+if (L.e) $("r-val").textContent = dLong(L.e); else $("r-val-l").hidden = true;
+$("resume").hidden = false;
+$("nom").value = L.c;
+$("ok-t").textContent = "J'accepte " + quoi + " " + L.n + (L.en ? (/^[aeiouyàâäéèêëîïôöûüù]/i.test(L.en) ? " d'" : " de ") + L.en : "") + " au montant de " + argent(L.t) + ", et j'autorise les travaux qui y sont décrits.";
+
+/* État : déjà signée, expirée, lien valide ? */
+const qs = new URLSearchParams({a:"etat", s:L.s, i:L.i, n:L.n, c:L.c, t:L.t, e:L.e, en:L.en, k:L.k}).toString();
+fetch(URL_S + "?" + qs, {cache:"no-store"}).then(r => r.json()).then(r => {
+  if (r && r.tel) tel = r.tel;
+  if (r && r.ok) return pret();
+  if (!(r && erreur(r) !== null)) pret();
+}).catch(() => pret());
+
+/* ----- Zone de signature ----- */
+const cv = $("cv"), g = cv.getContext("2d"); let traits = [], cur = null;
+function taille(){ const r = cv.getBoundingClientRect(), k = window.devicePixelRatio || 1; cv.width = Math.round(r.width * k); cv.height = Math.round(r.height * k); g.setTransform(k, 0, 0, k, 0, 0); dessin(); }
+function dessin(){ const r = cv.getBoundingClientRect(); g.clearRect(0, 0, r.width, r.height); g.strokeStyle = "#16221D"; g.lineWidth = 2.6; g.lineCap = "round"; g.lineJoin = "round";
+  traits.forEach(t => { g.beginPath(); t.forEach((p, i) => { if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); }); if (t.length === 1) g.lineTo(t[0][0] + 0.1, t[0][1]); g.stroke(); }); }
+const pt = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+cv.addEventListener("pointerdown", e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = [pt(e)]; traits.push(cur); dessin(); maj(); });
+cv.addEventListener("pointermove", e => { if (!cur) return; e.preventDefault(); (e.getCoalescedEvents ? e.getCoalescedEvents() : [e]).forEach(x => cur.push(pt(x))); dessin(); });
+const fin = () => { cur = null; maj(); }; cv.addEventListener("pointerup", fin); cv.addEventListener("pointercancel", fin);
+$("effacer").onclick = () => { traits = []; dessin(); maj(); };
+window.addEventListener("resize", () => { if (!$("f").hidden) taille(); });
+const longueur = () => traits.reduce((s, t) => s + t.reduce((a, p, i) => i ? a + Math.hypot(p[0] - t[i - 1][0], p[1] - t[i - 1][1]) : a, 0), 0);
+function maj(){ const on = traits.length > 0; $("pad").classList.toggle("on", on); $("effacer").hidden = !on; $("go").disabled = busy || !($("nom").value.trim() && longueur() > 25 && $("ok").checked); }
+$("nom").addEventListener("input", maj); $("ok").addEventListener("change", maj);
+function pret(){ show("f"); taille(); maj(); }
+
+/* Image JPEG de la signature (fond blanc, recadrée) */
+function image(){
+  const pts = traits.flat(), x0 = Math.min(...pts.map(p => p[0])) - 12, y0 = Math.min(...pts.map(p => p[1])) - 12, x1 = Math.max(...pts.map(p => p[0])) + 12, y1 = Math.max(...pts.map(p => p[1])) + 12;
+  const w = Math.max(40, x1 - x0), h = Math.max(30, y1 - y0), k = Math.min(3, 900 / w, 300 / h), c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  const x = c.getContext("2d"); x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, c.width, c.height); x.setTransform(k, 0, 0, k, -x0 * k, -y0 * k);
+  x.strokeStyle = "#16221D"; x.lineWidth = 2.6; x.lineCap = "round"; x.lineJoin = "round";
+  traits.forEach(t => { x.beginPath(); t.forEach((p, i) => { if (i) x.lineTo(p[0], p[1]); else x.moveTo(p[0], p[1]); }); if (t.length === 1) x.lineTo(t[0][0] + 0.1, t[0][1]); x.stroke(); });
+  return c.toDataURL("image/jpeg", 0.9);
+}
+$("f").addEventListener("submit", async e => {
+  e.preventDefault(); if (busy || $("go").disabled) return;
+  busy = true; $("go").disabled = true; $("go").textContent = "Envoi de la signature…"; $("err").hidden = true;
+  let r = null;
+  try { const res = await fetch(URL_S, {method:"POST", body:JSON.stringify(Object.assign({a:"signer"}, L, {nom:$("nom").value.trim(), sig:image()}))}); r = await res.json(); } catch(er){ r = null; }
+  busy = false; $("go").textContent = "Signer et accepter";
+  if (r && r.ok){
+    $("fini-t").innerHTML = esc(L.en || "L'entreprise") + " a bien reçu votre signature pour " + quoi + " " + esc(L.n) + " (" + esc(argent(L.t)) + "), le " + dLong(r.date) + " à " + heure(r.heure) + ".<br>Vous pouvez fermer cette page.";
+    $("resume").hidden = true; show("fini"); return;
+  }
+  if (r && erreur(r) !== null) return;
+  $("err").innerHTML = "<b>La signature n'a pas pu être envoyée</b>" + (r && r.err === "signature" ? "Écrivez votre nom et signez dans le cadre." : "Vérifiez votre connexion Internet, puis appuyez de nouveau sur « Signer et accepter ».");
+  $("err").hidden = false; maj();
+});
+})();
+</script>
+</body>
+</html>

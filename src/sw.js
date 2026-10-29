@@ -1,6 +1,6 @@
 /* Comptabilité : garde l'application dans le téléphone pour qu'elle s'ouvre sans réseau. Version __VERSION__ */
 const CACHE = "compta-__VERSION__";
-const SHELL = ["./", "complet.html", "envoi.html", "manifest.webmanifest", "icon-feuille-192.png", "icon-feuille-512.png", "icon-feuille-maskable.png", "apple-touch-icon-feuille.png"];
+const SHELL = ["./", "complet.html", "envoi.html", "signer.html", "manifest.webmanifest", "icon-feuille-192.png", "icon-feuille-512.png", "icon-feuille-maskable.png", "apple-touch-icon-feuille.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
@@ -12,7 +12,7 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const r = e.request; if (r.method !== "GET") return;
   const u = new URL(r.url); if (u.origin !== self.location.origin) return;
-  const key = r.mode === "navigate" ? (/complet\.html$/.test(u.pathname) ? "complet.html" : /envoi\.html$/.test(u.pathname) ? "envoi.html" : "./") : r;
+  const key = r.mode === "navigate" ? ((u.pathname.match(/(complet|envoi|signer)\.html$/) || [])[0] || "./") : r;
   e.respondWith(caches.open(CACHE).then(async c => {
     const hit = await c.match(key, {ignoreSearch: true});
     const net = (r.mode === "navigate" ? fetch(r.url, {cache: "no-cache", credentials: "same-origin"}) : fetch(r)).then(res => { if (res && res.ok && res.type === "basic") c.put(key, res.clone()); return res; }).catch(() => null);
