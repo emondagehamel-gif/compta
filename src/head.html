@@ -204,4 +204,24 @@ details.more>div{display:flex;flex-direction:column;gap:12px}
 .send-opt{display:flex;gap:12px;align-items:flex-start;text-align:left}
 .send-opt .ic{flex:none;margin-top:3px;color:var(--accent)}
 .send-opt .t small{display:block;color:var(--muted);font-size:.8rem;font-weight:400}
+.sig-ov{position:fixed;inset:0;z-index:300;background:rgba(15,20,18,.55);display:flex;align-items:center;justify-content:center;padding:12px}
+.sig-box{background:#fff;color:#1e2622;border-radius:14px;width:min(720px,100%);max-height:100%;display:flex;flex-direction:column;gap:10px;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.sig-h{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:1.05rem}
+.sig-x{border:0;background:none;font-size:1.7rem;line-height:1;cursor:pointer;color:#67716b;padding:0 4px}
+.sig-t{margin:0;font-size:.92rem;color:#3b453f;line-height:1.45}
+.sig-zone{position:relative;height:min(260px,42vh);border:1.5px dashed #9aa79f;border-radius:10px;background:#fbfcfb;touch-action:none;overflow:hidden}
+.sig-zone canvas{position:absolute;inset:0;touch-action:none}
+.sig-ph{position:absolute;left:16px;top:12px;color:#9aa79f;font-size:.9rem;pointer-events:none}
+.sig-l{position:absolute;left:16px;right:16px;bottom:40px;border-bottom:1.5px solid #c9d2cc;pointer-events:none}
+.sig-n{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:600;color:#67716b}
+.sig-n input{font:inherit;font-size:1rem;font-weight:400;color:#1e2622;background:#fff;padding:10px;border:1px solid #c9d2cc;border-radius:8px}
+.sig-f{display:flex;gap:8px;align-items:center}
+.sig-b{font:inherit;font-weight:600;padding:11px 16px;border-radius:10px;border:1px solid #c9d2cc;background:#fff;color:#1e2622}
+.sig-ok{background:#2f6b3b;border-color:#2f6b3b;color:#fff}
+.sig-ok:disabled{opacity:.45}
+@media (max-width:600px){.sig-ov{padding:0;align-items:flex-end}.sig-box{border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}.sig-zone{height:min(300px,46vh)}}
+body.sig-open{overflow:hidden}
+.sig-done{display:flex;align-items:center;gap:8px;color:var(--pos);font-weight:600;font-size:.9rem;margin:4px 0}
+.sig-done .ic{width:18px;height:18px}
+.btn.sig-go{width:100%;justify-content:center;border-color:var(--accent);color:var(--accent)}
 </style>

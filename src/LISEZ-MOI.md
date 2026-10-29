@@ -19,3 +19,7 @@ Format des changements déposés dans `Comptabilite/telephone/` : voir `POUR-CLA
 ## Soumissions et factures complètes (v3.7)
 
 `devis_core.js` (inséré dans `Comptabilite.html` par `patch5_devis.py`) : lignes par type de frais avec unité, prix taxes incluses, tarifs enregistrés, nouvelle mise en page (`docLayout`, d'après le modèle d'Émondage Hamel) et images JPEG des documents (`docImages`) pour l'envoi par texto, Messenger ou Snapchat. `patch6_tel.py` met à jour le formulaire et l'envoi de l'app terrain (`ui.js`). Tests : `test_devis.py`, `test_devis_tel.py`, `test_integ_devis.py`.
+
+## Signature du client (v3.8)
+
+`sigPad` (dans `devis_core.js`) : pavé de signature à l'écran (doigt, stylet, souris) qui rend une image JPEG. `patch7_signature.py` l'ajoute à l'ordinateur et à la version complète (signature du client, signature de l'entreprise, op `signature`) ; `patch8_tel_sig.py` à l'app terrain. Tests : `test_signature.py`, `test_signature_tel.py`, `test_integ_signature.py`.

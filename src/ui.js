@@ -828,7 +828,8 @@ function docBody(kind, x){
 function sendDoc(kind, x){
   const isF = kind === "facture", G = docGenre(kind), c = clientOf(x) || {}, tel = String(c.telephone || "").replace(/[^\d+]/g, ""), share = !!(navigator.canShare && navigator.share);
   const opt = (k, icon, t, s) => '<button type="button" class="item send-opt" data-send="' + k + '">' + ico(icon) + '<span class="t"><b>' + esc(t) + "</b><small>" + esc(s) + "</small></span></button>";
-  openSheet("Envoyer " + G.la + " " + x.numero, '<p class="muted small">' + esc(x.client) + " · " + esc(fmt(docTotals(x).total)) + '</p><label class="field"><span>Message</span><textarea class="ctl" id="snd-msg" rows="6">' + esc(docMessage(kind, x)) + "</textarea></label>" +
+  x = avecSig(x);
+  openSheet("Envoyer " + G.la + " " + x.numero + (x.signature ? (G.t === "Devis" ? " signé" : " signée") : ""), '<p class="muted small">' + esc(x.client) + " · " + esc(fmt(docTotals(x).total)) + '</p><label class="field"><span>Message</span><textarea class="ctl" id="snd-msg" rows="6">' + esc(docMessage(kind, x)) + "</textarea></label>" +
     '<div class="list">' + (share ? opt("img", "i-image", "Envoyer en image", "Texto, Snapchat, Messenger, Instagram…") + opt("pdf", "i-pdf", "Envoyer le PDF", "Courriel (Gmail), Messenger, WhatsApp, Drive…") : "") +
     (tel ? opt("sms", "i-phone", "Texto à " + c.telephone, "Le message seulement ; ajoute l'image avec « Envoyer en image »") : "") +
     opt("copy", "i-copy", "Copier le message", "Pour le coller où tu veux") + opt("save", "i-download", "Enregistrer le PDF", "Dans Téléchargements") + "</div>",
@@ -837,9 +838,9 @@ function sendDoc(kind, x){
       try { b.disabled = true;
         if (how === "copy"){ await copyTxt(text); return; }
         if (how === "sms"){ location.href = "sms:" + tel + "?body=" + encodeURIComponent(text); mark(); return; }
-        const logo = await phoneLogo();
-        if (how === "save"){ const f = new File([docPDF(kind, x, logo)], name + ".pdf", {type:"application/pdf"}), url = URL.createObjectURL(f), a = document.createElement("a"); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); toast("PDF enregistré dans Téléchargements."); return; }
-        const files = how === "img" ? await docImages(kind, x, logo) : [new File([docPDF(kind, x, logo)], name + ".pdf", {type:"application/pdf"})];
+        const logo = await phoneLogo(), sigs = await phoneSigs(kind, x);
+        if (how === "save"){ const f = new File([docPDF(kind, x, logo, sigs)], name + ".pdf", {type:"application/pdf"}), url = URL.createObjectURL(f), a = document.createElement("a"); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); toast("PDF enregistré dans Téléchargements."); return; }
+        const files = how === "img" ? await docImages(kind, x, logo, sigs) : [new File([docPDF(kind, x, logo, sigs)], name + ".pdf", {type:"application/pdf"})];
         if (!navigator.canShare({files})) throw new Error("ce téléphone ne partage pas ce fichier");
         if (how === "pdf" && c.courriel){ try { await navigator.clipboard.writeText(c.courriel); toast("Courriel du client copié : colle-le dans « À »"); } catch(e){} }
         await navigator.share({files, title: subj, text}); mark(); closeSheet();
@@ -847,19 +848,47 @@ function sendDoc(kind, x){
       finally { b.disabled = false; } }});
 }
 async function copyTxt(v){ try { await navigator.clipboard.writeText(v); toast("Copié"); } catch(e){ toast("Copie impossible : sélectionne le texte."); } }
+/* Signature du client : gardée dans le téléphone, envoyée à l'ordinateur (op « signature »), puis imprimée sur le PDF */
+const telSigOK = () => { const t = (S.d && S.d.telephone) || {}; return Array.isArray(t.ops) && t.ops.includes("signature"); };
+const avecSig = x => x.signature ? x : ((S.sigs || {})[x.id] ? Object.assign({}, x, {signature: S.sigs[x.id].meta}) : x);
+async function driveJpeg(path){
+  const key = "__f:" + path; try { const c = await IDB.get(key); if (c && c.data) return c; } catch(e){}
+  if (!S.ids || !S.ids.root || !online() || !tokOk()) return null;
+  try { const parts = String(path).split("/"); let parent = S.ids.root; for (const p of parts.slice(0, -1)){ parent = await subFolder(parent, p); if (!parent) return null; }
+    const L = await list("name = '" + qs(parts[parts.length - 1]) + "' and " + inP(parent), 2); if (!L[0]) return null;
+    const o = await jpegObj(await downloadBlob(L[0].id)); IDB.put(key, o).catch(() => {}); return o; } catch(e){ return null; }
+}
+async function phoneSigs(kind, x){
+  const out = {client: null, cie: null}; let loc = (S.sigs || {})[x.id];
+  if (!loc){ try { loc = await IDB.get("__sig:" + x.id); } catch(e){} }
+  if (x.signature) out.client = loc && loc.img ? loc.img : (x.signature.fichier ? await driveJpeg(x.signature.fichier) : null);
+  if (kind !== "facture" && R().signatureCie) out.cie = await driveJpeg(R().signatureCie);
+  return out;
+}
+async function fSigner(kind, x){
+  const res = await sigPad({titre: "Signature du client · " + docTitre(kind) + " " + x.numero, texte: sigTexte(kind, x), nom: x.client || ""}); if (!res) return;
+  const meta = {nom: res.nom, date: res.date, heure: res.heure, signeLe: res.signeLe, appareil: "téléphone"};
+  S.sigs = S.sigs || {}; S.sigs[x.id] = {meta, img: res.img};
+  try { await IDB.put("__sig:" + x.id, {meta, img: res.img}); } catch(e){}
+  await sendOp("signature", {kind, id: x.id, nom: res.nom, date: res.date, heure: res.heure, signeLe: res.signeLe}, [{blob: res.blob, type: "image/jpeg", ext: ".jpg"}]);
+  toast(docTitre(kind) + " " + x.numero + " signée par " + res.nom);
+  sendDoc(kind, Object.assign({}, x, {signature: meta}));
+}
+const sigLigne = x => x.signature ? '<p class="sig-done">' + ico("i-pen") + "Signée par " + esc(x.signature.nom) + " le " + esc(dLong(x.signature.date)) + (x.signature.heure ? " à " + esc(hmTxt(x.signature.heure)) : "") + "</p>" : "";
+const sigBouton = (kind, x) => !x.signature && telSigOK() && x.statut !== "annulee" ? '<button class="btn wide sig-go" type="button" data-x="signer">' + ico("i-pen") + "Faire signer le client</button>" : "";
 function openFacture(id){
-  const f = S.d.factures.find(x => x.id === id); if (!f) return; const t = S.tmap[f.transaction];
-  openSheet("Facture " + f.numero, docBody("facture", f) + '<p class="muted small">Le PDF est aussi créé sur l\'ordinateur, dans le dossier factures, quand il reçoit la facture.</p>',
+  const f0 = S.d.factures.find(x => x.id === id); if (!f0) return; const f = avecSig(f0), t = S.tmap[f.transaction];
+  openSheet("Facture " + f.numero, docBody("facture", f) + sigLigne(f) + sigBouton("facture", f) + '<p class="muted small">Le PDF est aussi créé sur l\'ordinateur, dans le dossier factures, quand il reçoit la facture.</p>',
     {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-send") + "Envoyer</button>" + (f.statut !== "annulee" ? '<button class="btn" type="button" data-x="mod">Modifier</button>' : "") + (t && unpaid(t) ? '<button class="btn primary" type="button" data-x="pay">Encaisser</button>' : ""),
      onClick: ev => { const b = ev.target.closest("button"); if (!b) return; if (b.dataset.copy) return copyTxt(b.dataset.copy);
-       const x = b.dataset.x; if (x === "pdf") sendDoc("facture", f); else if (x === "mod") fDoc("facture", f); else if (x === "pay") fEncaisser(f); }});
+       const x = b.dataset.x; if (x === "pdf") sendDoc("facture", f); else if (x === "signer") fSigner("facture", f); else if (x === "mod") fDoc("facture", f0); else if (x === "pay") fEncaisser(f0); }});
 }
 function openDevis(id){
-  const v = S.d.devis.find(x => x.id === id); if (!v) return; const s = devStatus(v);
-  openSheet(docTitre("devis") + " " + v.numero, docBody("devis", v) + (s.k !== "facture" ? '<div class="row"><button class="btn sm" type="button" data-x="accepte">Accepté par le client</button><button class="btn sm" type="button" data-x="refuse">Refusé</button></div>' : ""),
+  const v0 = S.d.devis.find(x => x.id === id); if (!v0) return; const v = avecSig(v0), s = devStatus(v0);
+  openSheet(docTitre("devis") + " " + v.numero, docBody("devis", v) + sigLigne(v) + (s.k !== "facture" ? sigBouton("devis", v) : "") + (s.k !== "facture" && !v.signature ? '<div class="row"><button class="btn sm" type="button" data-x="accepte">Accepté par le client</button><button class="btn sm" type="button" data-x="refuse">Refusé</button></div>' : ""),
     {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-send") + "Envoyer</button>" + (s.k !== "facture" ? '<button class="btn" type="button" data-x="mod">Modifier</button><button class="btn primary" type="button" data-x="fac">Facturer</button>' : ""),
      onClick: async ev => { const b = ev.target.closest("button"); if (!b) return; if (b.dataset.copy) return copyTxt(b.dataset.copy);
-       const x = b.dataset.x; if (x === "pdf") sendDoc("devis", v); else if (x === "mod") fDoc("devis", v); else if (x === "fac") fDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, taxesLigne:!!v.taxesLigne, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});
+       const x = b.dataset.x; if (x === "pdf") sendDoc("devis", v); else if (x === "signer") fSigner("devis", v); else if (x === "mod") fDoc("devis", v0); else if (x === "fac") fDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, taxesLigne:!!v.taxesLigne, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});
        else if (x === "accepte" || x === "refuse"){ closeSheet(); toast("Devis " + (x === "accepte" ? "accepté" : "refusé")); await sendOp("devis-statut", {id:v.id, statut:x}); } }});
 }
 function openClient(id){

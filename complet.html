@@ -711,6 +711,27 @@ details.more .form-grid{padding-bottom:14px}
 .tarifs p{padding:8px 10px;margin:0}
 .tarif-add{flex-wrap:wrap}
 .tarif-add #r-tf-desc{flex:1;min-width:180px}
+/* Signature à l'écran */
+.sig-ov{position:fixed;inset:0;z-index:300;background:rgba(15,20,18,.55);display:flex;align-items:center;justify-content:center;padding:12px}
+.sig-box{background:#fff;color:#1e2622;border-radius:14px;width:min(720px,100%);max-height:100%;display:flex;flex-direction:column;gap:10px;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.sig-h{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:1.05rem}
+.sig-x{border:0;background:none;font-size:1.7rem;line-height:1;cursor:pointer;color:#67716b;padding:0 4px}
+.sig-t{margin:0;font-size:.92rem;color:#3b453f;line-height:1.45}
+.sig-zone{position:relative;height:min(260px,42vh);border:1.5px dashed #9aa79f;border-radius:10px;background:#fbfcfb;touch-action:none;overflow:hidden}
+.sig-zone canvas{position:absolute;inset:0;touch-action:none;cursor:crosshair}
+.sig-ph{position:absolute;left:16px;top:12px;color:#9aa79f;font-size:.9rem;pointer-events:none}
+.sig-l{position:absolute;left:16px;right:16px;bottom:40px;border-bottom:1.5px solid #c9d2cc;pointer-events:none}
+.sig-n{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:600;color:#67716b}
+.sig-n input{font:inherit;font-size:1rem;font-weight:400;color:#1e2622;background:#fff;padding:9px 10px;border:1px solid #c9d2cc;border-radius:8px}
+.sig-f{display:flex;gap:8px;align-items:center}
+.sig-b{font:inherit;font-weight:600;padding:10px 16px;border-radius:10px;border:1px solid #c9d2cc;background:#fff;cursor:pointer;color:#1e2622}
+.sig-ok{background:#2f6b3b;border-color:#2f6b3b;color:#fff}
+.sig-ok:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:600px){.sig-ov{padding:0;align-items:flex-end}.sig-box{border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}.sig-zone{height:min(300px,46vh)}}
+body.sig-open{overflow:hidden}
+.sig-st{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}
+.sig-st .ic{width:16px;height:16px;color:var(--accent)}
+.icon-btn.signed{color:var(--pos)}
 </style>
 </head>
 <body>
@@ -769,6 +790,7 @@ details.more .form-grid{padding-bottom:14px}
   <symbol id="i-tool" viewBox="0 0 24 24"><path d="M4 14h16v6H4zM8 14V9h8v5M10 9V5h4v4"/></symbol>
   <symbol id="i-laptop" viewBox="0 0 24 24"><path d="M5 5h14v10H5zM2.5 19h19"/></symbol>
   <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M9.5 13h5M9.5 16.5h5"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M3 21c3-1 5-3 7-6l7-7a2.1 2.1 0 0 0-3-3l-7 7c-3 2-5 4-6 7z"/><path d="M14 6l3 3"/><path d="M13 21h8"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></symbol>
   <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></symbol>
@@ -1144,6 +1166,7 @@ details.more .form-grid{padding-bottom:14px}
           <div class="field full"><span>Tarifs enregistrés</span><div id="r-tarifs" class="tarifs"></div>
             <div class="inline-form tarif-add"><select id="r-tf-type" class="ctl auto"></select><input id="r-tf-desc" class="ctl" type="text" maxlength="200" placeholder="Description, ex. : Taux horaire, émondeur"><select id="r-tf-unite" class="ctl auto" aria-label="Unité"></select><input id="r-tf-prix" class="ctl fig" type="text" inputmode="decimal" placeholder="Prix" style="width:100px"><label class="check"><input id="r-tf-ttc" type="checkbox"><span>Taxes incluses</span></label><button class="btn sm" type="button" id="r-tf-ok"><svg class="ic"><use href="#i-plus"/></svg>Ajouter</button></div>
             <small>Tes prix habituels (taux horaire, location, déplacement…) : ils s'ajoutent en un clic dans une facture ou une soumission. Tu peux aussi enregistrer une ligne avec l'étoile dans l'éditeur.</small></div>
+          <div class="field full"><span>Signature de l'entreprise (sur les soumissions, facultatif)</span><div class="inline-form"><span class="muted small" id="r-sigcie-st">Aucune</span><button class="btn sm" type="button" id="r-sigcie"><svg class="ic"><use href="#i-pen"/></svg>Dessiner ma signature</button><button class="btn link" type="button" id="r-sigcie-rm" hidden>Retirer</button></div></div>
           <div class="field full"><span>Logo (facultatif)</span><div class="inline-form"><span class="muted small" id="r-logo-st">Aucun logo</span><label class="btn sm"><svg class="ic"><use href="#i-upload"/></svg>Choisir une image<input id="r-logo" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only"></label><button class="btn link" type="button" id="r-logo-rm" hidden>Retirer</button></div></div>
         </div>
         <h2>Taxes de vente</h2>
@@ -1465,7 +1488,7 @@ const TYPES = {depense:"Dépense", revenu:"Revenu", transfert:"Transfert", tvh:"
 const DEF_REGLAGES = {nom:"Mon entreprise", numero:"", structure:"societe", province:"QC", regime:"federal", dateConstitution:"", obligations:{}, finExercice:12, exerciceConfirme:false, inscritTVH:true, inscritTVQ:true, tauxTPS:5, tauxTVQ:9.975, tauxTVH:13, frequence:"trimestrielle",
   dateOuverture:"2026-01-01", tvhOuverture:0, capitalActions:0, tauxKm:{"2025":[0.72,0.66], "2026":[0.73,0.67]}, compteKm:"c-actionnaire", declarations:{},
   adresse:"", telephone:"", courriel:"", noTPS:"", noTVQ:"", termes:30, validiteDevis:30, messageFacture:"Merci de votre confiance!", logo:"",
-  slogan:"", neq:"", modePaiement:"", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
+  slogan:"", neq:"", modePaiement:"", signatureCie:"", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
 const COLLECTIONS = ["comptes","transactions","fournisseurs","projets","km","rapprochements","clients","factures","devis","agenda","equipements","produits","lieux"];
 
 function defaultData(){
@@ -3714,7 +3737,8 @@ const DOC_COUL = {g:"#2F6B3B", tint:"#EDF4EE", ink:"#1E2622", mut:"#67716B", lin
 function docTitre(kind){ return kind === "facture" ? "Facture" : (R().titreDevis || "Devis"); }
 /* Accords : « la facture », « la soumission », mais « le devis » */
 function docGenre(kind){ const t = docTitre(kind), f = t !== "Devis", m = t.toLowerCase(); return {t, m, la: (f ? "la " : "le ") + m, de: (f ? "de la " : "du ") + m, cette: (f ? "Cette " : "Ce ") + m, prep: f ? "préparée" : "préparé", presente: (f ? "la présente " : "le présent ") + m}; }
-function docLayout(kind, doc, logo){
+function docLayout(kind, doc, logo, sigs){
+  sigs = sigs || {}; const sg = doc.signature && doc.signature.nom ? doc.signature : null;
   const r = R(), P = PDF(), C = DOC_COUL, M = 54, RX = P.W - M, W = RX - M, isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
   const G = docGenre(kind), titre = G.t, nom = String(r.nom || "Mon entreprise").trim(), BOTTOM = P.H - 74, grp = docGroupes(doc), multi = grp.length > 1;
   const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16, TXL = doc.taxesLigne ? ligneTaxes(doc) : null;
@@ -3799,6 +3823,12 @@ function docLayout(kind, doc, logo){
     const txt = paid ? "Cette facture a été payée le " + dLong((t.paiement && t.paiement.date) || t.date) + ". Merci!" : (doc.dateTravaux ? "Les travaux décrits ci-dessus ont été complétés le " + dLong(doc.dateTravaux) + ". " : "") + (doc.echeance && doc.echeance > doc.date ? "Le solde est payable d'ici le " + dLong(doc.echeance) + "." : "Le solde est payable à réception de la présente facture.");
     wrapText(txt, 10, false, W).forEach(s => { need(13); T(M, y, s, {size:10}); y += 13; });
     if (pay && !paid){ y += 3; const w = T(M, y, "Mode de paiement :", {size:10, bold:true}); T(M + w + 4, y, pay, {size:10}); y += 13; }
+    if (sg){
+      need(116); y += 14; h2("Confirmation du client");
+      wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
+      y += 6; const cw2 = (W - 30) / 2; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw2 - 8, 32); P.line(M, y + 34, M + cw2, y + 34, {color:"#8A948E", w:0.7});
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + (sg.appareil ? ", sur " + sg.appareil : ""), {size:7.5, italic:true, color:C.mut}); y += 62;
+    }
   } else {
     need(70); y += 14; h2("Modalités");
     String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
@@ -3807,8 +3837,12 @@ function docLayout(kind, doc, logo){
     /* Acceptation */
     need(120); y += 8; h2("Acceptation " + G.de);
     wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
-    y += 8; [[M, nom], [rx2, "Client"]].forEach(([x, s]) => { T(x, y, s, {size:10, bold:true}); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut}); T(x, y + 67, "Date : ______________________", {size:8.5, color:C.mut}); });
-    y += 72;
+    y += 8;
+    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut});
+      T(x, y + 67, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 80, pied, {size:7.5, italic:true, color:C.mut}); };
+    bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
+    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? "Signé électroniquement" + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil ? ", sur " + sg.appareil : "") : "");
+    y += sg ? 84 : 72;
   }
   /* Remerciements */
   const msg = String(doc.message || "").trim(), extra = msg && !/^merci de votre confiance\s*[.!]?$/i.test(msg) ? wrapText(msg, 9, false, W - 40) : [];
@@ -3819,7 +3853,62 @@ function docLayout(kind, doc, logo){
   P.pages.forEach((_, i) => { P.at(i); P.line(M, P.H - 50, RX, P.H - 50, {color:C.line, w:0.6}); T(P.W / 2, P.H - 36, pied + (P.pages.length > 1 ? "   ·   Page " + (i + 1) + " de " + P.pages.length : ""), {size:8.5, color:C.mut, align:"center"}); });
   return P;
 }
-function docPDF(kind, doc, logo){ return docLayout(kind, doc, logo).bytes(); }
+function docPDF(kind, doc, logo, sigs){ return docLayout(kind, doc, logo, sigs).bytes(); }
+/* Signature : image centrée dans sa case, sans la déformer */
+function sigImage(P, img, x, y, w, h){ let iw = img.w, ih = img.h, k = Math.min(w / iw, h / ih); iw *= k; ih *= k; P.image(img, x, y + (h - ih), iw, ih); }
+const hmTxt = h => { const m = String(h || "").match(/^(\d{1,2}):(\d{2})/); return m ? Number(m[1]) + " h " + m[2] : ""; };
+/* Image JPEG prête pour le PDF (une autre sorte d'image est convertie) */
+async function jpegObj(blob){
+  const bm = await createImageBitmap(blob); let data;
+  if (blob.type === "image/jpeg") data = new Uint8Array(await blob.arrayBuffer());
+  else { const c = document.createElement("canvas"); c.width = bm.width; c.height = bm.height; const g = c.getContext("2d"); g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bm, 0, 0); data = new Uint8Array(await (await new Promise(r => c.toBlob(r, "image/jpeg", 0.9))).arrayBuffer()); }
+  return {w: bm.width, h: bm.height, data};
+}
+/* Signature à l'écran : le client signe avec le doigt, un stylet ou la souris. Rend {blob, img, nom, date, heure, signeLe} ou null. */
+function sigPad(o){
+  o = o || {};
+  return new Promise(resolve => {
+    const ov = document.createElement("div"); ov.className = "sig-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", o.titre || "Signature");
+    ov.innerHTML = '<div class="sig-box"><div class="sig-h"><b>' + esc(o.titre || "Signature") + '</b><button type="button" class="sig-x" aria-label="Fermer">×</button></div>' + (o.texte ? '<p class="sig-t">' + esc(o.texte) + "</p>" : "") +
+      '<div class="sig-zone"><canvas></canvas><span class="sig-ph">Signez ici</span><span class="sig-l"></span></div>' +
+      (o.nom !== false ? '<label class="sig-n"><span>Nom de la personne qui signe</span><input type="text" maxlength="80" autocomplete="off" value="' + esc(o.nom || "") + '"></label>' : "") +
+      '<div class="sig-f"><button type="button" class="sig-b sig-clear">Effacer</button><span style="flex:1"></span><button type="button" class="sig-b sig-cancel">Annuler</button><button type="button" class="sig-b sig-ok" disabled>' + esc(o.ok || "Signer") + "</button></div></div>";
+    document.body.appendChild(ov); document.body.classList.add("sig-open");
+    const cv = ov.querySelector("canvas"), zone = ov.querySelector(".sig-zone"), g = cv.getContext("2d"), okB = ov.querySelector(".sig-ok"), nomI = ov.querySelector(".sig-n input"), dpr = Math.max(1, window.devicePixelRatio || 1);
+    let strokes = [], cur = null;
+    const draw = () => { g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#17244D"; g.lineWidth = 2.6;
+      strokes.forEach(st => { g.beginPath(); st.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); if (st.length === 1) g.lineTo(st[0][0] + 0.5, st[0][1] + 0.5); g.stroke(); });
+      ov.querySelector(".sig-ph").hidden = strokes.length > 0; okB.disabled = !strokes.length || (nomI ? !nomI.value.trim() : false); };
+    const size = () => { const r = zone.getBoundingClientRect(); cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr)); cv.style.width = r.width + "px"; cv.style.height = r.height + "px"; draw(); };
+    const pt = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.addEventListener("pointerdown", e => { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch(er){} cur = [pt(e)]; strokes.push(cur); draw(); });
+    cv.addEventListener("pointermove", e => { if (!cur) return; e.preventDefault(); cur.push(pt(e)); draw(); });
+    const up = () => { cur = null; }; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up); cv.addEventListener("lostpointercapture", up);
+    if (nomI) nomI.addEventListener("input", draw);
+    const close = v => { window.removeEventListener("resize", size); document.removeEventListener("keydown", key, true); ov.remove(); document.body.classList.remove("sig-open"); resolve(v); };
+    const key = e => { if (e.key === "Escape"){ e.stopPropagation(); e.preventDefault(); close(null); } };
+    document.addEventListener("keydown", key, true); window.addEventListener("resize", size);
+    ov.querySelector(".sig-x").onclick = () => close(null); ov.querySelector(".sig-cancel").onclick = () => close(null);
+    ov.querySelector(".sig-clear").onclick = () => { strokes = []; draw(); };
+    okB.onclick = async () => {
+      okB.disabled = true;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; strokes.forEach(st => st.forEach(([a, b]) => { x0 = Math.min(x0, a); y0 = Math.min(y0, b); x1 = Math.max(x1, a); y1 = Math.max(y1, b); }));
+      const pad = 6, k = Math.min(2, 900 / Math.max(1, x1 - x0 + pad * 2)), w = Math.max(1, Math.round((x1 - x0 + pad * 2) * k)), h = Math.max(1, Math.round((y1 - y0 + pad * 2) * k));
+      const c = document.createElement("canvas"); c.width = w; c.height = h; const gx = c.getContext("2d"); gx.fillStyle = "#FFFFFF"; gx.fillRect(0, 0, w, h);
+      gx.setTransform(k, 0, 0, k, (pad - x0) * k, (pad - y0) * k); gx.lineCap = "round"; gx.lineJoin = "round"; gx.strokeStyle = "#17244D"; gx.lineWidth = 2.6;
+      strokes.forEach(st => { gx.beginPath(); st.forEach((q, i) => i ? gx.lineTo(q[0], q[1]) : gx.moveTo(q[0], q[1])); if (st.length === 1) gx.lineTo(st[0][0] + 0.5, st[0][1] + 0.5); gx.stroke(); });
+      const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.88)); if (!blob){ okB.disabled = false; return; }
+      const now = new Date(), pad2 = n => String(n).padStart(2, "0");
+      close({blob, img: {w, h, data: new Uint8Array(await blob.arrayBuffer())}, nom: nomI ? nomI.value.trim() : "", date: today(), heure: pad2(now.getHours()) + ":" + pad2(now.getMinutes()), signeLe: now.toISOString()});
+    };
+    requestAnimationFrame(size);
+  });
+}
+function sigTexte(kind, doc){
+  const G = docGenre(kind), t = docTotals(doc);
+  return kind === "facture" ? "En signant, je confirme que les travaux décrits dans la facture " + doc.numero + " ont été effectués (total : " + fmt(t.total) + ")."
+    : "En signant, j'accepte les travaux et le prix décrits dans " + G.la + " " + doc.numero + " : total de " + fmt(t.total) + (t.tx || t.tq ? ", taxes incluses" : "") + ".";
+}
 /* Les mêmes pages en images JPEG (pour Snapchat, Messenger, les textos) */
 async function pdfImages(P, scale){
   scale = scale || 2.5; const out = [];
@@ -3836,8 +3925,8 @@ async function pdfImages(P, scale){
   }
   return out;
 }
-async function docImages(kind, doc, logo){
-  const P = docLayout(kind, doc, logo), blobs = await pdfImages(P), base = fileSafe(doc.numero + " " + (doc.client || ""));
+async function docImages(kind, doc, logo, sigs){
+  const P = docLayout(kind, doc, logo, sigs), blobs = await pdfImages(P), base = fileSafe(doc.numero + " " + (doc.client || ""));
   return blobs.filter(Boolean).map((b, i) => new File([b], base + (blobs.length > 1 ? "-page-" + (i + 1) : "") + ".jpg", {type:"image/jpeg"}));
 }
 
@@ -3907,14 +3996,14 @@ function renderVentes(){
     put($("vt-sheet"), list.length ? '<table><thead><tr><th>Numéro</th><th>Client</th><th class="hide-sm">Date</th><th>Échéance</th><th class="num">Total</th><th>État</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>' +
       list.map(({f, s, tot: tt}) => { const t = S.tmap[f.transaction];
         return '<tr><td><button class="btn link doc-no" type="button" data-fac="' + esc(f.id) + '">' + esc(f.numero) + '</button></td><td>' + esc(f.client) + ((f.lignes[0] || {}).description ? '<br><small class="muted">' + esc(f.lignes[0].description) + "</small>" : "") + '</td><td class="fig hide-sm">' + dShort(f.date) + '</td><td class="fig">' + (f.echeance && f.echeance > f.date ? dShort(f.echeance) : "À réception") + '</td><td class="num">' + fmt(tt) + '</td><td><span class="chip ' + s.cls + '">' + esc(s.l) + '</span></td><td><div class="rowacts">' +
-          (t && unpaid(t) ? payRowHtml(t, "ar") : "") + (S.payRow === (t && t.id) ? "" : '<button class="icon-btn" type="button" data-fpdf="' + esc(f.id) + '" title="PDF" aria-label="Voir le PDF">' + ico("i-pdf") + '</button><button class="icon-btn" type="button" data-fmail="' + esc(f.id) + '" title="Envoyer (courriel, texto, Messenger…)" aria-label="Envoyer">' + ico("i-send") + "</button>") + "</div></td></tr>"; }).join("") +
+          (t && unpaid(t) ? payRowHtml(t, "ar") : "") + (S.payRow === (t && t.id) ? "" : '<button class="icon-btn" type="button" data-fpdf="' + esc(f.id) + '" title="PDF" aria-label="Voir le PDF">' + ico("i-pdf") + '</button><button class="icon-btn" type="button" data-fmail="' + esc(f.id) + '" title="Envoyer (courriel, texto, Messenger…)" aria-label="Envoyer">' + ico("i-send") + '</button><button class="icon-btn' + (f.signature ? " signed" : "") + '" type="button" data-fsig="' + esc(f.id) + '" title="' + (f.signature ? "Signée par " + esc(f.signature.nom) : "Faire signer le client") + '" aria-label="Faire signer le client">' + ico("i-pen") + "</button>") + "</div></td></tr>"; }).join("") +
       '</tbody><tfoot><tr><td colspan="4">Total</td><td class="num">' + fmt(list.filter(x => x.s.k !== "annulee").reduce((s, x) => s + x.tot, 0)) + '</td><td colspan="2"></td></tr></tfoot></table>'
       : '<div class="empty">' + ico("i-invoice") + "<p>" + (F.length ? "Aucune facture ne correspond à ces filtres." : "Crée ta première facture : elle est numérotée automatiquement (" + nextNum("facture") + "), calcule la TPS et la TVQ, s'inscrit dans tes revenus à encaisser et se transforme en PDF à envoyer.") + '</p>' + (F.length ? "" : '<div class="actions"><button class="btn primary" type="button" data-new-doc="facture">' + ico("i-plus") + "Nouvelle facture</button></div>") + "</div>");
   } else if (S.vt === "devis"){
     const list = V.map(v => ({v, s:devStatus(v)})).filter(x => match(x.v, "devis") && (S.vtF === "tous" || x.s.k === S.vtF || (S.vtF === "ferme" && (x.s.k === "refuse" || x.s.k === "expire")))).sort((a, b) => b.v.date.localeCompare(a.v.date) || b.v.numero.localeCompare(a.v.numero));
     put($("vt-sheet"), list.length ? '<table><thead><tr><th>Numéro</th><th>Client</th><th class="hide-sm">Date</th><th>Valide jusqu\'au</th><th class="num">Total</th><th>État</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>' +
       list.map(({v, s}) => '<tr><td><button class="btn link doc-no" type="button" data-dev="' + esc(v.id) + '">' + esc(v.numero) + '</button></td><td>' + esc(v.client) + ((v.lignes[0] || {}).description ? '<br><small class="muted">' + esc(v.lignes[0].description) + "</small>" : "") + '</td><td class="fig hide-sm">' + dShort(v.date) + '</td><td class="fig">' + dShort(v.echeance) + '</td><td class="num">' + fmt(docTotals(v).total) + '</td><td><span class="chip ' + s.cls + '">' + esc(s.l) + '</span></td><td><div class="rowacts">' +
-        (s.k === "facture" || s.k === "refuse" ? "" : '<button class="btn sm" type="button" data-dfac="' + esc(v.id) + '">Facturer</button>') + '<button class="icon-btn" type="button" data-dpdf="' + esc(v.id) + '" title="PDF" aria-label="Voir le PDF">' + ico("i-pdf") + '</button><button class="icon-btn" type="button" data-dmail="' + esc(v.id) + '" title="Envoyer (courriel, texto, Messenger…)" aria-label="Envoyer">' + ico("i-send") + "</button></div></td></tr>").join("") + "</tbody></table>"
+        (s.k === "facture" || s.k === "refuse" ? "" : '<button class="btn sm" type="button" data-dfac="' + esc(v.id) + '">Facturer</button>') + '<button class="icon-btn" type="button" data-dpdf="' + esc(v.id) + '" title="PDF" aria-label="Voir le PDF">' + ico("i-pdf") + '</button><button class="icon-btn" type="button" data-dmail="' + esc(v.id) + '" title="Envoyer (courriel, texto, Messenger…)" aria-label="Envoyer">' + ico("i-send") + '</button><button class="icon-btn' + (v.signature ? " signed" : "") + '" type="button" data-dsig="' + esc(v.id) + '" title="' + (v.signature ? "Signée par " + esc(v.signature.nom) : "Faire signer le client") + '" aria-label="Faire signer le client">' + ico("i-pen") + "</button></div></td></tr>").join("") + "</tbody></table>"
       : '<div class="empty">' + ico("i-quote") + "<p>" + (V.length ? "Aucun devis ne correspond à ces filtres." : "Un devis présente le prix d'un travail avant de le faire. Quand le client accepte, un clic le transforme en facture, sans retaper les lignes.") + "</p>" + (V.length ? "" : '<div class="actions"><button class="btn primary" type="button" data-new-doc="devis">' + ico("i-plus") + "Nouveau devis</button></div>") + "</div>");
   } else {
     const rows = S.d.clients.filter(c => !q || norm([c.nom, c.courriel, c.telephone, c.adresse].join(" ")).includes(q)).sort((a, b) => a.nom.localeCompare(b.nom, "fr")).map(c => {
@@ -3944,6 +4033,8 @@ $("view-ventes").addEventListener("click", e => {
   else if (ds.dev) openDoc("devis", S.d.devis.find(v => v.id === ds.dev));
   else if (ds.fpdf) makeDocPDF("facture", ds.fpdf, true);
   else if (ds.dpdf) makeDocPDF("devis", ds.dpdf, true);
+  else if (ds.fsig){ const f = S.d.factures.find(x => x.id === ds.fsig); if (f && f.signature) openDoc("facture", f); else signDoc("facture", ds.fsig); }
+  else if (ds.dsig){ const v = S.d.devis.find(x => x.id === ds.dsig); if (v && v.signature) openDoc("devis", v); else signDoc("devis", ds.dsig); }
   else if (ds.fmail) shareDoc("facture", ds.fmail);
   else if (ds.dmail) shareDoc("devis", ds.dmail);
   else if (ds.dfac) devisToFacture(S.d.devis.find(v => v.id === ds.dfac));
@@ -4024,12 +4115,14 @@ function renderDocExtra(){
     else if (t && !unpaid(t)) parts.push("Payée dans " + esc(compteNom(t.compte)) + ".");
     if (o.devis){ const v = S.d.devis.find(x => x.id === o.devis); if (v) parts.push("Selon le devis " + esc(v.numero) + "."); }
     if (o.pdf) parts.push("PDF : " + esc(winPath(o.pdf)));
+    parts.push('<br><span class="sig-st">' + ico("i-pen") + (o.signature ? sigResume(o.signature) + ' <button class="btn link" type="button" data-dact="sig-suppr">Retirer la signature</button>' : 'Pas encore signée par le client. <button class="btn sm" type="button" data-dact="signer">' + ico("i-pen") + "Faire signer le client</button>") + "</span>");
     if (S.doc.confirm === "annuler") parts.push('<br>La facture garde son numéro, mais son revenu et ses taxes sont retirés des livres. <button class="btn sm danger" type="button" data-dact="annuler-ok">Oui, annuler la facture</button> <button class="btn sm" type="button" data-dact="non">Non</button>');
     else if (S.doc.confirm === "suppr") parts.push('<br>La facture et son revenu seront supprimés. <button class="btn sm danger" type="button" data-dact="suppr-ok">Oui, supprimer</button> <button class="btn sm" type="button" data-dact="non">Non</button>');
     else parts.push("<br>" + (o.statut === "annulee" ? '<button class="btn link" type="button" data-dact="retablir">Rétablir la facture</button>' : '<button class="btn link" type="button" data-dact="annuler">Annuler la facture</button>') + '<button class="btn link" type="button" data-dact="suppr" style="color:var(--neg)">Supprimer</button>');
   } else if (o){
     const s = devStatus(o); parts.push('<span class="chip ' + s.cls + '">' + esc(s.l) + "</span>");
     if (o.pdf) parts.push("PDF : " + esc(winPath(o.pdf)));
+    parts.push('<br><span class="sig-st">' + ico("i-pen") + (o.signature ? sigResume(o.signature) + ' <button class="btn link" type="button" data-dact="sig-suppr">Retirer la signature</button>' : 'Pas encore signée par le client. <button class="btn sm" type="button" data-dact="signer">' + ico("i-pen") + "Faire signer le client</button>") + "</span>");
     if (S.doc.confirm === "suppr") parts.push('<br>Supprimer ce devis ? <button class="btn sm danger" type="button" data-dact="suppr-ok">Oui, supprimer</button> <button class="btn sm" type="button" data-dact="non">Non</button>');
     else parts.push("<br>" + (o.statut !== "facture" ? '<button class="btn link" type="button" data-dact="facturer">Transformer en facture</button>' : "") + '<button class="btn link" type="button" data-dact="suppr" style="color:var(--neg)">Supprimer</button>');
   }
@@ -4130,6 +4223,8 @@ $("doc-form").addEventListener("click", e => {
   if (act === "annuler" || act === "suppr"){ S.doc.confirm = act; renderDocExtra(); }
   else if (act === "non"){ S.doc.confirm = null; renderDocExtra(); }
   else if (act === "facturer"){ closeDoc(); devisToFacture(o); }
+  else if (act === "signer") signDoc(kind, o.id);
+  else if (act === "sig-suppr") retirerSignature(kind, o.id);
   else if (act === "annuler-ok" || act === "retablir"){
     const id = o.id, back = clone(S.d.transactions.find(t => t.id === o.transaction) || null), cancel = act === "annuler-ok"; closeDoc();
     mutate(d => { const f = d.factures.find(x => x.id === id); if (!f) return false; f.statut = cancel ? "annulee" : "emise"; f.modifieLe = new Date().toISOString(); syncFactureTx(d, f, ""); }, cancel ? "Facture " + o.numero + " annulée" : "Facture " + o.numero + " rétablie",
@@ -4193,10 +4288,29 @@ $("doc-form").addEventListener("submit", async e => {
   if (withSend){ await shareDoc(kind, doc.id); return; }
   if (withPdf || doc.pdf) await makeDocPDF(kind, doc.id, withPdf);
 });
+async function loadJpeg(path){ try { return await jpegObj(await readBlob(path)); } catch(e){ return null; } }
+async function docSigs(kind, doc){ const r = R(); return {client: doc.signature && doc.signature.fichier ? await loadJpeg(doc.signature.fichier) : null, cie: kind !== "facture" && r.signatureCie ? await loadJpeg(r.signatureCie) : null}; }
+/* Faire signer le client à l'écran */
+async function signDoc(kind, id){
+  const isF = kind === "facture", doc = (isF ? S.d.factures : S.d.devis).find(x => x.id === id); if (!doc) return;
+  const res = await sigPad({titre: "Signature du client · " + docTitre(kind) + " " + doc.numero, texte: sigTexte(kind, doc), nom: doc.client || ""}); if (!res) return;
+  const path = "signatures/" + fileSafe(doc.numero + " " + (doc.client || "")) + "-" + Math.random().toString(36).slice(2, 6) + ".jpg";
+  try { await writeFile(path, res.blob); } catch(e){ toast("Signature non enregistrée : " + (e.message || e)); return; }
+  const ok = await mutate(d => { const x = (isF ? d.factures : d.devis).find(y => y.id === id); if (!x) return false;
+    x.signature = {fichier: path, nom: res.nom, date: res.date, heure: res.heure, signeLe: res.signeLe, appareil: CLOUD ? "téléphone" : "ordinateur"}; x.modifieLe = new Date().toISOString();
+    if (!isF && (!x.statut || x.statut === "ouvert")) x.statut = "accepte"; if (isF) syncFactureTx(d, x, ""); }, (isF ? "Facture " : docTitre(kind) + " ") + doc.numero + " signée par " + res.nom + (isF ? "" : " : acceptée"), {label:"Envoyer la copie signée", fn: () => shareDoc(kind, id)});
+  if (!ok) return;
+  if (S.doc && S.doc.orig && S.doc.orig.id === id){ S.doc.orig = (isF ? S.d.factures : S.d.devis).find(x => x.id === id) || S.doc.orig; if (!isF) $("d-etat").value = S.doc.orig.statut || "ouvert"; renderDocExtra(); }
+  await makeDocPDF(kind, id, false, true);
+}
+function retirerSignature(kind, id){
+  const isF = kind === "facture"; mutate(d => { const x = (isF ? d.factures : d.devis).find(y => y.id === id); if (!x || !x.signature) return false; delete x.signature; x.modifieLe = new Date().toISOString(); }, "Signature retirée").then(ok => { if (ok){ if (S.doc && S.doc.orig && S.doc.orig.id === id){ S.doc.orig = (isF ? S.d.factures : S.d.devis).find(x => x.id === id) || S.doc.orig; renderDocExtra(); } makeDocPDF(kind, id, false, true); } });
+}
+const sigResume = sg => "Signée par " + esc(sg.nom) + " le " + esc(dLong(sg.date)) + (sg.heure ? " à " + esc(hmTxt(sg.heure)) : "") + ".";
 async function makeDocPDF(kind, id, open, quiet){
   const isF = kind === "facture", doc = (isF ? S.d.factures : S.d.devis).find(x => x.id === id); if (!doc) return null;
   try {
-    const bytes = docPDF(kind, doc, await loadLogo());
+    const bytes = docPDF(kind, doc, await loadLogo(), await docSigs(kind, doc));
     const path = (isF ? "factures/" : "devis/") + fileSafe(doc.numero + " " + (doc.client || "")) + ".pdf";
     await writeFile(path, new Blob([bytes], {type:"application/pdf"}));
     if (doc.pdf !== path || (isF && S.tmap[doc.transaction] && !(S.tmap[doc.transaction].recus || []).some(r => r.fichier === path)))
@@ -4223,18 +4337,18 @@ async function shareDoc(kind, id){
         const b = e.target.closest("[data-send]"); if (!b) return; const how = b.dataset.send, text = $("snd-msg").value, subj = docTitre(kind) + " " + doc.numero + (R().nom ? " · " + R().nom : "");
         const mark = () => mutate(d => { const x = (isF ? d.factures : d.devis).find(y => y.id === id); if (!x) return false; const t = today(); if ((isF ? x.envoyeeLe : x.envoyeLe) === t) return false; if (isF) x.envoyeeLe = t; else x.envoyeLe = t; });
         try {
-          b.disabled = true; const logo = await loadLogo(), name = fileSafe(doc.numero + " " + (doc.client || ""));
+          b.disabled = true; const logo = await loadLogo(), sigs = await docSigs(kind, doc), name = fileSafe(doc.numero + " " + (doc.client || ""));
           if (how === "copy"){ await navigator.clipboard.writeText(text); toast("Message copié"); return; }
           if (how === "sms"){ location.href = "sms:" + tel + "?body=" + encodeURIComponent(text); mark(); return; }
           if (how === "pdf" || how === "img" || (how === "mail" && CLOUD && canShare)){
-            const files = how === "img" ? await docImages(kind, doc, logo) : [new File([docPDF(kind, doc, logo)], name + ".pdf", {type:"application/pdf"})];
+            const files = how === "img" ? await docImages(kind, doc, logo, sigs) : [new File([docPDF(kind, doc, logo, sigs)], name + ".pdf", {type:"application/pdf"})];
             if (how === "mail" && mail){ try { await navigator.clipboard.writeText(c.courriel); toast("Courriel du client copié : colle-le dans « À »"); } catch(er){} }
             if (!navigator.canShare({files})) throw new Error("ce navigateur ne partage pas les fichiers");
             await navigator.share({files, title: subj, text}); mark(); closeForm(); return;
           }
           if (how === "mail"){ const path = await makeDocPDF(kind, id, false, true); location.href = "mailto:" + mail + "?subject=" + encodeURIComponent(subj) + "&body=" + encodeURIComponent(text); mark();
             if (path && !CLOUD) toast("Joins le PDF : dossier " + winPath(path.split("/").slice(0, -1).join("/")) + ", fichier " + path.split("/").pop()); return; }
-          if (how === "files"){ const all = [new File([docPDF(kind, doc, logo)], name + ".pdf", {type:"application/pdf"}), ...await docImages(kind, doc, logo)];
+          if (how === "files"){ const all = [new File([docPDF(kind, doc, logo, sigs)], name + ".pdf", {type:"application/pdf"}), ...await docImages(kind, doc, logo, sigs)];
             all.forEach((f, k) => setTimeout(() => { const u = URL.createObjectURL(f), a = document.createElement("a"); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }, k * 400));
             toast("PDF et image enregistrés dans Téléchargements"); return; }
         } catch(er){ if (er && er.name === "AbortError") return; toast("Envoi impossible : " + ((er && er.message) || er)); }
@@ -5003,9 +5117,9 @@ function nextNumIn(d, kind, date){
   return P + "-" + y + "-" + String(max + 1).padStart(3, "0");
 }
 /* Changements que cette version de l'application sait appliquer (écrit dans registre.json pour le téléphone) */
-const OPS_CONNUS = ["evenement","evenement-suppr","evenement-fait","obligation","operation","photo","trajet","lieu","lieu-suppr","paiement","facture","devis","devis-statut","envoye","entretien","odometre","client","patch","fichier","deplacer","fichier-suppr","doc-v2"];
+const OPS_CONNUS = ["evenement","evenement-suppr","evenement-fait","obligation","operation","photo","trajet","lieu","lieu-suppr","paiement","facture","devis","devis-statut","envoye","entretien","odometre","client","patch","fichier","deplacer","fichier-suppr","doc-v2","signature"];
 /* Chemin de fichier accepté venant du téléphone : un seul niveau, dans un dossier connu */
-function safePath(p){ p = String(p || ""); return /^(recus|a-traiter|documents|exports)\/[^\/\\:*?"<>|]+$/.test(p) && !/\.\./.test(p) ? p : ""; }
+function safePath(p){ p = String(p || ""); return /^(recus|a-traiter|documents|exports|signatures)\/[^\/\\:*?"<>|]+$/.test(p) && !/\.\./.test(p) ? p : ""; }
 function applyOp(d, op){
   const x = op.data || {}, now = op.creeLe || new Date().toISOString(), res = {msg:"", moves:[], removes:[], pdf:null, pdfs:[]};
   const photos = (op.photos || []).filter(p => typeof p === "string" && /^[\w.-]+$/.test(p));
@@ -5073,6 +5187,13 @@ function applyOp(d, op){
         if (c.col === "factures" || c.col === "devis") res.pdfs.push([c.col === "factures" ? "facture" : "devis", c.id]);
       });
       res.msg = x.msg || "Modification faite au téléphone"; break; }
+    case "signature": {
+      const L = x.kind === "devis" ? d.devis : d.factures, e = L.find(v => v.id === x.id); if (!e || !photos[0]) break;
+      const to = "signatures/" + fileSafe(e.numero + " " + (e.client || "")) + "-" + String(op.id).slice(-4) + (extOf(photos[0]) || ".jpg");
+      res.moves.push({from:"telephone/" + photos[0], to});
+      e.signature = {fichier: to, nom: String(x.nom || e.client || "").trim().slice(0, 80), date: x.date || today(), heure: String(x.heure || "").slice(0, 5), signeLe: x.signeLe || now, appareil: "téléphone"};
+      if (x.kind === "devis" && (!e.statut || e.statut === "ouvert")) e.statut = "accepte";
+      res.pdfs.push([x.kind === "devis" ? "devis" : "facture", e.id]); res.msg = "Signature du client : " + e.numero + " (" + e.signature.nom + ")"; break; }
     case "fichier": { const to = safePath(x.to); if (to && photos[0]) res.moves.push({from:"telephone/" + photos[0], to}); break; }
     case "deplacer": { const a = safePath(x.from), b = safePath(x.to); if (a && b) res.moves.push({from:a, to:b}); break; }
     case "fichier-suppr": { const p = safePath(x.path); if (p) res.removes.push(p); break; }
@@ -5151,6 +5272,7 @@ function renderReglages(){
   $("r-slogan").value = r.slogan || ""; $("r-neq").value = r.neq || ""; $("r-paiement").value = r.modePaiement || ""; $("r-titredevis").value = r.titreDevis === "Soumission" ? "Soumission" : "Devis"; $("r-condev").value = r.conditionsDevis || "";
   setOptions($("r-tf-type"), LT.map(t => [t.k, t.l])); if (!$("r-tf-unite").options.length){ $("r-tf-unite").innerHTML = uniteOptions("h"); } renderTarifsReglages();
   $("r-logo-st").textContent = r.logo ? "Logo : " + r.logo.split("/").pop() : "Aucun logo"; $("r-logo-rm").hidden = !r.logo;
+  $("r-sigcie-st").textContent = r.signatureCie ? "Enregistrée : elle s'imprime sur chaque soumission" : "Aucune : la case de l'entreprise reste à signer à la main"; $("r-sigcie-rm").hidden = !r.signatureCie; $("r-sigcie").lastChild.textContent = r.signatureCie ? "Refaire ma signature" : "Dessiner ma signature";
 }
 $("r-logo").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
@@ -5159,6 +5281,12 @@ $("r-logo").addEventListener("change", async e => {
   catch(er){ toast("Impossible d'enregistrer le logo : " + (er.message || er)); }
 });
 $("r-logo-rm").addEventListener("click", () => mutate(d => { d.reglages.logo = ""; }, "Logo retiré"));
+$("r-sigcie").addEventListener("click", async () => {
+  const res = await sigPad({titre: "Signature de l'entreprise", texte: "Elle s'imprimera dans la case « " + (R().nom || "Entreprise") + " » de tes soumissions.", nom: false, ok: "Enregistrer"}); if (!res) return;
+  const path = "signatures/entreprise-" + Math.random().toString(36).slice(2, 6) + ".jpg";
+  try { await writeFile(path, res.blob); await mutate(d => { d.reglages.signatureCie = path; }, "Signature de l'entreprise enregistrée"); } catch(e){ toast("Signature non enregistrée : " + (e.message || e)); }
+});
+$("r-sigcie-rm").addEventListener("click", () => mutate(d => { d.reglages.signatureCie = ""; }, "Signature de l'entreprise retirée"));
 /* Tarifs enregistrés */
 const tarifTxt = t => (LTM[t.type] || LTM.service).l + " · " + t.description + " · " + fmt(t.prix) + (t.unite ? " / " + t.unite : "") + (t.ttc ? " (taxes incl.)" : "");
 function renderTarifsReglages(){

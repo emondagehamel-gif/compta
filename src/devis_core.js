@@ -56,7 +56,8 @@ const DOC_COUL = {g:"#2F6B3B", tint:"#EDF4EE", ink:"#1E2622", mut:"#67716B", lin
 function docTitre(kind){ return kind === "facture" ? "Facture" : (R().titreDevis || "Devis"); }
 /* Accords : « la facture », « la soumission », mais « le devis » */
 function docGenre(kind){ const t = docTitre(kind), f = t !== "Devis", m = t.toLowerCase(); return {t, m, la: (f ? "la " : "le ") + m, de: (f ? "de la " : "du ") + m, cette: (f ? "Cette " : "Ce ") + m, prep: f ? "préparée" : "préparé", presente: (f ? "la présente " : "le présent ") + m}; }
-function docLayout(kind, doc, logo){
+function docLayout(kind, doc, logo, sigs){
+  sigs = sigs || {}; const sg = doc.signature && doc.signature.nom ? doc.signature : null;
   const r = R(), P = PDF(), C = DOC_COUL, M = 54, RX = P.W - M, W = RX - M, isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
   const G = docGenre(kind), titre = G.t, nom = String(r.nom || "Mon entreprise").trim(), BOTTOM = P.H - 74, grp = docGroupes(doc), multi = grp.length > 1;
   const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16, TXL = doc.taxesLigne ? ligneTaxes(doc) : null;
@@ -141,6 +142,12 @@ function docLayout(kind, doc, logo){
     const txt = paid ? "Cette facture a été payée le " + dLong((t.paiement && t.paiement.date) || t.date) + ". Merci!" : (doc.dateTravaux ? "Les travaux décrits ci-dessus ont été complétés le " + dLong(doc.dateTravaux) + ". " : "") + (doc.echeance && doc.echeance > doc.date ? "Le solde est payable d'ici le " + dLong(doc.echeance) + "." : "Le solde est payable à réception de la présente facture.");
     wrapText(txt, 10, false, W).forEach(s => { need(13); T(M, y, s, {size:10}); y += 13; });
     if (pay && !paid){ y += 3; const w = T(M, y, "Mode de paiement :", {size:10, bold:true}); T(M + w + 4, y, pay, {size:10}); y += 13; }
+    if (sg){
+      need(116); y += 14; h2("Confirmation du client");
+      wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
+      y += 6; const cw2 = (W - 30) / 2; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw2 - 8, 32); P.line(M, y + 34, M + cw2, y + 34, {color:"#8A948E", w:0.7});
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + (sg.appareil ? ", sur " + sg.appareil : ""), {size:7.5, italic:true, color:C.mut}); y += 62;
+    }
   } else {
     need(70); y += 14; h2("Modalités");
     String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
@@ -149,8 +156,12 @@ function docLayout(kind, doc, logo){
     /* Acceptation */
     need(120); y += 8; h2("Acceptation " + G.de);
     wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
-    y += 8; [[M, nom], [rx2, "Client"]].forEach(([x, s]) => { T(x, y, s, {size:10, bold:true}); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut}); T(x, y + 67, "Date : ______________________", {size:8.5, color:C.mut}); });
-    y += 72;
+    y += 8;
+    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut});
+      T(x, y + 67, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 80, pied, {size:7.5, italic:true, color:C.mut}); };
+    bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
+    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? "Signé électroniquement" + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil ? ", sur " + sg.appareil : "") : "");
+    y += sg ? 84 : 72;
   }
   /* Remerciements */
   const msg = String(doc.message || "").trim(), extra = msg && !/^merci de votre confiance\s*[.!]?$/i.test(msg) ? wrapText(msg, 9, false, W - 40) : [];
@@ -161,7 +172,62 @@ function docLayout(kind, doc, logo){
   P.pages.forEach((_, i) => { P.at(i); P.line(M, P.H - 50, RX, P.H - 50, {color:C.line, w:0.6}); T(P.W / 2, P.H - 36, pied + (P.pages.length > 1 ? "   ·   Page " + (i + 1) + " de " + P.pages.length : ""), {size:8.5, color:C.mut, align:"center"}); });
   return P;
 }
-function docPDF(kind, doc, logo){ return docLayout(kind, doc, logo).bytes(); }
+function docPDF(kind, doc, logo, sigs){ return docLayout(kind, doc, logo, sigs).bytes(); }
+/* Signature : image centrée dans sa case, sans la déformer */
+function sigImage(P, img, x, y, w, h){ let iw = img.w, ih = img.h, k = Math.min(w / iw, h / ih); iw *= k; ih *= k; P.image(img, x, y + (h - ih), iw, ih); }
+const hmTxt = h => { const m = String(h || "").match(/^(\d{1,2}):(\d{2})/); return m ? Number(m[1]) + " h " + m[2] : ""; };
+/* Image JPEG prête pour le PDF (une autre sorte d'image est convertie) */
+async function jpegObj(blob){
+  const bm = await createImageBitmap(blob); let data;
+  if (blob.type === "image/jpeg") data = new Uint8Array(await blob.arrayBuffer());
+  else { const c = document.createElement("canvas"); c.width = bm.width; c.height = bm.height; const g = c.getContext("2d"); g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bm, 0, 0); data = new Uint8Array(await (await new Promise(r => c.toBlob(r, "image/jpeg", 0.9))).arrayBuffer()); }
+  return {w: bm.width, h: bm.height, data};
+}
+/* Signature à l'écran : le client signe avec le doigt, un stylet ou la souris. Rend {blob, img, nom, date, heure, signeLe} ou null. */
+function sigPad(o){
+  o = o || {};
+  return new Promise(resolve => {
+    const ov = document.createElement("div"); ov.className = "sig-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", o.titre || "Signature");
+    ov.innerHTML = '<div class="sig-box"><div class="sig-h"><b>' + esc(o.titre || "Signature") + '</b><button type="button" class="sig-x" aria-label="Fermer">×</button></div>' + (o.texte ? '<p class="sig-t">' + esc(o.texte) + "</p>" : "") +
+      '<div class="sig-zone"><canvas></canvas><span class="sig-ph">Signez ici</span><span class="sig-l"></span></div>' +
+      (o.nom !== false ? '<label class="sig-n"><span>Nom de la personne qui signe</span><input type="text" maxlength="80" autocomplete="off" value="' + esc(o.nom || "") + '"></label>' : "") +
+      '<div class="sig-f"><button type="button" class="sig-b sig-clear">Effacer</button><span style="flex:1"></span><button type="button" class="sig-b sig-cancel">Annuler</button><button type="button" class="sig-b sig-ok" disabled>' + esc(o.ok || "Signer") + "</button></div></div>";
+    document.body.appendChild(ov); document.body.classList.add("sig-open");
+    const cv = ov.querySelector("canvas"), zone = ov.querySelector(".sig-zone"), g = cv.getContext("2d"), okB = ov.querySelector(".sig-ok"), nomI = ov.querySelector(".sig-n input"), dpr = Math.max(1, window.devicePixelRatio || 1);
+    let strokes = [], cur = null;
+    const draw = () => { g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#17244D"; g.lineWidth = 2.6;
+      strokes.forEach(st => { g.beginPath(); st.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); if (st.length === 1) g.lineTo(st[0][0] + 0.5, st[0][1] + 0.5); g.stroke(); });
+      ov.querySelector(".sig-ph").hidden = strokes.length > 0; okB.disabled = !strokes.length || (nomI ? !nomI.value.trim() : false); };
+    const size = () => { const r = zone.getBoundingClientRect(); cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr)); cv.style.width = r.width + "px"; cv.style.height = r.height + "px"; draw(); };
+    const pt = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.addEventListener("pointerdown", e => { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch(er){} cur = [pt(e)]; strokes.push(cur); draw(); });
+    cv.addEventListener("pointermove", e => { if (!cur) return; e.preventDefault(); cur.push(pt(e)); draw(); });
+    const up = () => { cur = null; }; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up); cv.addEventListener("lostpointercapture", up);
+    if (nomI) nomI.addEventListener("input", draw);
+    const close = v => { window.removeEventListener("resize", size); document.removeEventListener("keydown", key, true); ov.remove(); document.body.classList.remove("sig-open"); resolve(v); };
+    const key = e => { if (e.key === "Escape"){ e.stopPropagation(); e.preventDefault(); close(null); } };
+    document.addEventListener("keydown", key, true); window.addEventListener("resize", size);
+    ov.querySelector(".sig-x").onclick = () => close(null); ov.querySelector(".sig-cancel").onclick = () => close(null);
+    ov.querySelector(".sig-clear").onclick = () => { strokes = []; draw(); };
+    okB.onclick = async () => {
+      okB.disabled = true;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; strokes.forEach(st => st.forEach(([a, b]) => { x0 = Math.min(x0, a); y0 = Math.min(y0, b); x1 = Math.max(x1, a); y1 = Math.max(y1, b); }));
+      const pad = 6, k = Math.min(2, 900 / Math.max(1, x1 - x0 + pad * 2)), w = Math.max(1, Math.round((x1 - x0 + pad * 2) * k)), h = Math.max(1, Math.round((y1 - y0 + pad * 2) * k));
+      const c = document.createElement("canvas"); c.width = w; c.height = h; const gx = c.getContext("2d"); gx.fillStyle = "#FFFFFF"; gx.fillRect(0, 0, w, h);
+      gx.setTransform(k, 0, 0, k, (pad - x0) * k, (pad - y0) * k); gx.lineCap = "round"; gx.lineJoin = "round"; gx.strokeStyle = "#17244D"; gx.lineWidth = 2.6;
+      strokes.forEach(st => { gx.beginPath(); st.forEach((q, i) => i ? gx.lineTo(q[0], q[1]) : gx.moveTo(q[0], q[1])); if (st.length === 1) gx.lineTo(st[0][0] + 0.5, st[0][1] + 0.5); gx.stroke(); });
+      const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.88)); if (!blob){ okB.disabled = false; return; }
+      const now = new Date(), pad2 = n => String(n).padStart(2, "0");
+      close({blob, img: {w, h, data: new Uint8Array(await blob.arrayBuffer())}, nom: nomI ? nomI.value.trim() : "", date: today(), heure: pad2(now.getHours()) + ":" + pad2(now.getMinutes()), signeLe: now.toISOString()});
+    };
+    requestAnimationFrame(size);
+  });
+}
+function sigTexte(kind, doc){
+  const G = docGenre(kind), t = docTotals(doc);
+  return kind === "facture" ? "En signant, je confirme que les travaux décrits dans la facture " + doc.numero + " ont été effectués (total : " + fmt(t.total) + ")."
+    : "En signant, j'accepte les travaux et le prix décrits dans " + G.la + " " + doc.numero + " : total de " + fmt(t.total) + (t.tx || t.tq ? ", taxes incluses" : "") + ".";
+}
 /* Les mêmes pages en images JPEG (pour Snapchat, Messenger, les textos) */
 async function pdfImages(P, scale){
   scale = scale || 2.5; const out = [];
@@ -178,7 +244,7 @@ async function pdfImages(P, scale){
   }
   return out;
 }
-async function docImages(kind, doc, logo){
-  const P = docLayout(kind, doc, logo), blobs = await pdfImages(P), base = fileSafe(doc.numero + " " + (doc.client || ""));
+async function docImages(kind, doc, logo, sigs){
+  const P = docLayout(kind, doc, logo, sigs), blobs = await pdfImages(P), base = fileSafe(doc.numero + " " + (doc.client || ""));
   return blobs.filter(Boolean).map((b, i) => new File([b], base + (blobs.length > 1 ? "-page-" + (i + 1) : "") + ".jpg", {type:"image/jpeg"}));
 }
