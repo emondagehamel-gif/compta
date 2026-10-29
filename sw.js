@@ -1,5 +1,5 @@
-/* Comptabilité : garde l'application dans le téléphone pour qu'elle s'ouvre sans réseau. Version 677f0a8708 */
-const CACHE = "compta-677f0a8708";
+/* Comptabilité : garde l'application dans le téléphone pour qu'elle s'ouvre sans réseau. Version b2bc27041a */
+const CACHE = "compta-b2bc27041a";
 const SHELL = ["./", "complet.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

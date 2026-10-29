@@ -11,7 +11,9 @@ const LT = [
   ["rabais", "Rabais", "Rabais", "", "Ex. : Rabais client fidèle"]
 ].map(([k, l, g, u, ph]) => ({k, l, g, u, ph}));
 const LTM = Object.fromEntries(LT.map(t => [t.k, t]));
-const LUNITES = ["h", "jour", "sem.", "km", "unité", "forfait", "arbre", "souche", "voyage", "m³", "pi lin."];
+const LUNITES = [["", "—"], ["h", "heure (h)"], ["jour", "jour"], ["sem.", "semaine"], ["mois", "mois"], ["km", "km"], ["unité", "unité"], ["forfait", "forfait"], ["arbre", "arbre"], ["souche", "souche"], ["voyage", "voyage"], ["m³", "m³"], ["pi lin.", "pied linéaire"]];
+/* Liste des unités d'une ligne (une unité ancienne ou d'un tarif s'ajoute à la liste) */
+function uniteOptions(cur){ const c = String(cur || "").trim(), L = LUNITES.some(([v]) => v === c) ? LUNITES : LUNITES.concat([[c, c]]); return L.map(([v, l]) => '<option value="' + esc(v) + '"' + (v === c ? " selected" : "") + ">" + esc(l) + "</option>").join(""); }
 const ligneType = l => LTM[l && l.type] ? l.type : "service";
 const ligneMt = l => { const m = r2((Number(l.qte) || 0) * (Number(l.prix) || 0)); return l.type === "rabais" ? -Math.abs(m) : m; };
 const qteTxt = l => { const u = String(l.unite || "").trim(), pl = Number(l.qte) >= 2 && /^[a-zà-ÿ]{3,}$/i.test(u) && !/[sx]$/i.test(u); return fq(l.qte) + (u ? " " + u + (pl ? "s" : "") : ""); };
@@ -22,6 +24,21 @@ function docTotals(doc){
   const brut = r2((doc.lignes || []).reduce((s, l) => s + ligneMt(l), 0)), [a, b] = taxRates(doc.codeTaxe || "AUCUNE");
   if (doc.taxesIncluses && (a || b)){ const k = 100 + a + b, tx = r2(brut * a / k), tq = r2(brut * b / k); return {st: r2(brut - tx - tq), tx, tq, total: brut, ttc: true}; }
   const tx = r2(brut * a / 100), tq = r2(brut * b / 100); return {st: brut, tx, tq, total: r2(brut + tx + tq), ttc: false};
+}
+/* Taxes de chaque ligne, réparties au cent près pour que leur somme égale les taxes du document */
+function ligneTaxes(doc){
+  const L = doc.lignes || [], tot = docTotals(doc), [a, b] = taxRates(doc.codeTaxe || "AUCUNE"), k = tot.ttc ? 100 + a + b : 100;
+  const part = (rate, cible) => { const raw = L.map(l => ligneMt(l) * rate / k), c = raw.map(v => Math.round(v * 100)); let diff = Math.round(cible * 100) - c.reduce((s, v) => s + v, 0);
+    const ord = raw.map((v, i) => [v * 100 - c[i], i]).sort((x, y) => diff > 0 ? y[0] - x[0] : x[0] - y[0]);
+    for (let j = 0; diff !== 0 && ord.length && j < ord.length * 3; j++){ c[ord[j % ord.length][1]] += diff > 0 ? 1 : -1; diff += diff > 0 ? -1 : 1; }
+    return c.map(v => v / 100); };
+  const tx = part(a, tot.tx), tq = part(b, tot.tq);
+  return L.map((l, i) => { const m = ligneMt(l); return tot.ttc ? {ht: r2(m - tx[i] - tq[i]), tx: tx[i], tq: tq[i], ttc: m} : {ht: m, tx: tx[i], tq: tq[i], ttc: r2(m + tx[i] + tq[i])}; });
+}
+function ligneTaxTxt(doc, t){
+  const [a, b] = taxRates(doc.codeTaxe || "AUCUNE"); if (!a && !b) return "";
+  const parts = [a ? (doc.codeTaxe === "ON" ? "TVH " : "TPS ") + fmt(t.tx) : "", b ? "TVQ " + fmt(t.tq) : ""].filter(Boolean).join(" · ");
+  return doc.taxesIncluses ? "Avant taxes " + fmt(t.ht) + " · " + parts : parts + " · Total avec taxes " + fmt(t.ttc);
 }
 /* Lignes regroupées par type, dans l'ordre de LT (services d'abord, rabais à la fin) */
 function docGroupes(doc){
@@ -42,7 +59,7 @@ function docGenre(kind){ const t = docTitre(kind), f = t !== "Devis", m = t.toLo
 function docLayout(kind, doc, logo){
   const r = R(), P = PDF(), C = DOC_COUL, M = 54, RX = P.W - M, W = RX - M, isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
   const G = docGenre(kind), titre = G.t, nom = String(r.nom || "Mon entreprise").trim(), BOTTOM = P.H - 74, grp = docGroupes(doc), multi = grp.length > 1;
-  const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16;
+  const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16, TXL = doc.taxesLigne ? ligneTaxes(doc) : null;
   let y = 0, inTable = false;
   const T = (x, yy, s, o) => P.text(x, yy, s, Object.assign({color:C.ink}, o || {}));
   const h2 = (s) => { T(M, y + 13, s, {size:12.5, bold:true, color:C.g}); y += 29; };
@@ -89,11 +106,12 @@ function docLayout(kind, doc, logo){
     if (hdr){ need(20 + 30); P.rect(M, y, W, 20, C.tint); T(XQ + 8, y + 13.5, g.t.g.toUpperCase(), {size:7.8, bold:true, color:C.g, ls:0.8}); T(RX - 8, y + 13.5, (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)), {size:8.8, bold:true, color:C.g, align:"right"}); P.line(M, y, M, y + 20, {color:C.line, w:0.6}); P.line(RX, y, RX, y + 20, {color:C.line, w:0.6}); P.line(M, y + 20, RX, y + 20, {color:C.line, w:0.6}); y += 20; }
     g.lignes.forEach(l => {
       const parts = String(l.description || "").split(/\r?\n/), main = wrapText(parts[0] || "", 10, false, DW), sub = parts.slice(1).join("\n").trim() ? wrapText(parts.slice(1).join("\n").trim(), 8.8, false, DW) : [];
-      const cap = multi && !hdr ? 10.5 : 0, h = cap + Math.max(1, main.length) * 12.5 + sub.length * 11 + 10, mt = ligneMt(l), yb = y + 14 + cap;
+      const lt = TXL ? ligneTaxTxt(doc, TXL[doc.lignes.indexOf(l)]) : "", cap = multi && !hdr ? 10.5 : 0, h = cap + Math.max(1, main.length) * 12.5 + sub.length * 11 + (lt ? 11 : 0) + 10, mt = ligneMt(l), yb = y + 14 + cap;
       need(h); const y0 = y;
       if (cap) T(XQ + 8, y + 12, g.t.g.toUpperCase(), {size:6.8, bold:true, color:C.g, ls:0.7});
       main.forEach((s, i) => T(XQ + 8, yb + i * 12.5, s, {size:10}));
       sub.forEach((s, i) => T(XQ + 8, yb + main.length * 12.5 + i * 11 - 1, s, {size:8.8, italic:true, color:C.mut}));
+      if (lt) T(XQ + 8, yb + main.length * 12.5 + sub.length * 11 - 1, lt, {size:7.8, color:C.mut});
       T((M + XQ) / 2, yb, qteTxt(l), {size:10, align:"center"});
       T(XT - 8, yb, fmt(l.prix), {size:10, align:"right"});
       T(RX - 8, yb, (mt < 0 ? "−" : "") + fmt(Math.abs(mt)), {size:10, align:"right", color: mt < 0 ? C.g : C.ink});

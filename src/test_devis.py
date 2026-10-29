@@ -16,7 +16,7 @@ async def data(pg): return json.loads(await pg.evaluate("__fs['registre.json'].c
 async def line(pg, i, **v):
     row = '#d-lines [data-l="%d"] ' % i
     for k, x in v.items():
-        if k == "type": await pg.select_option(row + '[data-f="type"]', x)
+        if k in ("type", "unite"): await pg.select_option(row + '[data-f="%s"]' % k, x)
         else: await pg.fill(row + '[data-f="%s"]' % k, str(x))
 async def main():
     async with async_playwright() as p:
@@ -43,6 +43,10 @@ async def main():
         await pg.fill("#d-lieu", "1600, rue Saint-François, L'Ancienne-Lorette"); await pg.fill("#d-dtrav", "2026-11-05")
         units = await pg.eval_on_selector_all('#d-lines [data-f="unite"]', "a => a.map(x => x.value)"); print("3 unités par défaut:", units)
         tot = await pg.inner_text("#d-tot"); print("3 totaux:", tot.replace("\n", " | "))
+        print("3b taxes par ligne:", await pg.eval_on_selector_all("#d-lines [data-tax]", "a => a.map(x => x.hidden ? '' : x.textContent)"))
+        await pg.select_option('#d-lines [data-l="1"] [data-f="unite"]', "sem."); print("3c unité choisie:", await pg.input_value('#d-lines [data-l="1"] [data-f="unite"]'))
+        await pg.select_option('#d-lines [data-l="1"] [data-f="unite"]', "jour")
+        await pg.check("#d-txl")
         exp = 400 + 450 + 50 - 50 + 35; k = 114.975; tx = round(exp * 5 / k, 2); tq = round(exp * 9.975 / k, 2); print("   attendu total", exp, "TPS", tx, "TVQ", tq, "avant taxes", round(exp - tx - tq, 2))
         # 3. Garder la ligne Nacelle comme tarif
         await pg.click('#d-lines [data-tfsave="1"]'); await pg.wait_for_timeout(400); print("4 tarif:", (await data(pg))["reglages"]["tarifs"])
@@ -52,6 +56,7 @@ async def main():
         pdf = await getb(pg, v["pdf"]); open(OUT + "/soumission.pdf", "wb").write(pdf)
         print("6 pdf:", subprocess.run(["qpdf", "--check", OUT + "/soumission.pdf"], capture_output=True, text=True).stdout.strip().split("\n")[-1])
         txt = subprocess.run(["pdftotext", "-layout", OUT + "/soumission.pdf", "-"], capture_output=True, text=True).stdout; print("   '?':", txt.count("?"), "| pages:", txt.count("\f"))
+        print("   taxes par ligne dans le PDF:", [l.strip()[:90] for l in txt.split("\n") if "Avant taxes" in l][:6], "| taxesLigne:", v.get("taxesLigne"))
         await pg.keyboard.press("Escape"); await pg.wait_for_timeout(300)
         # 4. Facturer la soumission : les lignes et les taxes incluses suivent
         await pg.click('[data-dfac="' + v["id"] + '"]'); await pg.wait_for_selector("#ov-doc:not([hidden])")

@@ -691,6 +691,7 @@ details.more .form-grid{padding-bottom:14px}
 .le-mini span{font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 .le2.rabais .amt{color:var(--pos)}
 .le2 small{grid-column:1/-1}
+.le2 .le-tax{color:var(--muted);font-size:.78rem;margin-top:-2px;text-align:right}
 @media (max-width:620px){.le-row.le2{grid-template-columns:1fr 1fr 1fr;grid-template-areas:"desc desc desc" "type type type" "qte unit prix" "amt amt acts"}.le2 .amt{display:block;text-align:left;padding-top:0}.le2 .le-acts{padding-top:0}}
 .lt-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip-btn{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line-strong);background:var(--surface);border-radius:999px;padding:5px 10px;font:inherit;font-size:.8rem;font-weight:600;color:var(--ink);cursor:pointer}
@@ -1141,7 +1142,7 @@ details.more .form-grid{padding-bottom:14px}
           <label class="field full"><span>Modalités des soumissions (une par ligne)</span><textarea id="r-condev" class="ctl" rows="2" maxlength="600"></textarea></label>
           <label class="field full"><span>Message au bas des factures et soumissions</span><textarea id="r-msg" class="ctl" rows="2" maxlength="400"></textarea><small>Il s'affiche en italique sous « Merci de votre confiance. »</small></label>
           <div class="field full"><span>Tarifs enregistrés</span><div id="r-tarifs" class="tarifs"></div>
-            <div class="inline-form tarif-add"><select id="r-tf-type" class="ctl auto"></select><input id="r-tf-desc" class="ctl" type="text" maxlength="200" placeholder="Description, ex. : Taux horaire, émondeur"><input id="r-tf-unite" class="ctl" type="text" maxlength="12" list="dl-unites" placeholder="Unité" style="width:90px"><input id="r-tf-prix" class="ctl fig" type="text" inputmode="decimal" placeholder="Prix" style="width:100px"><label class="check"><input id="r-tf-ttc" type="checkbox"><span>Taxes incluses</span></label><button class="btn sm" type="button" id="r-tf-ok"><svg class="ic"><use href="#i-plus"/></svg>Ajouter</button></div>
+            <div class="inline-form tarif-add"><select id="r-tf-type" class="ctl auto"></select><input id="r-tf-desc" class="ctl" type="text" maxlength="200" placeholder="Description, ex. : Taux horaire, émondeur"><select id="r-tf-unite" class="ctl auto" aria-label="Unité"></select><input id="r-tf-prix" class="ctl fig" type="text" inputmode="decimal" placeholder="Prix" style="width:100px"><label class="check"><input id="r-tf-ttc" type="checkbox"><span>Taxes incluses</span></label><button class="btn sm" type="button" id="r-tf-ok"><svg class="ic"><use href="#i-plus"/></svg>Ajouter</button></div>
             <small>Tes prix habituels (taux horaire, location, déplacement…) : ils s'ajoutent en un clic dans une facture ou une soumission. Tu peux aussi enregistrer une ligne avec l'étoile dans l'éditeur.</small></div>
           <div class="field full"><span>Logo (facultatif)</span><div class="inline-form"><span class="muted small" id="r-logo-st">Aucun logo</span><label class="btn sm"><svg class="ic"><use href="#i-upload"/></svg>Choisir une image<input id="r-logo" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only"></label><button class="btn link" type="button" id="r-logo-rm" hidden>Retirer</button></div></div>
         </div>
@@ -1305,14 +1306,14 @@ details.more .form-grid{padding-bottom:14px}
       </details>
       <label class="field full"><span>Description des travaux (sur le document, facultatif)</span><textarea id="d-travaux" class="ctl" rows="2" maxlength="1500" placeholder="Ex. : Émondage de 3 érables argentés en façade, dégagement de la toiture et ramassage des branches."></textarea></label>
       <div class="field"><div class="lines-top"><span>Services et frais</span><div class="seg" id="d-ttc" role="group" aria-label="Taxes"><button type="button" data-ttc="plus">Taxes en plus</button><button type="button" data-ttc="incl">Taxes incluses</button><button type="button" data-ttc="aucune">Sans taxes</button></div></div>
-        <p class="muted small" id="d-ttc-txt" style="margin:0 0 8px"></p>
+        <p class="muted small" id="d-ttc-txt" style="margin:0 0 4px"></p>
+        <label class="check" style="margin:0 0 8px"><input type="checkbox" id="d-txl"><span>Montrer aussi les taxes de chaque ligne sur le document</span></label>
         <div class="lines-ed" id="d-lines"></div>
         <div class="lt-add" id="d-lt-add"></div>
         <div class="inline-form" style="margin-top:8px">
           <select id="d-add-tarif" class="ctl auto" hidden></select>
           <select id="d-add-prod" class="ctl auto" hidden></select>
         </div>
-        <datalist id="dl-unites"></datalist>
       </div>
       <div class="doc-tot" id="d-tot"></div>
       <div class="form-grid">
@@ -3668,7 +3669,9 @@ const LT = [
   ["rabais", "Rabais", "Rabais", "", "Ex. : Rabais client fidèle"]
 ].map(([k, l, g, u, ph]) => ({k, l, g, u, ph}));
 const LTM = Object.fromEntries(LT.map(t => [t.k, t]));
-const LUNITES = ["h", "jour", "sem.", "km", "unité", "forfait", "arbre", "souche", "voyage", "m³", "pi lin."];
+const LUNITES = [["", "—"], ["h", "heure (h)"], ["jour", "jour"], ["sem.", "semaine"], ["mois", "mois"], ["km", "km"], ["unité", "unité"], ["forfait", "forfait"], ["arbre", "arbre"], ["souche", "souche"], ["voyage", "voyage"], ["m³", "m³"], ["pi lin.", "pied linéaire"]];
+/* Liste des unités d'une ligne (une unité ancienne ou d'un tarif s'ajoute à la liste) */
+function uniteOptions(cur){ const c = String(cur || "").trim(), L = LUNITES.some(([v]) => v === c) ? LUNITES : LUNITES.concat([[c, c]]); return L.map(([v, l]) => '<option value="' + esc(v) + '"' + (v === c ? " selected" : "") + ">" + esc(l) + "</option>").join(""); }
 const ligneType = l => LTM[l && l.type] ? l.type : "service";
 const ligneMt = l => { const m = r2((Number(l.qte) || 0) * (Number(l.prix) || 0)); return l.type === "rabais" ? -Math.abs(m) : m; };
 const qteTxt = l => { const u = String(l.unite || "").trim(), pl = Number(l.qte) >= 2 && /^[a-zà-ÿ]{3,}$/i.test(u) && !/[sx]$/i.test(u); return fq(l.qte) + (u ? " " + u + (pl ? "s" : "") : ""); };
@@ -3679,6 +3682,21 @@ function docTotals(doc){
   const brut = r2((doc.lignes || []).reduce((s, l) => s + ligneMt(l), 0)), [a, b] = taxRates(doc.codeTaxe || "AUCUNE");
   if (doc.taxesIncluses && (a || b)){ const k = 100 + a + b, tx = r2(brut * a / k), tq = r2(brut * b / k); return {st: r2(brut - tx - tq), tx, tq, total: brut, ttc: true}; }
   const tx = r2(brut * a / 100), tq = r2(brut * b / 100); return {st: brut, tx, tq, total: r2(brut + tx + tq), ttc: false};
+}
+/* Taxes de chaque ligne, réparties au cent près pour que leur somme égale les taxes du document */
+function ligneTaxes(doc){
+  const L = doc.lignes || [], tot = docTotals(doc), [a, b] = taxRates(doc.codeTaxe || "AUCUNE"), k = tot.ttc ? 100 + a + b : 100;
+  const part = (rate, cible) => { const raw = L.map(l => ligneMt(l) * rate / k), c = raw.map(v => Math.round(v * 100)); let diff = Math.round(cible * 100) - c.reduce((s, v) => s + v, 0);
+    const ord = raw.map((v, i) => [v * 100 - c[i], i]).sort((x, y) => diff > 0 ? y[0] - x[0] : x[0] - y[0]);
+    for (let j = 0; diff !== 0 && ord.length && j < ord.length * 3; j++){ c[ord[j % ord.length][1]] += diff > 0 ? 1 : -1; diff += diff > 0 ? -1 : 1; }
+    return c.map(v => v / 100); };
+  const tx = part(a, tot.tx), tq = part(b, tot.tq);
+  return L.map((l, i) => { const m = ligneMt(l); return tot.ttc ? {ht: r2(m - tx[i] - tq[i]), tx: tx[i], tq: tq[i], ttc: m} : {ht: m, tx: tx[i], tq: tq[i], ttc: r2(m + tx[i] + tq[i])}; });
+}
+function ligneTaxTxt(doc, t){
+  const [a, b] = taxRates(doc.codeTaxe || "AUCUNE"); if (!a && !b) return "";
+  const parts = [a ? (doc.codeTaxe === "ON" ? "TVH " : "TPS ") + fmt(t.tx) : "", b ? "TVQ " + fmt(t.tq) : ""].filter(Boolean).join(" · ");
+  return doc.taxesIncluses ? "Avant taxes " + fmt(t.ht) + " · " + parts : parts + " · Total avec taxes " + fmt(t.ttc);
 }
 /* Lignes regroupées par type, dans l'ordre de LT (services d'abord, rabais à la fin) */
 function docGroupes(doc){
@@ -3699,7 +3717,7 @@ function docGenre(kind){ const t = docTitre(kind), f = t !== "Devis", m = t.toLo
 function docLayout(kind, doc, logo){
   const r = R(), P = PDF(), C = DOC_COUL, M = 54, RX = P.W - M, W = RX - M, isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
   const G = docGenre(kind), titre = G.t, nom = String(r.nom || "Mon entreprise").trim(), BOTTOM = P.H - 74, grp = docGroupes(doc), multi = grp.length > 1;
-  const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16;
+  const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16, TXL = doc.taxesLigne ? ligneTaxes(doc) : null;
   let y = 0, inTable = false;
   const T = (x, yy, s, o) => P.text(x, yy, s, Object.assign({color:C.ink}, o || {}));
   const h2 = (s) => { T(M, y + 13, s, {size:12.5, bold:true, color:C.g}); y += 29; };
@@ -3746,11 +3764,12 @@ function docLayout(kind, doc, logo){
     if (hdr){ need(20 + 30); P.rect(M, y, W, 20, C.tint); T(XQ + 8, y + 13.5, g.t.g.toUpperCase(), {size:7.8, bold:true, color:C.g, ls:0.8}); T(RX - 8, y + 13.5, (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)), {size:8.8, bold:true, color:C.g, align:"right"}); P.line(M, y, M, y + 20, {color:C.line, w:0.6}); P.line(RX, y, RX, y + 20, {color:C.line, w:0.6}); P.line(M, y + 20, RX, y + 20, {color:C.line, w:0.6}); y += 20; }
     g.lignes.forEach(l => {
       const parts = String(l.description || "").split(/\r?\n/), main = wrapText(parts[0] || "", 10, false, DW), sub = parts.slice(1).join("\n").trim() ? wrapText(parts.slice(1).join("\n").trim(), 8.8, false, DW) : [];
-      const cap = multi && !hdr ? 10.5 : 0, h = cap + Math.max(1, main.length) * 12.5 + sub.length * 11 + 10, mt = ligneMt(l), yb = y + 14 + cap;
+      const lt = TXL ? ligneTaxTxt(doc, TXL[doc.lignes.indexOf(l)]) : "", cap = multi && !hdr ? 10.5 : 0, h = cap + Math.max(1, main.length) * 12.5 + sub.length * 11 + (lt ? 11 : 0) + 10, mt = ligneMt(l), yb = y + 14 + cap;
       need(h); const y0 = y;
       if (cap) T(XQ + 8, y + 12, g.t.g.toUpperCase(), {size:6.8, bold:true, color:C.g, ls:0.7});
       main.forEach((s, i) => T(XQ + 8, yb + i * 12.5, s, {size:10}));
       sub.forEach((s, i) => T(XQ + 8, yb + main.length * 12.5 + i * 11 - 1, s, {size:8.8, italic:true, color:C.mut}));
+      if (lt) T(XQ + 8, yb + main.length * 12.5 + sub.length * 11 - 1, lt, {size:7.8, color:C.mut});
       T((M + XQ) / 2, yb, qteTxt(l), {size:10, align:"center"});
       T(XT - 8, yb, fmt(l.prix), {size:10, align:"right"});
       T(RX - 8, yb, (mt < 0 ? "−" : "") + fmt(Math.abs(mt)), {size:10, align:"right", color: mt < 0 ? C.g : C.ink});
@@ -3938,7 +3957,7 @@ $("view-ventes").addEventListener("click", e => {
 });
 function devisToFacture(v){
   if (!v) return;
-  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});
+  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, taxesLigne:!!v.taxesLigne, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});
 }
 
 /* Éditeur de facture ou de devis */
@@ -3954,7 +3973,7 @@ function openDoc(kind, doc, preset){
   $("d-travaux").value = doc ? (doc.travaux || "") : (p.travaux || ""); $("d-lieu").value = doc ? (doc.lieu || "") : (p.lieu || ""); $("d-dtrav").value = doc ? (doc.dateTravaux || "") : (p.dateTravaux || "");
   $("d-dtrav-lbl").textContent = isF ? "Date des travaux" : "Date prévue des travaux";
   $("d-ttc").querySelector('[data-ttc="incl"]').disabled = !docV2(); $("d-ttc").querySelector('[data-ttc="incl"]').title = docV2() ? "" : "Ouvre une fois l'application de l'ordinateur (nouvelle version) pour l'activer";
-  $("dl-unites").innerHTML = LUNITES.map(u => '<option value="' + esc(u) + '">').join("");
+  $("d-txl").checked = !!(doc ? doc.taxesLigne : (p.taxesLigne != null ? p.taxesLigne : r.docTaxesLigne));
   $("d-lt-add").innerHTML = LT.filter(t => t.k !== "rabais" || docV2()).map(t => '<button type="button" class="chip-btn' + (t.k === "rabais" ? " alt" : "") + '" data-addlt="' + t.k + '">' + ico("i-plus") + esc(t.k === "service" ? "Service" : t.l) + "</button>").join("");
   const tfs = (r.tarifs || []);
   $("d-add-tarif").hidden = !tfs.length;
@@ -4023,11 +4042,11 @@ function renderLines(){
         '<textarea class="ctl le-desc" data-f="description" rows="1" maxlength="600" placeholder="' + esc(t.ph) + '" aria-label="Description de la ligne ' + (i + 1) + '">' + esc(l.description) + "</textarea>" +
         '<select class="ctl le-type" data-f="type" aria-label="Type">' + types.map(x => '<option value="' + x.k + '"' + (x.k === t.k ? " selected" : "") + ">" + esc(x.l) + "</option>").join("") + "</select>" +
         '<label class="le-mini"><span>Qté</span><input class="ctl fig" data-f="qte" inputmode="decimal" value="' + esc(fq(l.qte)) + '"></label>' +
-        '<label class="le-mini"><span>Unité</span><input class="ctl" data-f="unite" list="dl-unites" maxlength="12" value="' + esc(l.unite || "") + '"></label>' +
+        '<label class="le-mini"><span>Unité</span><select class="ctl" data-f="unite">' + uniteOptions(l.unite) + "</select></label>" +
         '<label class="le-mini"><span>' + (S.doc.ttc ? "Prix (tx incl.)" : "Prix unitaire") + '</span><input class="ctl fig" data-f="prix" inputmode="decimal" value="' + (l.prix ? esc(n2s(l.prix)) : "") + '" placeholder="0,00"></label>' +
         '<span class="amt" data-amt="' + i + '">' + (mt < 0 ? "−" : "") + fmt(Math.abs(mt)) + "</span>" +
         '<span class="le-acts"><button type="button" class="icon-btn sm" data-tfsave="' + i + '" title="Garder comme tarif" aria-label="Garder comme tarif">' + ico("i-star") + '</button><button type="button" class="icon-btn sm" data-rmline="' + i + '" aria-label="Retirer la ligne"' + (L.length < 2 ? " disabled" : "") + ">" + ico("i-x") + "</button></span>" +
-        (pr ? '<small data-stock="' + i + '">' + ico("i-box") + " Produit du stock : " + esc(fq(stockOf(pr, S.doc.orig ? S.doc.orig.id : null))) + " " + esc(pr.unite || "unité(s)") + " disponible(s)</small>" : "") + "</div>"; }).join("");
+        '<small class="le-tax" data-tax="' + i + '"></small>' + (pr ? '<small data-stock="' + i + '">' + ico("i-box") + " Produit du stock : " + esc(fq(stockOf(pr, S.doc.orig ? S.doc.orig.id : null))) + " " + esc(pr.unite || "unité(s)") + " disponible(s)</small>" : "") + "</div>"; }).join("");
   $("d-lines").querySelectorAll(".le-desc").forEach(autoGrow);
 }
 const autoGrow = el => { el.style.height = "auto"; el.style.height = Math.min(220, el.scrollHeight + 2) + "px"; };
@@ -4043,7 +4062,9 @@ function docRecalc(){
   const doc = {lignes:S.doc.lignes, codeTaxe:$("d-code").value, taxesIncluses:S.doc.ttc}, t = docTotals(doc), G = docGroupes(doc);
   $("d-tot").innerHTML = (G.length > 1 ? G.map(g => '<div class="muted small"><span>' + esc(g.t.g) + "</span><span>" + (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)) + "</span></div>").join("") + '<div class="sep"></div>' : "") +
     '<div><span>' + (t.ttc ? "Montant avant taxes" : "Sous-total") + "</span><span>" + fmt(t.st) + "</span></div>" + taxLines(doc.codeTaxe, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="grand"><span>Total' + (t.ttc ? " (taxes incluses)" : "") + "</span><span>" + fmt(t.total) + "</span></div>";
-  S.doc.lignes.forEach((l, i) => { const el = $("d-lines").querySelector('[data-amt="' + i + '"]'); if (el){ const m = ligneMt(l); el.textContent = (m < 0 ? "−" : "") + fmt(Math.abs(m)); } });
+  const TX = ligneTaxes(doc);
+  S.doc.lignes.forEach((l, i) => { const el = $("d-lines").querySelector('[data-amt="' + i + '"]'); if (el){ const m = ligneMt(l); el.textContent = (m < 0 ? "−" : "") + fmt(Math.abs(m)); }
+    const tx = $("d-lines").querySelector('[data-tax="' + i + '"]'); if (tx){ const s = Number(l.prix) ? ligneTaxTxt(doc, TX[i]) : ""; tx.textContent = s; tx.hidden = !s; } });
   const r = R(), msgs = [];
   if (S.doc.kind === "facture" && t.total >= 100 && (t.tx || t.tq) && ((t.tx && !r.noTPS) || (t.tq && !r.noTVQ))) msgs.push("Ajoute tes numéros de TPS et de TVQ dans les Réglages (section Factures et devis) : ils doivent figurer sur les factures de 100 $ et plus pour que ton client récupère les taxes.");
   const pm = {}; S.d.produits.forEach(x => pm[x.id] = x); const need = {};
@@ -4091,7 +4112,7 @@ $("d-lines").addEventListener("change", e => {
 });
 $("d-lines").addEventListener("focusout", e => { const el = e.target.closest('[data-f="prix"]'); if (el && el.value.trim()){ const v = num(el.value); if (isFinite(v)) el.value = n2s(v); } });
 $("d-lines").addEventListener("keydown", e => {
-  if (e.key !== "Enter" || !e.target.closest("[data-f]") || (e.target.tagName === "TEXTAREA" && e.shiftKey)) return;
+  if (e.key !== "Enter" || !e.target.closest("[data-f]") || e.target.tagName === "SELECT" || (e.target.tagName === "TEXTAREA" && e.shiftKey)) return;
   e.preventDefault(); const row = e.target.closest("[data-l]"), i = Number(row.dataset.l);
   if (i === S.doc.lignes.length - 1) addLigne(ligneDe(ligneType(S.doc.lignes[i]))); else { const n = $("d-lines").querySelector('[data-l="' + (i + 1) + '"] [data-f="description"]'); if (n) n.focus(); }
 });
@@ -4149,8 +4170,8 @@ $("doc-form").addEventListener("submit", async e => {
   if (!lignes.length) return fail("Ajoute au moins une ligne avec une description et un prix.");
   if (lignes.some(l => !l.description)) return fail("Chaque ligne doit avoir une description.");
   const doc = Object.assign({}, o || {id: uid(isF ? "fa" : "dv"), creeLe: now}, {numero, date, echeance: $("d-ech").value && $("d-ech").value >= date ? $("d-ech").value : date, client, lignes, codeTaxe: $("d-code").value, projet: $("d-proj").value, message: $("d-msg").value.trim(), note: $("d-note").value.trim(), modifieLe: now,
-    taxesIncluses: !!S.doc.ttc, travaux: $("d-travaux").value.trim(), lieu: $("d-lieu").value.trim(), dateTravaux: $("d-dtrav").value || ""});
-  if (!doc.taxesIncluses) delete doc.taxesIncluses; ["travaux","lieu","dateTravaux"].forEach(k => { if (!doc[k]) delete doc[k]; });
+    taxesIncluses: !!S.doc.ttc, taxesLigne: $("d-txl").checked, travaux: $("d-travaux").value.trim(), lieu: $("d-lieu").value.trim(), dateTravaux: $("d-dtrav").value || ""});
+  if (!doc.taxesIncluses) delete doc.taxesIncluses; if (!doc.taxesLigne) delete doc.taxesLigne; ["travaux","lieu","dateTravaux"].forEach(k => { if (!doc[k]) delete doc[k]; });
   if (isF){ doc.categorie = $("d-cat").value; doc.statut = o ? (o.statut || "emise") : "emise"; }
   else doc.statut = o && o.statut === "facture" ? "facture" : $("d-etat").value;
   const tt = docTotals(doc); Object.assign(doc, {sousTotal: tt.st, tps: tt.tx, tvq: tt.tq, total: tt.total});
@@ -4163,6 +4184,7 @@ $("doc-form").addEventListener("submit", async e => {
     const L = isF ? d.factures : d.devis, i = L.findIndex(x => x.id === doc.id); if (i >= 0) L[i] = doc; else L.push(doc);
     if (isF) syncFactureTx(d, doc, pay);
     if (docV2() && !!d.reglages.docTTC !== !!doc.taxesIncluses) d.reglages.docTTC = !!doc.taxesIncluses;
+    if (docV2() && !!d.reglages.docTaxesLigne !== !!doc.taxesLigne) d.reglages.docTaxesLigne = !!doc.taxesLigne;
   }, o ? (isF ? "Facture " : "Devis ") + numero + " modifié" + (isF ? "e" : "") : (isF ? "Facture " + numero + " créée" + (pay ? " et payée" : ", à encaisser") : "Devis " + numero + " créé"));
   if (!ok) return;
   closeDoc();
@@ -5127,7 +5149,7 @@ function renderReglages(){
   $("r-termes").value = String(r.termes != null ? r.termes : 30); if (!$("r-termes").value) $("r-termes").value = "30";
   $("r-validite").value = String(r.validiteDevis || 30); $("r-msg").value = r.messageFacture || "";
   $("r-slogan").value = r.slogan || ""; $("r-neq").value = r.neq || ""; $("r-paiement").value = r.modePaiement || ""; $("r-titredevis").value = r.titreDevis === "Soumission" ? "Soumission" : "Devis"; $("r-condev").value = r.conditionsDevis || "";
-  setOptions($("r-tf-type"), LT.map(t => [t.k, t.l])); renderTarifsReglages();
+  setOptions($("r-tf-type"), LT.map(t => [t.k, t.l])); if (!$("r-tf-unite").options.length){ $("r-tf-unite").innerHTML = uniteOptions("h"); } renderTarifsReglages();
   $("r-logo-st").textContent = r.logo ? "Logo : " + r.logo.split("/").pop() : "Aucun logo"; $("r-logo-rm").hidden = !r.logo;
 }
 $("r-logo").addEventListener("change", async e => {
@@ -5147,8 +5169,10 @@ $("r-tarifs").addEventListener("click", e => { const b = e.target.closest("[data
 $("r-tf-ok").addEventListener("click", () => {
   const desc = $("r-tf-desc").value.trim(), prix = num($("r-tf-prix").value), type = $("r-tf-type").value;
   if (!desc || !isFinite(prix) || prix <= 0) return toast("Entre la description et le prix du tarif.");
-  const t = {id: uid("tf"), type, description: desc, unite: $("r-tf-unite").value.trim() || (LTM[type] || {}).u || "", prix: r2(prix), ttc: $("r-tf-ttc").checked};
+  const t = {id: uid("tf"), type, description: desc, unite: $("r-tf-unite").value || "", prix: r2(prix), ttc: $("r-tf-ttc").checked};
   mutate(d => { d.reglages.tarifs = (d.reglages.tarifs || []).concat([t]); }, "Tarif ajouté").then(ok => { if (ok){ $("r-tf-desc").value = ""; $("r-tf-prix").value = ""; $("r-tf-unite").value = ""; } });
+});
+$("r-tf-type").addEventListener("change", () => { $("r-tf-unite").value = (LTM[$("r-tf-type").value] || {}).u || "";
 });
 $("cfg-form").addEventListener("submit", e => {
   e.preventDefault(); const err = $("cfg-err"); err.hidden = true;

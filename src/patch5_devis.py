@@ -67,12 +67,12 @@ rep('''          <label class="field full"><span>Message au bas des factures</sp
           <label class="field full"><span>Modalités des soumissions (une par ligne)</span><textarea id="r-condev" class="ctl" rows="2" maxlength="600"></textarea></label>
           <label class="field full"><span>Message au bas des factures et soumissions</span><textarea id="r-msg" class="ctl" rows="2" maxlength="400"></textarea><small>Il s'affiche en italique sous « Merci de votre confiance. »</small></label>
           <div class="field full"><span>Tarifs enregistrés</span><div id="r-tarifs" class="tarifs"></div>
-            <div class="inline-form tarif-add"><select id="r-tf-type" class="ctl auto"></select><input id="r-tf-desc" class="ctl" type="text" maxlength="200" placeholder="Description, ex. : Taux horaire, émondeur"><input id="r-tf-unite" class="ctl" type="text" maxlength="12" list="dl-unites" placeholder="Unité" style="width:90px"><input id="r-tf-prix" class="ctl fig" type="text" inputmode="decimal" placeholder="Prix" style="width:100px"><label class="check"><input id="r-tf-ttc" type="checkbox"><span>Taxes incluses</span></label><button class="btn sm" type="button" id="r-tf-ok"><svg class="ic"><use href="#i-plus"/></svg>Ajouter</button></div>
+            <div class="inline-form tarif-add"><select id="r-tf-type" class="ctl auto"></select><input id="r-tf-desc" class="ctl" type="text" maxlength="200" placeholder="Description, ex. : Taux horaire, émondeur"><select id="r-tf-unite" class="ctl auto" aria-label="Unité"></select><input id="r-tf-prix" class="ctl fig" type="text" inputmode="decimal" placeholder="Prix" style="width:100px"><label class="check"><input id="r-tf-ttc" type="checkbox"><span>Taxes incluses</span></label><button class="btn sm" type="button" id="r-tf-ok"><svg class="ic"><use href="#i-plus"/></svg>Ajouter</button></div>
             <small>Tes prix habituels (taux horaire, location, déplacement…) : ils s'ajoutent en un clic dans une facture ou une soumission. Tu peux aussi enregistrer une ligne avec l'étoile dans l'éditeur.</small></div>''')
 rep('''  $("r-validite").value = String(r.validiteDevis || 30); $("r-msg").value = r.messageFacture || "";''',
     '''  $("r-validite").value = String(r.validiteDevis || 30); $("r-msg").value = r.messageFacture || "";
   $("r-slogan").value = r.slogan || ""; $("r-neq").value = r.neq || ""; $("r-paiement").value = r.modePaiement || ""; $("r-titredevis").value = r.titreDevis === "Soumission" ? "Soumission" : "Devis"; $("r-condev").value = r.conditionsDevis || "";
-  setOptions($("r-tf-type"), LT.map(t => [t.k, t.l])); renderTarifsReglages();''')
+  setOptions($("r-tf-type"), LT.map(t => [t.k, t.l])); if (!$("r-tf-unite").options.length){ $("r-tf-unite").innerHTML = uniteOptions("h"); } renderTarifsReglages();''')
 rep('''validiteDevis: Math.max(1, Math.round(num($("r-validite").value)) || 30), messageFacture:$("r-msg").value.trim()});''',
     '''validiteDevis: Math.max(1, Math.round(num($("r-validite").value)) || 30), messageFacture:$("r-msg").value.trim(),
     slogan:$("r-slogan").value.trim(), neq:$("r-neq").value.trim(), modePaiement:$("r-paiement").value.trim(), titreDevis:$("r-titredevis").value, conditionsDevis:$("r-condev").value.trim()});''')
@@ -88,8 +88,10 @@ $("r-tarifs").addEventListener("click", e => { const b = e.target.closest("[data
 $("r-tf-ok").addEventListener("click", () => {
   const desc = $("r-tf-desc").value.trim(), prix = num($("r-tf-prix").value), type = $("r-tf-type").value;
   if (!desc || !isFinite(prix) || prix <= 0) return toast("Entre la description et le prix du tarif.");
-  const t = {id: uid("tf"), type, description: desc, unite: $("r-tf-unite").value.trim() || (LTM[type] || {}).u || "", prix: r2(prix), ttc: $("r-tf-ttc").checked};
+  const t = {id: uid("tf"), type, description: desc, unite: $("r-tf-unite").value || "", prix: r2(prix), ttc: $("r-tf-ttc").checked};
   mutate(d => { d.reglages.tarifs = (d.reglages.tarifs || []).concat([t]); }, "Tarif ajouté").then(ok => { if (ok){ $("r-tf-desc").value = ""; $("r-tf-prix").value = ""; $("r-tf-unite").value = ""; } });
+});
+$("r-tf-type").addEventListener("change", () => { $("r-tf-unite").value = (LTM[$("r-tf-type").value] || {}).u || "";
 });''')
 
 # ---------- Éditeur : champs de la facture ou de la soumission ----------
@@ -106,14 +108,14 @@ rep('''      <div class="field"><span>Produits et services</span>
         </div>
       </div>''', '''      <label class="field full"><span>Description des travaux (sur le document, facultatif)</span><textarea id="d-travaux" class="ctl" rows="2" maxlength="1500" placeholder="Ex. : Émondage de 3 érables argentés en façade, dégagement de la toiture et ramassage des branches."></textarea></label>
       <div class="field"><div class="lines-top"><span>Services et frais</span><div class="seg" id="d-ttc" role="group" aria-label="Taxes"><button type="button" data-ttc="plus">Taxes en plus</button><button type="button" data-ttc="incl">Taxes incluses</button><button type="button" data-ttc="aucune">Sans taxes</button></div></div>
-        <p class="muted small" id="d-ttc-txt" style="margin:0 0 8px"></p>
+        <p class="muted small" id="d-ttc-txt" style="margin:0 0 4px"></p>
+        <label class="check" style="margin:0 0 8px"><input type="checkbox" id="d-txl"><span>Montrer aussi les taxes de chaque ligne sur le document</span></label>
         <div class="lines-ed" id="d-lines"></div>
         <div class="lt-add" id="d-lt-add"></div>
         <div class="inline-form" style="margin-top:8px">
           <select id="d-add-tarif" class="ctl auto" hidden></select>
           <select id="d-add-prod" class="ctl auto" hidden></select>
         </div>
-        <datalist id="dl-unites"></datalist>
       </div>''')
 rep('''      <button class="btn" type="button" id="d-save-pdf"><svg class="ic"><use href="#i-pdf"/></svg>Enregistrer et créer le PDF</button>''',
     '''      <button class="btn" type="button" id="d-save-pdf"><svg class="ic"><use href="#i-pdf"/></svg>Enregistrer et voir le PDF</button>
@@ -129,7 +131,7 @@ rep('''  S.doc = {kind, orig: doc || null, lignes: doc ? clone(doc.lignes) : (p.
   $("d-travaux").value = doc ? (doc.travaux || "") : (p.travaux || ""); $("d-lieu").value = doc ? (doc.lieu || "") : (p.lieu || ""); $("d-dtrav").value = doc ? (doc.dateTravaux || "") : (p.dateTravaux || "");
   $("d-dtrav-lbl").textContent = isF ? "Date des travaux" : "Date prévue des travaux";
   $("d-ttc").querySelector('[data-ttc="incl"]').disabled = !docV2(); $("d-ttc").querySelector('[data-ttc="incl"]').title = docV2() ? "" : "Ouvre une fois l'application de l'ordinateur (nouvelle version) pour l'activer";
-  $("dl-unites").innerHTML = LUNITES.map(u => '<option value="' + esc(u) + '">').join("");
+  $("d-txl").checked = !!(doc ? doc.taxesLigne : (p.taxesLigne != null ? p.taxesLigne : r.docTaxesLigne));
   $("d-lt-add").innerHTML = LT.filter(t => t.k !== "rabais" || docV2()).map(t => '<button type="button" class="chip-btn' + (t.k === "rabais" ? " alt" : "") + '" data-addlt="' + t.k + '">' + ico("i-plus") + esc(t.k === "service" ? "Service" : t.l) + "</button>").join("");
   const tfs = (r.tarifs || []);
   $("d-add-tarif").hidden = !tfs.length;
@@ -151,11 +153,11 @@ rep('''function renderLines(){
         '<textarea class="ctl le-desc" data-f="description" rows="1" maxlength="600" placeholder="' + esc(t.ph) + '" aria-label="Description de la ligne ' + (i + 1) + '">' + esc(l.description) + "</textarea>" +
         '<select class="ctl le-type" data-f="type" aria-label="Type">' + types.map(x => '<option value="' + x.k + '"' + (x.k === t.k ? " selected" : "") + ">" + esc(x.l) + "</option>").join("") + "</select>" +
         '<label class="le-mini"><span>Qté</span><input class="ctl fig" data-f="qte" inputmode="decimal" value="' + esc(fq(l.qte)) + '"></label>' +
-        '<label class="le-mini"><span>Unité</span><input class="ctl" data-f="unite" list="dl-unites" maxlength="12" value="' + esc(l.unite || "") + '"></label>' +
+        '<label class="le-mini"><span>Unité</span><select class="ctl" data-f="unite">' + uniteOptions(l.unite) + "</select></label>" +
         '<label class="le-mini"><span>' + (S.doc.ttc ? "Prix (tx incl.)" : "Prix unitaire") + '</span><input class="ctl fig" data-f="prix" inputmode="decimal" value="' + (l.prix ? esc(n2s(l.prix)) : "") + '" placeholder="0,00"></label>' +
         '<span class="amt" data-amt="' + i + '">' + (mt < 0 ? "−" : "") + fmt(Math.abs(mt)) + "</span>" +
         '<span class="le-acts"><button type="button" class="icon-btn sm" data-tfsave="' + i + '" title="Garder comme tarif" aria-label="Garder comme tarif">' + ico("i-star") + '</button><button type="button" class="icon-btn sm" data-rmline="' + i + '" aria-label="Retirer la ligne"' + (L.length < 2 ? " disabled" : "") + ">" + ico("i-x") + "</button></span>" +
-        (pr ? '<small data-stock="' + i + '">' + ico("i-box") + " Produit du stock : " + esc(fq(stockOf(pr, S.doc.orig ? S.doc.orig.id : null))) + " " + esc(pr.unite || "unité(s)") + " disponible(s)</small>" : "") + "</div>"; }).join("");
+        '<small class="le-tax" data-tax="' + i + '"></small>' + (pr ? '<small data-stock="' + i + '">' + ico("i-box") + " Produit du stock : " + esc(fq(stockOf(pr, S.doc.orig ? S.doc.orig.id : null))) + " " + esc(pr.unite || "unité(s)") + " disponible(s)</small>" : "") + "</div>"; }).join("");
   $("d-lines").querySelectorAll(".le-desc").forEach(autoGrow);
 }
 const autoGrow = el => { el.style.height = "auto"; el.style.height = Math.min(220, el.scrollHeight + 2) + "px"; };
@@ -173,7 +175,9 @@ rep('''  const doc = {lignes:S.doc.lignes, codeTaxe:$("d-code").value}, t = docT
 '''  const doc = {lignes:S.doc.lignes, codeTaxe:$("d-code").value, taxesIncluses:S.doc.ttc}, t = docTotals(doc), G = docGroupes(doc);
   $("d-tot").innerHTML = (G.length > 1 ? G.map(g => '<div class="muted small"><span>' + esc(g.t.g) + "</span><span>" + (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)) + "</span></div>").join("") + '<div class="sep"></div>' : "") +
     '<div><span>' + (t.ttc ? "Montant avant taxes" : "Sous-total") + "</span><span>" + fmt(t.st) + "</span></div>" + taxLines(doc.codeTaxe, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="grand"><span>Total' + (t.ttc ? " (taxes incluses)" : "") + "</span><span>" + fmt(t.total) + "</span></div>";
-  S.doc.lignes.forEach((l, i) => { const el = $("d-lines").querySelector('[data-amt="' + i + '"]'); if (el){ const m = ligneMt(l); el.textContent = (m < 0 ? "−" : "") + fmt(Math.abs(m)); } });''')
+  const TX = ligneTaxes(doc);
+  S.doc.lignes.forEach((l, i) => { const el = $("d-lines").querySelector('[data-amt="' + i + '"]'); if (el){ const m = ligneMt(l); el.textContent = (m < 0 ? "−" : "") + fmt(Math.abs(m)); }
+    const tx = $("d-lines").querySelector('[data-tax="' + i + '"]'); if (tx){ const s = Number(l.prix) ? ligneTaxTxt(doc, TX[i]) : ""; tx.textContent = s; tx.hidden = !s; } });''')
 rep('''$("d-add-line").addEventListener("click", () => { S.doc.lignes.push({description:"", qte:1, prix:0}); renderLines(); docRecalc(); const ins = $("d-lines").querySelectorAll('[data-f="description"]'); ins[ins.length - 1].focus(); });
 $("d-add-prod").addEventListener("change", e => {
   const pr = S.d.produits.find(x => x.id === e.target.value); e.target.value = ""; if (!pr) return;
@@ -215,7 +219,7 @@ $("d-lines").addEventListener("change", e => {
 });''')
 rep('''$("d-lines").addEventListener("keydown", e => {
   if (e.key !== "Enter" || !e.target.closest("[data-f]")) return;''', '''$("d-lines").addEventListener("keydown", e => {
-  if (e.key !== "Enter" || !e.target.closest("[data-f]") || (e.target.tagName === "TEXTAREA" && e.shiftKey)) return;''')
+  if (e.key !== "Enter" || !e.target.closest("[data-f]") || e.target.tagName === "SELECT" || (e.target.tagName === "TEXTAREA" && e.shiftKey)) return;''')
 rep('''  if (i === S.doc.lignes.length - 1) $("d-add-line").click(); else''', '''  if (i === S.doc.lignes.length - 1) addLigne(ligneDe(ligneType(S.doc.lignes[i]))); else''')
 rep('''$("d-lines").addEventListener("click", e => { const b = e.target.closest("[data-rmline]"); if (!b) return; S.doc.lignes.splice(Number(b.dataset.rmline), 1); if (!S.doc.lignes.length) S.doc.lignes.push({description:"", qte:1, prix:0}); renderLines(); docRecalc(); });''',
 '''$("d-lines").addEventListener("click", e => {
@@ -234,18 +238,19 @@ rep('''  const lignes = S.doc.lignes.map(l => { const x = {description:String(l.
     '''  const lignes = S.doc.lignes.map(l => { const x = {type: ligneType(l), description:String(l.description || "").trim(), qte: Number(l.qte) || 0, unite: String(l.unite || "").trim(), prix: r2(l.prix)}; if (l.produit) x.produit = l.produit; return x; }).filter(l => l.description || l.prix);''')
 rep('''client, lignes, codeTaxe: $("d-code").value, projet: $("d-proj").value, message: $("d-msg").value.trim(), note: $("d-note").value.trim(), modifieLe: now});''',
     '''client, lignes, codeTaxe: $("d-code").value, projet: $("d-proj").value, message: $("d-msg").value.trim(), note: $("d-note").value.trim(), modifieLe: now,
-    taxesIncluses: !!S.doc.ttc, travaux: $("d-travaux").value.trim(), lieu: $("d-lieu").value.trim(), dateTravaux: $("d-dtrav").value || ""});
-  if (!doc.taxesIncluses) delete doc.taxesIncluses; ["travaux","lieu","dateTravaux"].forEach(k => { if (!doc[k]) delete doc[k]; });''')
+    taxesIncluses: !!S.doc.ttc, taxesLigne: $("d-txl").checked, travaux: $("d-travaux").value.trim(), lieu: $("d-lieu").value.trim(), dateTravaux: $("d-dtrav").value || ""});
+  if (!doc.taxesIncluses) delete doc.taxesIncluses; if (!doc.taxesLigne) delete doc.taxesLigne; ["travaux","lieu","dateTravaux"].forEach(k => { if (!doc[k]) delete doc[k]; });''')
 rep('''    if (isF) syncFactureTx(d, doc, pay);
   }, o ?''', '''    if (isF) syncFactureTx(d, doc, pay);
     if (docV2() && !!d.reglages.docTTC !== !!doc.taxesIncluses) d.reglages.docTTC = !!doc.taxesIncluses;
+    if (docV2() && !!d.reglages.docTaxesLigne !== !!doc.taxesLigne) d.reglages.docTaxesLigne = !!doc.taxesLigne;
   }, o ?''')
 rep('''  if (withPdf || doc.pdf) await makeDocPDF(kind, doc.id, withPdf);
 });''', '''  if (withSend){ await shareDoc(kind, doc.id); return; }
   if (withPdf || doc.pdf) await makeDocPDF(kind, doc.id, withPdf);
 });''')
 rep('''  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id});''',
-    '''  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});''')
+    '''  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, taxesLigne:!!v.taxesLigne, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});''')
 rep('''  setOptions($("d-code"), TAXCODES.map(c => [c, taxLabel(c)]), doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE")));''',
     '''  setOptions($("d-code"), TAXCODES.map(c => [c, taxLabel(c)]), doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE")));
   if ($("d-code").value === "AUCUNE") S.doc.ttc = false; S.doc.codeAvant = ""; docTTCset();''')
@@ -323,6 +328,7 @@ rep('''</style>''', '''/* Éditeur de factures et soumissions : lignes sur deux 
 .le-mini span{font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 .le2.rabais .amt{color:var(--pos)}
 .le2 small{grid-column:1/-1}
+.le2 .le-tax{color:var(--muted);font-size:.78rem;margin-top:-2px;text-align:right}
 @media (max-width:620px){.le-row.le2{grid-template-columns:1fr 1fr 1fr;grid-template-areas:"desc desc desc" "type type type" "qte unit prix" "amt amt acts"}.le2 .amt{display:block;text-align:left;padding-top:0}.le2 .le-acts{padding-top:0}}
 .lt-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip-btn{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line-strong);background:var(--surface);border-radius:999px;padding:5px 10px;font:inherit;font-size:.8rem;font-weight:600;color:var(--ink);cursor:pointer}

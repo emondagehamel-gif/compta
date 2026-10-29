@@ -28,7 +28,9 @@ async def run(ops, label):
         print(label, "1 titre:", await pg.inner_text("#sh-title"), "| ttc:", await pg.locator("[data-ttc]").count(), "| options:", await pg.eval_on_selector_all("#d-add option", "a => a.map(x => x.textContent).slice(0, 14)"))
         print(label, "1b taxes:", await pg.eval_on_selector_all("[data-ttc]", "a => a.map(x => x.dataset.ttc + (x.disabled ? ' (désactivé)' : '') + (x.getAttribute('aria-pressed') === 'true' ? ' *' : ''))"), "|", await pg.inner_text("#d-txt"))
         await pg.fill('[data-li="0"] [data-lf="prix"]', "100"); await pg.click('[data-ttc="aucune"]'); print(label, "1c sans taxes:", await pg.input_value("#d-code"), (await pg.inner_text("#d-tot")).replace("\n", " | "))
-        await pg.click('[data-ttc="plus"]'); print(label, "1d en plus:", await pg.input_value("#d-code"), (await pg.inner_text("#d-tot")).replace("\n", " | "))
+        await pg.click('[data-ttc="plus"]'); await pg.select_option('[data-li="0"] [data-lf="unite"]', "h"); print(label, "1e unité:", await pg.input_value('[data-li="0"] [data-lf="unite"]'), "| taxes ligne:", await pg.inner_text('[data-tax="0"]'))
+        await pg.select_option('[data-li="0"] [data-lf="unite"]', "")
+        print(label, "1d en plus:", await pg.input_value("#d-code"), (await pg.inner_text("#d-tot")).replace("\n", " | "))
         await pg.screenshot(path=OUT + "/devis-tel-taxes-" + ("v2" if "doc-v2" in ops else "ancien") + ".png")
         if "doc-v2" not in ops:
             print(label, "hint:", await pg.inner_text("#sh-body .hint")); await b.close(); return
