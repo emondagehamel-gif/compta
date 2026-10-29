@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Comptabilité">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-feuille-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon-feuille.png">
 <title>Comptabilité</title>
 <style>
 /* Compagnon de terrain de l'application de bureau : mêmes couleurs, une colonne, barre d'onglets en bas. */
@@ -56,8 +56,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* En-tête */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
 .top .wrap{display:flex;align-items:center;gap:10px;padding-block:10px}
-.logo{width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(160deg,#3F8C4D,#235A2F);color:#FFFFFF;--leaf-vein:#2C6B39;display:grid;place-items:center;flex:none;box-shadow:0 1px 2px rgba(20,60,30,.25)}
 .logo .ic{width:18px;height:18px}
+.logo .ic.feuille{width:26px;height:26px;stroke-width:0}
 .who{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
 .who b{font-family:var(--font-d);font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sync{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);border:none;background:none;padding:0;cursor:pointer;text-align:left}
@@ -306,6 +307,7 @@ body.sig-open{overflow:hidden}
   <symbol id="i-tool" viewBox="0 0 24 24"><path d="M4 14h16v6H4zM8 14V9h8v5M10 9V5h4v4"/></symbol>
   <symbol id="i-laptop" viewBox="0 0 24 24"><path d="M5 5h14v10H5zM2.5 19h19"/></symbol>
   <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M9.5 13h5M9.5 16.5h5"/></symbol>
+  <symbol id="i-feuille" viewBox="0 0 100 100"><g transform="translate(50 50) scale(1.42) translate(-48 -52)"><path d="M30 70C17.6 40 55.9 29.9 74 26C70.1 44.1 60 82.4 30 70Z" fill="currentColor" stroke="none"/><path d="M30.5 69.5L21 79" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"/><path d="M33 67C44 56 55 45 66.5 33.5" fill="none" stroke="var(--leaf-vein, #2C6B39)" stroke-width="3.2" stroke-linecap="round"/></g></symbol>
   <symbol id="i-pen" viewBox="0 0 24 24"><path d="M3 21c3-1 5-3 7-6l7-7a2.1 2.1 0 0 0-3-3l-7 7c-3 2-5 4-6 7z"/><path d="M14 6l3 3"/><path d="M13 21h8"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></symbol>
@@ -318,7 +320,7 @@ body.sig-open{overflow:hidden}
 </svg>
 <header class="top">
   <div class="wrap">
-    <span class="logo"><svg class="ic"><use href="#i-book"/></svg></span>
+    <span class="logo"><svg class="ic feuille"><use href="#i-feuille"/></svg></span>
     <div class="who"><b id="h-nom">Comptabilité</b><button class="sync busy" id="h-sync" type="button"><i></i><span id="h-sync-t">Connexion à tes livres…</span></button></div>
     <button class="icon-btn" id="h-refresh" type="button" aria-label="Actualiser"><svg class="ic"><use href="#i-refresh"/></svg></button>
   </div>
@@ -869,10 +871,12 @@ function docLayoutOrigine(kind, doc, logo, sigs){
 const DOC_STYLES = {origine: "Modèle d'origine", nature: "Nature : doux et rassurant", moderne: "Moderne : bandeau vert", epure: "Épuré : sobre et aéré"};
 function docLayout(kind, doc, logo, sigs){ const st = R().styleDoc; return DOC_STYLES[st] && st !== "origine" ? docLayoutStyle(kind, doc, logo, sigs, st) : docLayoutOrigine(kind, doc, logo, sigs); }
 function docEmbleme(P, cx, cy, R0, fond, feuille){
+  /* Même feuille que le logo de l'application (dessin sur 100 unités, centré sur 48,52) */
   P.circle(cx, cy, R0, {fill: fond});
-  const r = R0 * 0.62, x0 = cx - r * 0.62, y0 = cy + r * 0.62;
-  P.path([["M", x0, y0], ["C", x0 - r * 0.15, cy - r * 0.35, cx + r * 0.05, cy - r * 0.95, cx + r * 0.72, cy - r * 0.78], ["C", cx + r * 0.85, cy - r * 0.05, cx + r * 0.2, cy + r * 0.72, x0, y0], ["Z"]], {fill: feuille});
-  P.path([["M", x0 - r * 0.22, y0 + r * 0.22], ["L", x0, y0], ["C", cx - r * 0.1, cy + r * 0.05, cx + r * 0.2, cy - r * 0.35, cx + r * 0.5, cy - r * 0.6]], {stroke: fond, w: Math.max(0.8, R0 / 16)});
+  const k = R0 / 50 * 1.02, X = u => cx + (u - 48) * k, Y = v => cy + (v - 52) * k;
+  P.path([["M", X(30), Y(70)], ["C", X(17.6), Y(40), X(55.9), Y(29.9), X(74), Y(26)], ["C", X(70.1), Y(44.1), X(60), Y(82.4), X(30), Y(70)], ["Z"]], {fill: feuille});
+  P.path([["M", X(30.5), Y(69.5)], ["L", X(21), Y(79)]], {stroke: feuille, w: 4.6 * k});
+  P.path([["M", X(33), Y(67)], ["C", X(44), Y(56), X(55), Y(45), X(66.5), Y(33.5)]], {stroke: fond, w: 3.2 * k});
 }
 function docLayoutStyle(kind, doc, logo, sigs, st){
   sigs = sigs || {}; const sg = doc.signature && doc.signature.nom ? doc.signature : null, MOD = st === "moderne", EPU = st === "epure";
@@ -1086,7 +1090,7 @@ async function pdfImages(P, scale){
       if (o.k === "t"){ g.fillStyle = o.color || "#000000"; g.font = (o.italic ? "italic " : "") + (o.bold ? "bold " : "") + o.size + "px Helvetica, Arial, sans-serif"; g.textAlign = "left"; try { g.letterSpacing = (o.ls || 0) + "px"; } catch(e){} g.fillText(o.s, o.x, o.y); }
       else if (o.k === "l"){ g.strokeStyle = o.color; g.lineWidth = o.w; g.beginPath(); g.moveTo(o.x1, o.y1); g.lineTo(o.x2, o.y2); g.stroke(); }
       else if (o.k === "r"){ g.fillStyle = o.color; g.fillRect(o.x, o.y, o.w, o.h); }
-      else if (o.k === "p"){ g.beginPath(); o.cmds.forEach(c => c[0] === "M" ? g.moveTo(c[1], c[2]) : c[0] === "L" ? g.lineTo(c[1], c[2]) : c[0] === "C" ? g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]) : g.closePath()); if (o.fill){ g.fillStyle = o.fill; g.fill(); } if (o.stroke){ g.strokeStyle = o.stroke; g.lineWidth = o.w; g.stroke(); } }
+      else if (o.k === "p"){ g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); o.cmds.forEach(c => c[0] === "M" ? g.moveTo(c[1], c[2]) : c[0] === "L" ? g.lineTo(c[1], c[2]) : c[0] === "C" ? g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]) : g.closePath()); if (o.fill){ g.fillStyle = o.fill; g.fill(); } if (o.stroke){ g.strokeStyle = o.stroke; g.lineWidth = o.w; g.stroke(); } }
       else if (o.k === "i"){ try { const bm = await createImageBitmap(new Blob([o.img.data], {type:"image/jpeg"})); g.drawImage(bm, o.x, o.y, o.w, o.h); } catch(e){} }
     }
     out.push(await new Promise(res => c.toBlob(res, "image/jpeg", 0.9)));

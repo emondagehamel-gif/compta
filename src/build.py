@@ -12,7 +12,7 @@ head = open('phone/head.html', encoding='utf-8').read()
 head = head.replace('<title>Comptabilité mobile</title>', '<title>Comptabilité</title>').replace('<meta name="claude:viewport-fit-sides" content="cover">\n', '')
 ui = open('pwa/ui.js', encoding='utf-8').read().replace('"__CLIENT_ID__"', json.dumps(client))
 js = '(function(){\n"use strict";\n' + open('phone/core.js', encoding='utf-8').read() + '\n' + ui + '\n})();\n'
-full = src.replace('<meta name="viewport" content="width=device-width,initial-scale=1">', '<meta name="viewport" content="width=device-width,initial-scale=1">\n<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">\n<meta name="theme-color" content="#151D19" media="(prefers-color-scheme: dark)">\n<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icon-192.png" type="image/png">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">', 1)
+full = src.replace('<meta name="viewport" content="width=device-width,initial-scale=1">', '<meta name="viewport" content="width=device-width,initial-scale=1">\n<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">\n<meta name="theme-color" content="#151D19" media="(prefers-color-scheme: dark)">\n<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icon-feuille-192.png" type="image/png">\n<link rel="apple-touch-icon" href="apple-touch-icon-feuille.png">', 1)
 assert full != src, "en-tête de la version complète introuvable"
 ver = hashlib.sha1((head + js + sprite + full).encode()).hexdigest()[:10]
 html = '''<!doctype html>
@@ -25,8 +25,8 @@ html = '''<!doctype html>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Comptabilité">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-feuille-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon-feuille.png">
 ''' + head + '''<style>html,body{margin:0}body{min-height:100dvh;overscroll-behavior-y:contain}[hidden]{display:none!important}.sync.off i{background:var(--muted)}img{max-width:100%}
 .full-link{flex-direction:row;align-items:center;gap:12px;text-decoration:none;color:inherit;border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:var(--accent-soft)}
 .full-link .fl-ic{width:40px;height:40px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
@@ -50,8 +50,8 @@ open('pwa/all.js', 'w', encoding='utf-8').write(js)
 manifest = {"name": "Comptabilité", "short_name": "Comptabilité", "description": "Comptabilité de l'entreprise sur le terrain : reçus, factures, devis, agenda, trajets et entretiens, même sans réseau.",
   "lang": "fr-CA", "id": "./", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "portrait",
   "background_color": "#F2F5F1", "theme_color": "#FFFFFF",
-  "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
-            {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}
+  "icons": [{"src": "icon-feuille-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-feuille-512.png", "sizes": "512x512", "type": "image/png"},
+            {"src": "icon-feuille-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}
 open('pwa/dist/manifest.webmanifest', 'w', encoding='utf-8').write(json.dumps(manifest, ensure_ascii=False, indent=2))
 sw = open('pwa/sw.js', encoding='utf-8').read().replace('__VERSION__', ver)
 open('pwa/dist/sw.js', 'w', encoding='utf-8').write(sw)

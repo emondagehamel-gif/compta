@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151D19" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-feuille-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon-feuille.png">
 <title>Comptabilité</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='5' fill='%2324418C'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h9' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%232F6B3B%22/%3E%3Cg transform=%22translate%2850 50%29 scale%281.25%29 translate%28-48 -52%29%22%3E%3Cpath d=%22M30 70C17.6 40 55.9 29.9 74 26C70.1 44.1 60 82.4 30 70Z%22 fill=%22%23fff%22/%3E%3Cpath d=%22M30.5 69.5L21 79%22 stroke=%22%23fff%22 stroke-width=%224.6%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M33 67C44 56 55 45 66.5 33.5%22 stroke=%22%232C6B39%22 stroke-width=%223.2%22 stroke-linecap=%22round%22 fill=%22none%22/%3E%3C/g%3E%3C/svg%3E">
 <style>
 /* Mise en page : application de bureau à la manière de Fluent (Windows 11).
    Barre latérale à gauche, en-tête de page avec « + Nouveau », contenu en cartes ;
@@ -81,7 +81,10 @@ kbd{font-family:var(--font-body);font-size:.7rem;border:1px solid var(--line-str
 .app{display:grid;grid-template-columns:256px minmax(0,1fr);min-height:100%}
 .side{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .brand{display:flex;gap:10px;align-items:center;padding:2px 6px 4px}
-.logo{width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(160deg,#3F8C4D,#235A2F);color:#FFFFFF;--leaf-vein:#2C6B39;display:grid;place-items:center;flex:none;box-shadow:0 1px 2px rgba(20,60,30,.25)}
+.logo .ic.feuille{width:26px;height:26px;stroke-width:0}
+.splash .box .logo{width:52px;height:52px;border-radius:14px}
+.splash .box .logo .ic.feuille{width:40px;height:40px}
 .brand .name{display:block;font-family:var(--font-display);font-weight:600;font-size:1rem;line-height:1.2;overflow-wrap:anywhere}
 .search-btn{display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r);padding:7px 10px;color:var(--muted);cursor:pointer;text-align:left}
 .search-btn:hover{border-color:var(--line-strong)}
@@ -793,6 +796,7 @@ body.sig-open{overflow:hidden}
   <symbol id="i-tool" viewBox="0 0 24 24"><path d="M4 14h16v6H4zM8 14V9h8v5M10 9V5h4v4"/></symbol>
   <symbol id="i-laptop" viewBox="0 0 24 24"><path d="M5 5h14v10H5zM2.5 19h19"/></symbol>
   <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M9.5 13h5M9.5 16.5h5"/></symbol>
+  <symbol id="i-feuille" viewBox="0 0 100 100"><g transform="translate(50 50) scale(1.42) translate(-48 -52)"><path d="M30 70C17.6 40 55.9 29.9 74 26C70.1 44.1 60 82.4 30 70Z" fill="currentColor" stroke="none"/><path d="M30.5 69.5L21 79" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"/><path d="M33 67C44 56 55 45 66.5 33.5" fill="none" stroke="var(--leaf-vein, #2C6B39)" stroke-width="3.2" stroke-linecap="round"/></g></symbol>
   <symbol id="i-pen" viewBox="0 0 24 24"><path d="M3 21c3-1 5-3 7-6l7-7a2.1 2.1 0 0 0-3-3l-7 7c-3 2-5 4-6 7z"/><path d="M14 6l3 3"/><path d="M13 21h8"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></symbol>
@@ -807,6 +811,7 @@ body.sig-open{overflow:hidden}
 <!-- Écran d'ouverture du dossier -->
 <div class="splash" id="splash">
   <div class="box" id="splash-box">
+    <span class="logo"><svg class="ic feuille"><use href="#i-feuille"/></svg></span>
     <span class="eyebrow">Comptabilité</span>
     <h1>Ouverture de tes livres…</h1>
   </div>
@@ -815,7 +820,7 @@ body.sig-open{overflow:hidden}
 <div class="app" id="app" hidden>
   <aside class="side">
     <div class="brand">
-      <span class="logo"><svg class="ic"><use href="#i-book"/></svg></span>
+      <span class="logo"><svg class="ic feuille"><use href="#i-feuille"/></svg></span>
       <div><span class="eyebrow">Comptabilité</span><span class="name" id="side-nom">Mon entreprise</span></div>
     </div>
     <button class="search-btn" id="btn-search" type="button"><svg class="ic"><use href="#i-search"/></svg><span>Rechercher</span><kbd>Ctrl K</kbd></button>
@@ -1555,7 +1560,7 @@ function idb(){ return new Promise((res, rej) => { const r = indexedDB.open("com
 async function kvGet(k){ try { const db = await idb(); return await new Promise((res, rej) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch(e){ return null; } }
 async function kvSet(k, v){ try { const db = await idb(); await new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch(e){} }
 
-function splash(html){ $("splash-box").innerHTML = html; $("splash").hidden = false; $("app").hidden = true; }
+function splash(html){ $("splash-box").innerHTML = '<span class="logo"><svg class="ic feuille"><use href="#i-feuille"/></svg></span>' + html; $("splash").hidden = false; $("app").hidden = true; }
 async function boot(){
   if (CLOUD) return nuBoot();
   if (!window.showDirectoryPicker){
@@ -1947,7 +1952,7 @@ const NU_ADD = [["depense","i-camera","Reçu ou dépense","Photo du reçu et mon
 const nuMobile = () => CLOUD && !!window.matchMedia && matchMedia("(max-width: 900px)").matches;
 function nuShell(){
   if ($("m-head")) return;
-  document.querySelector(".main").insertAdjacentHTML("afterbegin", '<header class="m-head" id="m-head"><span class="logo">' + ico("i-book") + '</span><div class="m-who"><b id="m-nom">Comptabilité</b><button class="m-sync" id="m-sync" type="button" data-nu="synccard"><i></i><span id="m-sync-t">Connexion…</span></button></div><button class="m-ib" type="button" data-nu="search" aria-label="Rechercher">' + ico("i-search") + '</button><button class="m-ib" type="button" data-nu="sync" aria-label="Actualiser">' + ico("i-refresh") + "</button></header>");
+  document.querySelector(".main").insertAdjacentHTML("afterbegin", '<header class="m-head" id="m-head"><span class="logo"><svg class="ic feuille"><use href="#i-feuille"/></svg></span><div class="m-who"><b id="m-nom">Comptabilité</b><button class="m-sync" id="m-sync" type="button" data-nu="synccard"><i></i><span id="m-sync-t">Connexion…</span></button></div><button class="m-ib" type="button" data-nu="search" aria-label="Rechercher">' + ico("i-search") + '</button><button class="m-ib" type="button" data-nu="sync" aria-label="Actualiser">' + ico("i-refresh") + "</button></header>");
   document.body.insertAdjacentHTML("beforeend", '<nav class="m-tabs" aria-label="Sections"><div class="m-wrap"><a href="./#accueil">' + ico("i-home") + 'Accueil</a><a href="./#agenda">' + ico("i-cal") + 'Agenda<span class="m-badge" id="mb-agenda" hidden></span></a><button type="button" class="m-add" data-nu="add" aria-label="Ajouter">' + ico("i-plus") + '</button><a href="./#ventes">' + ico("i-invoice") + 'Ventes<span class="m-badge" id="mb-ventes" hidden></span></a><button type="button" data-nu="menu" aria-current="page">' + ico("i-grid") + "Menu</button></div></nav>" +
     '<div class="m-ov" id="m-menu" hidden><div class="m-panel" role="dialog" aria-label="Menu"><header><h2>Menu</h2><button class="m-ib" type="button" data-nu="close" aria-label="Fermer">' + ico("i-x") + '</button></header><div class="m-body" id="m-menu-b"></div></div></div>' +
     '<div class="m-ov" id="m-add" hidden><div class="m-panel" role="dialog" aria-label="Ajouter"><header><h2>Ajouter</h2><button class="m-ib" type="button" data-nu="close" aria-label="Fermer">' + ico("i-x") + '</button></header><div class="m-body"><div class="m-addgrid">' +
@@ -3868,10 +3873,12 @@ const DOC_STYLES = {origine: "Modèle d'origine", nature: "Nature : doux et rass
 function docLayout(kind, doc, logo, sigs){ const st = R().styleDoc; return DOC_STYLES[st] && st !== "origine" ? docLayoutStyle(kind, doc, logo, sigs, st) : docLayoutOrigine(kind, doc, logo, sigs); }
 /* Emblème : une feuille dans un cercle (quand il n'y a pas de logo) */
 function docEmbleme(P, cx, cy, R0, fond, feuille){
+  /* Même feuille que le logo de l'application (dessin sur 100 unités, centré sur 48,52) */
   P.circle(cx, cy, R0, {fill: fond});
-  const r = R0 * 0.62, x0 = cx - r * 0.62, y0 = cy + r * 0.62;
-  P.path([["M", x0, y0], ["C", x0 - r * 0.15, cy - r * 0.35, cx + r * 0.05, cy - r * 0.95, cx + r * 0.72, cy - r * 0.78], ["C", cx + r * 0.85, cy - r * 0.05, cx + r * 0.2, cy + r * 0.72, x0, y0], ["Z"]], {fill: feuille});
-  P.path([["M", x0 - r * 0.22, y0 + r * 0.22], ["L", x0, y0], ["C", cx - r * 0.1, cy + r * 0.05, cx + r * 0.2, cy - r * 0.35, cx + r * 0.5, cy - r * 0.6]], {stroke: fond, w: Math.max(0.8, R0 / 16)});
+  const k = R0 / 50 * 1.02, X = u => cx + (u - 48) * k, Y = v => cy + (v - 52) * k;
+  P.path([["M", X(30), Y(70)], ["C", X(17.6), Y(40), X(55.9), Y(29.9), X(74), Y(26)], ["C", X(70.1), Y(44.1), X(60), Y(82.4), X(30), Y(70)], ["Z"]], {fill: feuille});
+  P.path([["M", X(30.5), Y(69.5)], ["L", X(21), Y(79)]], {stroke: feuille, w: 4.6 * k});
+  P.path([["M", X(33), Y(67)], ["C", X(44), Y(56), X(55), Y(45), X(66.5), Y(33.5)]], {stroke: fond, w: 3.2 * k});
 }
 function docLayoutStyle(kind, doc, logo, sigs, st){
   sigs = sigs || {}; const sg = doc.signature && doc.signature.nom ? doc.signature : null, MOD = st === "moderne", EPU = st === "epure";
@@ -4089,7 +4096,7 @@ async function pdfImages(P, scale){
       if (o.k === "t"){ g.fillStyle = o.color || "#000000"; g.font = (o.italic ? "italic " : "") + (o.bold ? "bold " : "") + o.size + "px Helvetica, Arial, sans-serif"; g.textAlign = "left"; try { g.letterSpacing = (o.ls || 0) + "px"; } catch(e){} g.fillText(o.s, o.x, o.y); }
       else if (o.k === "l"){ g.strokeStyle = o.color; g.lineWidth = o.w; g.beginPath(); g.moveTo(o.x1, o.y1); g.lineTo(o.x2, o.y2); g.stroke(); }
       else if (o.k === "r"){ g.fillStyle = o.color; g.fillRect(o.x, o.y, o.w, o.h); }
-      else if (o.k === "p"){ g.beginPath(); o.cmds.forEach(c => c[0] === "M" ? g.moveTo(c[1], c[2]) : c[0] === "L" ? g.lineTo(c[1], c[2]) : c[0] === "C" ? g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]) : g.closePath()); if (o.fill){ g.fillStyle = o.fill; g.fill(); } if (o.stroke){ g.strokeStyle = o.stroke; g.lineWidth = o.w; g.stroke(); } }
+      else if (o.k === "p"){ g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); o.cmds.forEach(c => c[0] === "M" ? g.moveTo(c[1], c[2]) : c[0] === "L" ? g.lineTo(c[1], c[2]) : c[0] === "C" ? g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]) : g.closePath()); if (o.fill){ g.fillStyle = o.fill; g.fill(); } if (o.stroke){ g.strokeStyle = o.stroke; g.lineWidth = o.w; g.stroke(); } }
       else if (o.k === "i"){ try { const bm = await createImageBitmap(new Blob([o.img.data], {type:"image/jpeg"})); g.drawImage(bm, o.x, o.y, o.w, o.h); } catch(e){} }
     }
     out.push(await new Promise(res => c.toBlob(res, "image/jpeg", 0.9)));

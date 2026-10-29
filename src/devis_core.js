@@ -238,7 +238,7 @@ async function pdfImages(P, scale){
       if (o.k === "t"){ g.fillStyle = o.color || "#000000"; g.font = (o.bold ? "bold " : "") + o.size + "px Helvetica, Arial, sans-serif"; g.textAlign = o.align || "left"; g.fillText(o.s, o.x, o.y); }
       else if (o.k === "l"){ g.strokeStyle = o.color; g.lineWidth = o.w; g.beginPath(); g.moveTo(o.x1, o.y1); g.lineTo(o.x2, o.y2); g.stroke(); }
       else if (o.k === "r"){ g.fillStyle = o.color; g.fillRect(o.x, o.y, o.w, o.h); }
-      else if (o.k === "p"){ g.beginPath(); o.cmds.forEach(c => c[0] === "M" ? g.moveTo(c[1], c[2]) : c[0] === "L" ? g.lineTo(c[1], c[2]) : c[0] === "C" ? g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]) : g.closePath()); if (o.fill){ g.fillStyle = o.fill; g.fill(); } if (o.stroke){ g.strokeStyle = o.stroke; g.lineWidth = o.w; g.stroke(); } }
+      else if (o.k === "p"){ g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); o.cmds.forEach(c => c[0] === "M" ? g.moveTo(c[1], c[2]) : c[0] === "L" ? g.lineTo(c[1], c[2]) : c[0] === "C" ? g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]) : g.closePath()); if (o.fill){ g.fillStyle = o.fill; g.fill(); } if (o.stroke){ g.strokeStyle = o.stroke; g.lineWidth = o.w; g.stroke(); } }
       else if (o.k === "i"){ try { const bm = await createImageBitmap(new Blob([o.img.data], {type:"image/jpeg"})); g.drawImage(bm, o.x, o.y, o.w, o.h); } catch(e){} }
     }
     out.push(await new Promise(res => c.toBlob(res, "image/jpeg", 0.9)));

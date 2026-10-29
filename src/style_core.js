@@ -3,10 +3,12 @@ const DOC_STYLES = {origine: "Modèle d'origine", nature: "Nature : doux et rass
 function docLayout(kind, doc, logo, sigs){ const st = R().styleDoc; return DOC_STYLES[st] && st !== "origine" ? docLayoutStyle(kind, doc, logo, sigs, st) : docLayoutOrigine(kind, doc, logo, sigs); }
 /* Emblème : une feuille dans un cercle (quand il n'y a pas de logo) */
 function docEmbleme(P, cx, cy, R0, fond, feuille){
+  /* Même feuille que le logo de l'application (dessin sur 100 unités, centré sur 48,52) */
   P.circle(cx, cy, R0, {fill: fond});
-  const r = R0 * 0.62, x0 = cx - r * 0.62, y0 = cy + r * 0.62;
-  P.path([["M", x0, y0], ["C", x0 - r * 0.15, cy - r * 0.35, cx + r * 0.05, cy - r * 0.95, cx + r * 0.72, cy - r * 0.78], ["C", cx + r * 0.85, cy - r * 0.05, cx + r * 0.2, cy + r * 0.72, x0, y0], ["Z"]], {fill: feuille});
-  P.path([["M", x0 - r * 0.22, y0 + r * 0.22], ["L", x0, y0], ["C", cx - r * 0.1, cy + r * 0.05, cx + r * 0.2, cy - r * 0.35, cx + r * 0.5, cy - r * 0.6]], {stroke: fond, w: Math.max(0.8, R0 / 16)});
+  const k = R0 / 50 * 1.02, X = u => cx + (u - 48) * k, Y = v => cy + (v - 52) * k;
+  P.path([["M", X(30), Y(70)], ["C", X(17.6), Y(40), X(55.9), Y(29.9), X(74), Y(26)], ["C", X(70.1), Y(44.1), X(60), Y(82.4), X(30), Y(70)], ["Z"]], {fill: feuille});
+  P.path([["M", X(30.5), Y(69.5)], ["L", X(21), Y(79)]], {stroke: feuille, w: 4.6 * k});
+  P.path([["M", X(33), Y(67)], ["C", X(44), Y(56), X(55), Y(45), X(66.5), Y(33.5)]], {stroke: fond, w: 3.2 * k});
 }
 function docLayoutStyle(kind, doc, logo, sigs, st){
   sigs = sigs || {}; const sg = doc.signature && doc.signature.nom ? doc.signature : null, MOD = st === "moderne", EPU = st === "epure";

@@ -1,6 +1,6 @@
 /* Comptabilité : garde l'application dans le téléphone pour qu'elle s'ouvre sans réseau. Version __VERSION__ */
 const CACHE = "compta-__VERSION__";
-const SHELL = ["./", "complet.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png"];
+const SHELL = ["./", "complet.html", "manifest.webmanifest", "icon-feuille-192.png", "icon-feuille-512.png", "icon-feuille-maskable.png", "apple-touch-icon-feuille.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });

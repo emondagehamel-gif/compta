@@ -45,8 +45,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* En-tête */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
 .top .wrap{display:flex;align-items:center;gap:10px;padding-block:10px}
-.logo{width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(160deg,#3F8C4D,#235A2F);color:#FFFFFF;--leaf-vein:#2C6B39;display:grid;place-items:center;flex:none;box-shadow:0 1px 2px rgba(20,60,30,.25)}
 .logo .ic{width:18px;height:18px}
+.logo .ic.feuille{width:26px;height:26px;stroke-width:0}
 .who{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
 .who b{font-family:var(--font-d);font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sync{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);border:none;background:none;padding:0;cursor:pointer;text-align:left}
