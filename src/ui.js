@@ -195,7 +195,7 @@ function opLabel(op){
   return ({evenement:"Agenda : " + (x.titre || ""), "evenement-suppr":"Événement retiré", "evenement-fait":"Événement " + (x.fait ? "fait" : "à faire"), obligation:"Échéance " + (x.fait ? "faite" : "à faire"),
     operation:(x.type === "revenu" ? "Revenu : " : "Dépense : ") + (x.tiers || x.description || ""), photo:"Photo à traiter", trajet:"Trajet : " + (x.destination || "") + ", " + (x.km || 0) + " km",
     paiement:"Paiement reçu", facture:"Facture " + (x.numero || "") + ", " + (x.client || ""), devis:"Devis " + (x.numero || "") + ", " + (x.client || ""), "devis-statut":"Devis : " + (x.statut || ""),
-    envoye:"Marqué envoyé", entretien:"Entretien : " + ((x.entretien || {}).type || ""), odometre:"Odomètre : " + (x.km || ""), client:"Client : " + (x.nom || ""), lieu:"Lieu : " + (x.nom || ""), "lieu-suppr":"Lieu retiré"})[op.type] || op.type;
+    envoye:"Marqué envoyé", entretien:"Entretien : " + ((x.entretien || {}).type || ""), odometre:"Odomètre : " + (x.km || ""), client:"Client : " + (x.nom || ""), lieu:"Lieu : " + (x.nom || ""), "lieu-suppr":"Lieu retiré", patch: x.msg || "Modification (version complète)", fichier:"Fichier : " + String(x.to || "").split("/").pop(), deplacer:"Document classé", "fichier-suppr":"Document supprimé"})[op.type] || op.type;
 }
 /* Un ajout est d'abord gardé dans le téléphone (photos comprises), puis envoyé dès que possible */
 async function sendOp(type, data, files){
@@ -387,7 +387,7 @@ function vPlus(){
   const y = new Date().getFullYear(), kl = kmCalc(y), kp = kl.filter(k => !k.cie), kmT = kp.reduce((s, k) => s + (Number(k.km) || 0), 0), kmM = kp.reduce((s, k) => s + k.mt, 0), kmC = kl.filter(k => k.cie).reduce((s, k) => s + (Number(k.km) || 0), 0);
   const lieux = (S.d.lieux || []).slice().sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   const eqs = S.d.equipements.filter(e => e.statut !== "vendu"), recent = S.d.transactions.filter(t => t.type === "depense" || t.type === "revenu").sort((a, b) => b.date.localeCompare(a.date) || String(b.creeLe || "").localeCompare(String(a.creeLe || ""))).slice(0, 12);
-  let html = syncCard();
+  let html = '<a class="card full-link" href="complet.html"><span class="fl-ic">' + ico("i-grid") + '</span><span class="t"><b>Version complète</b><small>Toutes les fonctions de l\'ordinateur : opérations, documents, fournisseurs, banque, taxes, kilométrage, projets, rapports, réglages…</small></span>' + ico("i-chev") + "</a>" + syncCard();
   html += '<div class="card"><div class="card-h"><h2>' + ico("i-truck") + 'Camion et équipement</h2></div>' + (eqs.length ? eqs.map(e => { const nx = nextMaint(e).map(n => ({n, s:maintState(e, n)})).sort((a, b) => ({late:0, due:1, ok:2})[a.s] - ({late:0, due:1, ok:2})[b.s])[0];
       return '<div class="line"><div class="row"><b style="flex:1">' + esc(e.nom) + "</b>" + (isRoad(e) && e.odometre ? '<span class="muted small">' + fmtKm(e.odometre) + "</span>" : "") + "</div>" + (nx ? '<span class="small"><span class="chip ' + (nx.s === "late" ? "late" : nx.s === "due" ? "due" : "open") + '">' + (nx.s === "late" ? "En retard" : nx.s === "due" ? "Bientôt" : "Prévu") + "</span> " + esc(maintTxt(e, nx.n)) + "</span>" : '<span class="muted small">Aucun entretien prévu.</span>') +
         '<div class="row"><button class="btn sm primary" type="button" data-add="entretien" data-eq="' + esc(e.id) + '">' + ico("i-wrench") + "Entretien</button>" + (isRoad(e) ? '<button class="btn sm" type="button" data-odo="' + esc(e.id) + '">Odomètre</button>' : "") + '<button class="btn sm" type="button" data-rdv="' + esc(e.id) + '">Rendez-vous</button></div></div>'; }).join("") : '<p class="muted small">Ajoute ton camion dans l\'application de l\'ordinateur (Inventaire) pour suivre ses entretiens ici.</p>') + "</div>";
@@ -863,7 +863,15 @@ async function savePDF(kind, x){
 
 /* ===== Démarrage ===== */
 (function start(){
+  /* La version complète demande une connexion Google : on la fait ici (adresse autorisée), puis on y retourne */
+  const qp = new URLSearchParams(location.search);
+  if (qp.get("auth")){
+    const r = qp.get("retour") || ""; LS.set("retour", /^complet\.html(#[\w-]*)?$/.test(r) ? r : "");
+    try { history.replaceState(null, "", location.pathname); } catch(e){}
+    if (online() && clientId()){ authRedirect(qp.get("auth") === "2"); return; }
+  }
   const auth = readAuthHash();
+  if (auth && auth.ok && LS.get("retour", "")){ const r = LS.get("retour", ""); LS.set("retour", ""); location.replace(r); return; }
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch(e){}
   S.pending = LS.get("pending", []).filter(p => p && p.op && p.op.id).map(p => (p.etat === "envoi" || p.etat === "verifier") ? Object.assign(p, {etat:"attente", tries:Math.max(1, p.tries || 0)}) : p);
   const cached = LS.get("base", null); S.lastSync = LS.get("lastSync", "");

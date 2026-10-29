@@ -1,6 +1,6 @@
-/* Comptabilité : garde l'application dans le téléphone pour qu'elle s'ouvre sans réseau. Version 1e1ba97341 */
-const CACHE = "compta-1e1ba97341";
-const SHELL = ["./", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png"];
+/* Comptabilité : garde l'application dans le téléphone pour qu'elle s'ouvre sans réseau. Version 096b1807c0 */
+const CACHE = "compta-096b1807c0";
+const SHELL = ["./", "complet.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
@@ -12,7 +12,7 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const r = e.request; if (r.method !== "GET") return;
   const u = new URL(r.url); if (u.origin !== self.location.origin) return;
-  const key = r.mode === "navigate" ? "./" : r;
+  const key = r.mode === "navigate" ? (/complet\.html$/.test(u.pathname) ? "complet.html" : "./") : r;
   e.respondWith(caches.open(CACHE).then(async c => {
     const hit = await c.match(key, {ignoreSearch: true});
     const net = (r.mode === "navigate" ? fetch(r.url, {cache: "no-cache", credentials: "same-origin"}) : fetch(r)).then(res => { if (res && res.ok && res.type === "basic") c.put(key, res.clone()); return res; }).catch(() => null);

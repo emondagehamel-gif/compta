@@ -208,7 +208,10 @@ details.more>div{display:flex;flex-direction:column;gap:12px}
 .toast-a{background:none;border:none;color:var(--bg);font-weight:700;text-decoration:underline;padding:2px 4px}
 .sheet-open .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 </style>
-<style>html,body{margin:0}body{min-height:100dvh;overscroll-behavior-y:contain}[hidden]{display:none!important}.sync.off i{background:var(--muted)}img{max-width:100%}</style>
+<style>html,body{margin:0}body{min-height:100dvh;overscroll-behavior-y:contain}[hidden]{display:none!important}.sync.off i{background:var(--muted)}img{max-width:100%}
+.full-link{flex-direction:row;align-items:center;gap:12px;text-decoration:none;color:inherit;border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:var(--accent-soft)}
+.full-link .fl-ic{width:40px;height:40px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.full-link .t{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}.full-link small{color:var(--muted);font-size:.8rem;line-height:1.35}</style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -843,8 +846,10 @@ function nextNumIn(d, kind, date){
   list.forEach(x => { const m = String(x.numero || "").match(/^([A-Za-z]+)-(\d{4})-(\d+)$/); if (m && m[1].toUpperCase() === P && m[2] === y) max = Math.max(max, Number(m[3])); });
   return P + "-" + y + "-" + String(max + 1).padStart(3, "0");
 }
+const OPS_CONNUS = ["evenement","evenement-suppr","evenement-fait","obligation","operation","photo","trajet","lieu","lieu-suppr","paiement","facture","devis","devis-statut","envoye","entretien","odometre","client","patch","fichier","deplacer","fichier-suppr"];
+function safePath(p){ p = String(p || ""); return /^(recus|a-traiter|documents|exports)\/[^\/\\:*?"<>|]+$/.test(p) && !/\.\./.test(p) ? p : ""; }
 function applyOp(d, op){
-  const x = op.data || {}, now = op.creeLe || new Date().toISOString(), res = {msg:"", moves:[], pdf:null};
+  const x = op.data || {}, now = op.creeLe || new Date().toISOString(), res = {msg:"", moves:[], removes:[], pdf:null, pdfs:[]};
   const photos = (op.photos || []).filter(p => typeof p === "string" && /^[\w.-]+$/.test(p));
   const toRecus = (date, who) => photos.map((p, k) => { const to = "recus/" + (date || today()) + "_" + (slug(who) || "recu") + "_" + String(op.id).slice(-4) + (k ? "-" + (k + 1) : "") + (extOf(p) || ".jpg"); res.moves.push({from:"telephone/" + p, to}); return {fichier:to, nom:p}; });
   const upsert = (arr, doc) => { const i = arr.findIndex(e => e.id === doc.id); if (i >= 0) arr[i] = Object.assign({}, arr[i], doc); else arr.push(doc); return i >= 0 ? arr[i] : doc; };
@@ -896,7 +901,24 @@ function applyOp(d, op){
       res.msg = "Entretien : " + doc.type + ", " + e.nom; break; }
     case "odometre": { const e = d.equipements.find(q => q.id === x.equipement); if (e && Number(x.km) > 0){ e.odometre = Math.round(Number(x.km)); e.odometreLe = x.date || now.slice(0, 10); res.msg = "Odomètre de " + e.nom + " : " + fmtKm(x.km); } break; }
     case "client": { if (!x.nom) break; const c = d.clients.find(e => (x.id && e.id === x.id) || norm(e.nom) === norm(x.nom)); if (c) Object.assign(c, x, {id: c.id}); else d.clients.push(Object.assign({id: x.id || uid("c"), courriel:"", telephone:"", adresse:"", note:""}, x)); res.msg = "Client : " + x.nom; break; }
-    default: res.msg = "";
+    /* Modification faite dans la version complète du téléphone : champs changés, fiches ajoutées ou retirées */
+    case "patch": {
+      (Array.isArray(x.changes) ? x.changes : []).forEach(c => {
+        if (!c || typeof c !== "object") return;
+        if (c.col === "reglages"){ d.reglages = d.reglages || {}; Object.assign(d.reglages, clone(c.set || {})); (c.unset || []).forEach(k => { delete d.reglages[k]; }); return; }
+        if (!COLLECTIONS.includes(c.col) || !c.id || !Array.isArray(d[c.col])) return;
+        const L = d[c.col], i = L.findIndex(e => e && e.id === c.id);
+        if (c.suppr){ if (i >= 0) L.splice(i, 1); return; }
+        if (i < 0){ if (!c.doc || c.doc.id !== c.id) return; L.push(clone(c.doc)); }
+        else if (c.doc) L[i] = clone(c.doc);
+        else { Object.assign(L[i], clone(c.set || {})); (c.unset || []).forEach(k => { delete L[i][k]; }); }
+        if (c.col === "factures" || c.col === "devis") res.pdfs.push([c.col === "factures" ? "facture" : "devis", c.id]);
+      });
+      res.msg = x.msg || "Modification faite au téléphone"; break; }
+    case "fichier": { const to = safePath(x.to); if (to && photos[0]) res.moves.push({from:"telephone/" + photos[0], to}); break; }
+    case "deplacer": { const a = safePath(x.from), b = safePath(x.to); if (a && b) res.moves.push({from:a, to:b}); break; }
+    case "fichier-suppr": { const p = safePath(x.path); if (p) res.removes.push(p); break; }
+    default: res.unknown = true;
   }
   return res;
 }
@@ -1098,7 +1120,7 @@ function opLabel(op){
   return ({evenement:"Agenda : " + (x.titre || ""), "evenement-suppr":"Événement retiré", "evenement-fait":"Événement " + (x.fait ? "fait" : "à faire"), obligation:"Échéance " + (x.fait ? "faite" : "à faire"),
     operation:(x.type === "revenu" ? "Revenu : " : "Dépense : ") + (x.tiers || x.description || ""), photo:"Photo à traiter", trajet:"Trajet : " + (x.destination || "") + ", " + (x.km || 0) + " km",
     paiement:"Paiement reçu", facture:"Facture " + (x.numero || "") + ", " + (x.client || ""), devis:"Devis " + (x.numero || "") + ", " + (x.client || ""), "devis-statut":"Devis : " + (x.statut || ""),
-    envoye:"Marqué envoyé", entretien:"Entretien : " + ((x.entretien || {}).type || ""), odometre:"Odomètre : " + (x.km || ""), client:"Client : " + (x.nom || ""), lieu:"Lieu : " + (x.nom || ""), "lieu-suppr":"Lieu retiré"})[op.type] || op.type;
+    envoye:"Marqué envoyé", entretien:"Entretien : " + ((x.entretien || {}).type || ""), odometre:"Odomètre : " + (x.km || ""), client:"Client : " + (x.nom || ""), lieu:"Lieu : " + (x.nom || ""), "lieu-suppr":"Lieu retiré", patch: x.msg || "Modification (version complète)", fichier:"Fichier : " + String(x.to || "").split("/").pop(), deplacer:"Document classé", "fichier-suppr":"Document supprimé"})[op.type] || op.type;
 }
 /* Un ajout est d'abord gardé dans le téléphone (photos comprises), puis envoyé dès que possible */
 async function sendOp(type, data, files){
@@ -1290,7 +1312,7 @@ function vPlus(){
   const y = new Date().getFullYear(), kl = kmCalc(y), kp = kl.filter(k => !k.cie), kmT = kp.reduce((s, k) => s + (Number(k.km) || 0), 0), kmM = kp.reduce((s, k) => s + k.mt, 0), kmC = kl.filter(k => k.cie).reduce((s, k) => s + (Number(k.km) || 0), 0);
   const lieux = (S.d.lieux || []).slice().sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   const eqs = S.d.equipements.filter(e => e.statut !== "vendu"), recent = S.d.transactions.filter(t => t.type === "depense" || t.type === "revenu").sort((a, b) => b.date.localeCompare(a.date) || String(b.creeLe || "").localeCompare(String(a.creeLe || ""))).slice(0, 12);
-  let html = syncCard();
+  let html = '<a class="card full-link" href="complet.html"><span class="fl-ic">' + ico("i-grid") + '</span><span class="t"><b>Version complète</b><small>Toutes les fonctions de l\'ordinateur : opérations, documents, fournisseurs, banque, taxes, kilométrage, projets, rapports, réglages…</small></span>' + ico("i-chev") + "</a>" + syncCard();
   html += '<div class="card"><div class="card-h"><h2>' + ico("i-truck") + 'Camion et équipement</h2></div>' + (eqs.length ? eqs.map(e => { const nx = nextMaint(e).map(n => ({n, s:maintState(e, n)})).sort((a, b) => ({late:0, due:1, ok:2})[a.s] - ({late:0, due:1, ok:2})[b.s])[0];
       return '<div class="line"><div class="row"><b style="flex:1">' + esc(e.nom) + "</b>" + (isRoad(e) && e.odometre ? '<span class="muted small">' + fmtKm(e.odometre) + "</span>" : "") + "</div>" + (nx ? '<span class="small"><span class="chip ' + (nx.s === "late" ? "late" : nx.s === "due" ? "due" : "open") + '">' + (nx.s === "late" ? "En retard" : nx.s === "due" ? "Bientôt" : "Prévu") + "</span> " + esc(maintTxt(e, nx.n)) + "</span>" : '<span class="muted small">Aucun entretien prévu.</span>') +
         '<div class="row"><button class="btn sm primary" type="button" data-add="entretien" data-eq="' + esc(e.id) + '">' + ico("i-wrench") + "Entretien</button>" + (isRoad(e) ? '<button class="btn sm" type="button" data-odo="' + esc(e.id) + '">Odomètre</button>' : "") + '<button class="btn sm" type="button" data-rdv="' + esc(e.id) + '">Rendez-vous</button></div></div>'; }).join("") : '<p class="muted small">Ajoute ton camion dans l\'application de l\'ordinateur (Inventaire) pour suivre ses entretiens ici.</p>') + "</div>";
@@ -1766,7 +1788,15 @@ async function savePDF(kind, x){
 
 /* ===== Démarrage ===== */
 (function start(){
+  /* La version complète demande une connexion Google : on la fait ici (adresse autorisée), puis on y retourne */
+  const qp = new URLSearchParams(location.search);
+  if (qp.get("auth")){
+    const r = qp.get("retour") || ""; LS.set("retour", /^complet\.html(#[\w-]*)?$/.test(r) ? r : "");
+    try { history.replaceState(null, "", location.pathname); } catch(e){}
+    if (online() && clientId()){ authRedirect(qp.get("auth") === "2"); return; }
+  }
   const auth = readAuthHash();
+  if (auth && auth.ok && LS.get("retour", "")){ const r = LS.get("retour", ""); LS.set("retour", ""); location.replace(r); return; }
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch(e){}
   S.pending = LS.get("pending", []).filter(p => p && p.op && p.op.id).map(p => (p.etat === "envoi" || p.etat === "verifier") ? Object.assign(p, {etat:"attente", tries:Math.max(1, p.tries || 0)}) : p);
   const cached = LS.get("base", null); S.lastSync = LS.get("lastSync", "");
