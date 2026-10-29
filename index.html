@@ -1351,7 +1351,7 @@ const FOLDER = "application/vnd.google-apps.folder";
 /* Identifiant client Google (remplacé à la construction ; sinon saisi une fois dans l'application) */
 const CLIENT_ID_DEF = "426079109504-mnl3la1a49q52rdb98i2as6pulnllt3e.apps.googleusercontent.com";
 const API = window.__GAPI || "https://www.googleapis.com", AUTH_URL = window.__GAUTH || "https://accounts.google.com/o/oauth2/v2/auth";
-const SCOPE = "https://www.googleapis.com/auth/drive";
+const SCOPE = "https://www.googleapis.com/auth/drive", MAIL_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 const qs = s => String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 const dLoc = s => iso(new Date(s));
 const heure = iso_ => { const d = iso_ ? new Date(iso_) : new Date(); return d.getHours() + " h " + pad(d.getMinutes()); };
@@ -1365,8 +1365,9 @@ const tokOk = m => !!(TOK && TOK.t && TOK.exp - Date.now() > (m || 60000));
 function authRedirect(interactive){
   const st = Math.random().toString(36).slice(2) + Date.now().toString(36);
   LS.set("authState", {st, tab:S.tab, at:Date.now()}); LS.set("authTry", Date.now());
-  const p = new URLSearchParams({client_id:clientId(), redirect_uri:redirectUri(), response_type:"token", scope:SCOPE, include_granted_scopes:"true", state:st, prompt: interactive ? "select_account" : "none"});
-  const hint = LS.get("email", ""); if (hint) p.set("login_hint", hint);
+  const p = new URLSearchParams({client_id:clientId(), redirect_uri:redirectUri(), response_type:"token", scope:LS.get("authMail", 0) ? MAIL_SCOPE : SCOPE, include_granted_scopes:"true", state:st, prompt: interactive === true ? "select_account" : "none"});
+  if (interactive === "auto") p.delete("prompt");
+  const hint = LS.get("authHint", "") || LS.get("email", ""); if (hint) p.set("login_hint", hint);
   setSync("busy", "Connexion à Google…");
   location.assign(AUTH_URL + "?" + p.toString());
 }
@@ -1377,7 +1378,7 @@ function readAuthHash(){
   try { history.replaceState(null, "", location.pathname + location.search + (saved.tab && saved.tab !== "accueil" ? "#" + saved.tab : "")); } catch(e){}
   if (!saved.st || p.get("state") !== saved.st){ LS.set("authFail", Date.now()); return {err:"state"}; }
   if (p.get("access_token")){
-    TOK = {t:p.get("access_token"), exp:Date.now() + (Number(p.get("expires_in")) || 3600) * 1000};
+    TOK = {t:p.get("access_token"), exp:Date.now() + (Number(p.get("expires_in")) || 3600) * 1000, scope:p.get("scope") || ""};
     LS.set("tok", TOK); LS.set("authFail", 0); return {ok:true};
   }
   LS.set("authFail", Date.now()); return {err:p.get("error") || "erreur"};
@@ -2284,12 +2285,16 @@ async function savePDF(kind, x){
   /* La version complète demande une connexion Google : on la fait ici (adresse autorisée), puis on y retourne */
   const qp = new URLSearchParams(location.search);
   if (qp.get("auth")){
-    const r = qp.get("retour") || ""; LS.set("retour", /^complet\.html(#[\w-]*)?$/.test(r) ? r : "");
+    const r = qp.get("retour") || "", a = qp.get("auth"), hint = qp.get("hint") || "";
+    LS.set("retour", /^(complet|envoi)\.html(#[\w-]*)?$/.test(r) ? r : "");
+    LS.set("authMail", qp.get("mail") && /^envoi/.test(r) ? 1 : 0); LS.set("authHint", /^[^@\s]+@[^@\s]+$/.test(hint) ? hint : "");
     try { history.replaceState(null, "", location.pathname); } catch(e){}
-    if (online() && clientId()){ authRedirect(qp.get("auth") === "2"); return; }
+    if (online() && clientId()){ authRedirect(a === "2" ? true : a === "3" ? "auto" : false); return; }
   }
-  const auth = readAuthHash();
-  if (auth && auth.ok && LS.get("retour", "")){ const r = LS.get("retour", ""); LS.set("retour", ""); location.replace(r); return; }
+  const auth = readAuthHash(); LS.set("authMail", 0); LS.set("authHint", "");
+  if (auth && LS.get("retour", "")){ const r = LS.get("retour", "");
+    /* page d'envoi : on y retourne même si Google a refusé, pour qu'elle l'explique */
+    if (auth.ok || /^envoi/.test(r)){ LS.set("retour", ""); location.replace(r + (auth.ok ? "" : "#erreur=" + encodeURIComponent(auth.err || "erreur"))); return; } }
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch(e){}
   S.pending = LS.get("pending", []).filter(p => p && p.op && p.op.id).map(p => (p.etat === "envoi" || p.etat === "verifier") ? Object.assign(p, {etat:"attente", tries:Math.max(1, p.tries || 0)}) : p);
   const cached = LS.get("base", null); S.lastSync = LS.get("lastSync", "");

@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist")
 FOLDER = "application/vnd.google-apps.folder"
-STATE = {"files": {}, "n": 0, "auth": "ok", "tok": 0, "valid": set(), "log": [], "calls": 0, "osrm": "ok", "routes": 0}
+STATE = {"files": {}, "n": 0, "auth": "ok", "tok": 0, "valid": set(), "log": [], "calls": 0, "osrm": "ok", "routes": 0, "gmail": "ok", "mails": []}
 
 def reset(reg_text):
     F = STATE["files"] = {}
@@ -16,7 +16,7 @@ def reset(reg_text):
     add(id="tel1", name="telephone", mimeType=FOLDER, parents=["root1"])
     add(id="docs1", name="documents", mimeType=FOLDER, parents=["root1"])
     add(id="reg1", name="registre.json", mimeType="application/json", parents=["root1"], content=reg_text.encode())
-    STATE["auth"] = "ok"; STATE["valid"] = set(); STATE["log"] = []; STATE["n"] = 0
+    STATE["auth"] = "ok"; STATE["valid"] = set(); STATE["log"] = []; STATE["n"] = 0; STATE["gmail"] = "ok"; STATE["mails"] = []
 
 def match(f, q):
     for c in [c.strip() for c in q.split(" and ")]:
@@ -52,6 +52,7 @@ class G(BaseHTTPRequestHandler):
             STATE["log"].append({"prompt": q.get("prompt"), "hint": q.get("login_hint", ""), "scope": q.get("scope"), "client": q.get("client_id"), "redirect": q.get("redirect_uri")})
             mode = STATE["auth"]
             if mode == "deny" and q.get("prompt") == "none": frag = {"error": "interaction_required", "state": q.get("state", "")}
+            elif mode == "refuse": frag = {"error": "access_denied", "state": q.get("state", "")}
             else:
                 STATE["tok"] += 1; t = "tok%d" % STATE["tok"]; STATE["valid"].add(t)
                 frag = {"access_token": t, "expires_in": "3599", "token_type": "Bearer", "scope": q.get("scope", ""), "state": q.get("state", "")}
@@ -65,7 +66,7 @@ class G(BaseHTTPRequestHandler):
             STATE["routes"] += 1
             return self.out(200, {"code": "Ok", "routes": [{"distance": round(2 * 6371000 * math.asin(math.sqrt(h)) * 1.3, 1), "duration": 900}]})
         if u.path == "/__state":
-            return self.out(200, {"files": [{k: (base64.b64encode(v).decode() if k == "content" else v) for k, v in f.items()} for f in STATE["files"].values()], "log": STATE["log"], "calls": STATE["calls"], "routes": STATE["routes"]})
+            return self.out(200, {"files": [{k: (base64.b64encode(v).decode() if k == "content" else v) for k, v in f.items()} for f in STATE["files"].values()], "log": STATE["log"], "calls": STATE["calls"], "routes": STATE["routes"], "mails": [base64.b64encode(m).decode() for m in STATE["mails"]]})
         if u.path == "/drive/v3/about":
             if not self.authed(): return
             return self.out(200, {"user": {"emailAddress": "emondagehamel@gmail.com", "displayName": "Emondage Hamel"}})
@@ -87,7 +88,7 @@ class G(BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
         if u.path == "/__mode":
-            o = json.loads(body); STATE.update({k: v for k, v in o.items() if k in ("auth", "osrm")})
+            o = json.loads(body); STATE.update({k: v for k, v in o.items() if k in ("auth", "osrm", "gmail")})
             if o.get("expire"): STATE["valid"] = set()
             return self.out(200, {"ok": True})
         if u.path == "/__setreg":
@@ -97,6 +98,12 @@ class G(BaseHTTPRequestHandler):
             for f in STATE["files"].values():
                 if "tel1" in f.get("parents", []): f["trashed"] = True
             return self.out(200, {"ok": True})
+        if u.path == "/upload/gmail/v1/users/me/messages/send":
+            if not self.authed(): return
+            if STATE["gmail"] == "disabled": return self.out(403, {"error": {"code": 403, "message": "Gmail API has not been used in project 426079109504 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=426079109504 then retry.", "status": "PERMISSION_DENIED", "details": [{"reason": "SERVICE_DISABLED"}]}})
+            if STATE["gmail"] == "scope": return self.out(403, {"error": {"code": 403, "message": "Request had insufficient authentication scopes.", "status": "PERMISSION_DENIED", "details": [{"reason": "ACCESS_TOKEN_SCOPE_INSUFFICIENT"}]}})
+            if "uploadType=media" not in u.query or not self.headers.get("Content-Type", "").startswith("message/rfc822"): return self.out(400, {"error": {"code": 400, "message": "mauvais envoi"}})
+            STATE["mails"].append(body); return self.out(200, {"id": "msg%d" % len(STATE["mails"]), "threadId": "th1", "labelIds": ["SENT"]})
         if u.path == "/upload/drive/v3/files":
             if not self.authed(): return
             ct = self.headers.get("Content-Type", ""); m = re.search(r"boundary=([^;]+)", ct)

@@ -14,7 +14,8 @@ ui = open('pwa/ui.js', encoding='utf-8').read().replace('"__CLIENT_ID__"', json.
 js = '(function(){\n"use strict";\n' + open('phone/core.js', encoding='utf-8').read() + '\n' + ui + '\n})();\n'
 full = src.replace('<meta name="viewport" content="width=device-width,initial-scale=1">', '<meta name="viewport" content="width=device-width,initial-scale=1">\n<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">\n<meta name="theme-color" content="#151D19" media="(prefers-color-scheme: dark)">\n<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icon-feuille-192.png" type="image/png">\n<link rel="apple-touch-icon" href="apple-touch-icon-feuille.png">', 1)
 assert full != src, "en-tête de la version complète introuvable"
-ver = hashlib.sha1((head + js + sprite + full).encode()).hexdigest()[:10]
+envoi = open('pwa/envoi.html', encoding='utf-8').read()
+ver = hashlib.sha1((head + js + sprite + full + envoi).encode()).hexdigest()[:10]
 html = '''<!doctype html>
 <html lang="fr-CA">
 <head>
@@ -46,6 +47,7 @@ html = '''<!doctype html>
 os.makedirs('pwa/dist', exist_ok=True)
 open('pwa/dist/index.html', 'w', encoding='utf-8').write(html)
 open('pwa/dist/complet.html', 'w', encoding='utf-8').write(full)
+open('pwa/dist/envoi.html', 'w', encoding='utf-8').write(envoi)
 open('pwa/all.js', 'w', encoding='utf-8').write(js)
 manifest = {"name": "Comptabilité", "short_name": "Comptabilité", "description": "Comptabilité de l'entreprise sur le terrain : reçus, factures, devis, agenda, trajets et entretiens, même sans réseau.",
   "lang": "fr-CA", "id": "./", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "portrait",

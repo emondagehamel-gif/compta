@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151D19" media="(prefers-color-scheme: dark)">
+<title>Envoyer par Gmail · Comptabilité</title>
+<link rel="icon" href="icon-feuille-192.png" type="image/png">
+<style>
+:root{
+  --bg:#F2F5F1; --surface:#FFFFFF; --sunk:#F5F8F4; --ink:#16221D; --ink-2:#33423B; --muted:#5F6F67; --line:#E0E7E1; --line-strong:#C7D1C9;
+  --accent:#2C6B39; --accent-2:#3F8C4D; --accent-ink:#FFFFFF; --accent-soft:#E5F1E6;
+  --neg:#B23A2E; --neg-soft:#FBE8E4; --warn:#8F5E00; --warn-soft:#FBF0D6;
+  --font:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-d:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --r:14px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E1411; --surface:#151D19; --sunk:#111814; --ink:#E5EDE7; --ink-2:#C4D0C9; --muted:#93A49B; --line:#25302A; --line-strong:#37453E;
+  --accent:#8FD09C; --accent-2:#6DB87C; --accent-ink:#0C1A10; --accent-soft:#18301F;
+  --neg:#F2958A; --neg-soft:#3A1F1B; --warn:#EAC06A; --warn-soft:#352A12; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh;padding:24px 16px 32px}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--font-d);font-size:1.25rem;font-weight:650;margin:0;letter-spacing:-.005em}
+.head{display:flex;align-items:center;gap:12px}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(160deg,#3F8C4D,#235A2F);color:#FFFFFF;display:grid;place-items:center;flex:none;box-shadow:0 1px 2px rgba(20,60,30,.25)}
+.head p{margin:2px 0 0;color:var(--muted);font-size:.9rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(16,40,24,.04)}
+.row{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:10px}
+.row>span,.lab{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.de{font-weight:600;overflow-wrap:anywhere}
+.de small{display:block;font-weight:400;color:var(--muted);font-size:.85rem}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--sunk);border:1px solid var(--line-strong);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:180px;line-height:1.5}
+input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.bad input{border-color:var(--neg);background:var(--neg-soft)}
+.hint{font-size:.82rem;color:var(--neg);margin-top:4px}
+.stack{display:flex;flex-direction:column;gap:6px}
+.pj{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--sunk)}
+.pj .doc{width:38px;height:44px;border-radius:6px;background:var(--surface);border:1px solid var(--line-strong);display:grid;place-items:center;color:#B23A2E;font-size:.62rem;font-weight:800;letter-spacing:.04em;flex:none}
+.pj .nm{flex:1;min-width:0}
+.pj .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj .nm small{color:var(--muted)}
+.pj .ok{color:var(--accent);font-size:.82rem;font-weight:600;white-space:nowrap}
+.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:600;border-radius:10px;padding:10px 16px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer;text-decoration:none;min-height:42px}
+.btn:hover{background:var(--sunk)}
+.btn.prim{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);min-width:140px}
+.btn.prim:hover{filter:brightness(1.06)}
+.btn.link{border:none;background:none;color:var(--accent);padding:6px 4px;min-height:0;font-weight:600}
+.btn[disabled]{opacity:.6;cursor:default}
+.banner{border-radius:12px;padding:12px 14px;font-size:.92rem;display:flex;gap:10px;align-items:flex-start}
+.banner.warn{background:var(--warn-soft);color:var(--ink)}
+.banner.err{background:var(--neg-soft);color:var(--ink)}
+.banner .t>b:first-child{display:block;margin-bottom:2px}
+.btn:focus-visible,.btn.link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.prim:focus-visible{outline-color:var(--accent-2)}
+.banner .t{flex:1;min-width:0}
+.banner .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.status{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:34px 16px}
+.status p{margin:0;color:var(--muted);max-width:430px}
+.status b{font-size:1.05rem}
+.spin{width:30px;height:30px;border-radius:50%;border:3px solid var(--accent-soft);border-top-color:var(--accent);animation:sp 0.9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.done{width:56px;height:56px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.foot{color:var(--muted);font-size:.8rem;text-align:center}
+@media (max-width:520px){.row{grid-template-columns:1fr;gap:4px}.actions .btn{flex:1}}
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <div class="logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 100 100"><g transform="translate(50 50) scale(1.42) translate(-48 -52)"><path d="M30 70C17.6 40 55.9 29.9 74 26C70.1 44.1 60 82.4 30 70Z" fill="currentColor"/><path d="M30.5 69.5L21 79" fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round"/><path d="M33 67C44 56 55 45 66.5 33.5" fill="none" stroke="#2C6B39" stroke-width="3.2" stroke-linecap="round"/></g></svg></div>
+    <div><h1>Envoyer par Gmail</h1><p id="sous">Comptabilité</p></div>
+  </div>
+
+  <section class="card" id="st"><div class="status"><div class="spin"></div><b>Préparation du courriel…</b><p>Le document arrive de l'application Comptabilité.</p></div></section>
+
+  <form class="card" id="f" hidden novalidate>
+    <div class="row"><span>De</span><div class="de" id="de"></div></div>
+    <div class="banner warn" id="compte" hidden></div>
+    <label class="row" id="to-row"><span>À</span><div><input id="to" type="text" inputmode="email" autocomplete="off" spellcheck="false" placeholder="courriel@exemple.com"><div class="hint" id="to-hint" hidden></div></div></label>
+    <label class="row"><span>Objet</span><input id="su" type="text" autocomplete="off"></label>
+    <label class="stack"><span class="lab">Message</span><textarea id="bo" rows="10"></textarea></label>
+    <div class="stack"><span class="lab">Pièce jointe</span>
+      <div class="pj"><div class="doc">PDF</div><div class="nm"><b id="pj-nom"></b><small id="pj-taille"></small></div><span class="ok">✓ Jointe</span><button type="button" class="btn link" id="pj-voir">Voir</button></div>
+    </div>
+    <div class="banner err" id="err" hidden></div>
+    <div class="actions"><button type="button" class="btn" id="annuler">Annuler</button><button type="submit" class="btn prim" id="envoyer">Envoyer</button></div>
+  </form>
+
+  <section class="card" id="fini" hidden><div class="status"><div class="done"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><b>Courriel envoyé</b><p id="fini-t"></p><button type="button" class="btn" id="fermer">Fermer</button></div></section>
+
+  <p class="foot">Le courriel part de ton compte Gmail. Une copie reste dans « Messages envoyés ».</p>
+</main>
+<script>
+(function(){
+"use strict";
+/* Envoi d'une soumission ou d'une facture par Gmail, avec le PDF déjà joint.
+   L'application de l'ordinateur ouvre cette page et lui passe le document. La connexion Google
+   se fait par la page principale (seule adresse autorisée), puis revient ici. Rien ne part sans le bouton « Envoyer ». */
+const API = window.__GAPI || "https://www.googleapis.com", GMAIL = window.__GAPI ? [window.__GAPI] : ["https://gmail.googleapis.com", "https://www.googleapis.com"];
+const MAIL_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+const CONSOLE = "https://console.cloud.google.com/apis/library/gmail.googleapis.com?project=comptabilite-513021";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[c]));
+const LS = {
+  get(k, d){ try { const v = localStorage.getItem("cm-" + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem("cm-" + k, JSON.stringify(v)); } catch(e){} }
+};
+const DB = {
+  open(){ return this.p || (this.p = new Promise((res, rej) => { const r = indexedDB.open("compta-envoi", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); },
+  async run(mode, fn){ const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction("kv", mode), q = fn(t.objectStore("kv")); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); },
+  get(k){ return this.run("readonly", s => s.get(k)).catch(() => null); },
+  put(k, v){ return this.run("readwrite", s => s.put(v, k)).catch(() => null); },
+  del(k){ return this.run("readwrite", s => s.delete(k)).catch(() => null); }
+};
+const tok = () => { const t = LS.get("tok", null); return t && t.t && t.exp - Date.now() > 120000 ? t : null; };
+const hasMail = t => !!(t && String(t.scope || "").split(/\s+/).indexOf(MAIL_SCOPE) >= 0);
+const taille = n => n < 1024 * 1024 ? Math.max(1, Math.round(n / 1024)) + " Ko" : (n / 1024 / 1024).toFixed(1).replace(".", ",") + " Mo";
+const opener = () => { try { return window.opener && !window.opener.closed ? window.opener : null; } catch(e){ return null; } };
+const tell = m => { const o = opener(); if (o) try { o.postMessage(m, "*"); } catch(e){} };
+
+let DATA = null, ACCT = "", busy = false, sent = false;
+const h = new URLSearchParams(location.hash.slice(1)), authErr = h.get("erreur") || "";
+if (location.hash || location.search) try { history.replaceState(null, "", location.pathname); } catch(e){}
+const back = Number(LS.get("envoiAuth", 0)) || 0; LS.set("envoiAuth", 0);
+
+function show(which){ ["st", "f", "fini"].forEach(id => { $(id).hidden = id !== which; }); }
+function status(kind, title, text, acts){
+  $("st").innerHTML = '<div class="status">' + (kind === "busy" ? '<div class="spin"></div>' : "") + "<b>" + title + "</b>" + (text ? "<p>" + text + "</p>" : "") +
+    (acts ? '<div class="actions" style="justify-content:center">' + acts + "</div>" : "") + "</div>";
+  show("st");
+}
+const B = (id, t, prim) => '<button type="button" class="btn' + (prim ? " prim" : "") + '" data-a="' + id + '">' + t + "</button>";
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-a]"); if (!b) return;
+  const a = b.dataset.a;
+  if (a === "auth") goAuth(true);
+  else if (a === "manuel") manuel();
+  else if (a === "renvoyer"){ $("err").hidden = true; send(); }
+  else if (a === "fermer") window.close();
+});
+
+/* Données reçues de l'application : on garde seulement ce qui sert */
+function clean(d){
+  if (!d || d.t !== "envoi" || !d.id || !d.pdf) return null;
+  let pdf = d.pdf; if (pdf instanceof ArrayBuffer) pdf = new Uint8Array(pdf);
+  if (!(pdf instanceof Uint8Array) || pdf.length < 8 || pdf.length > 20e6) return null;
+  const s = (x, n) => String(x == null ? "" : x).slice(0, n || 400);
+  return {id:s(d.id, 80), kind:s(d.kind, 20), numero:s(d.numero, 40), to:s(d.to), subject:s(d.subject).replace(/[\r\n]+/g, " "), body:s(d.body, 20000),
+    filename:(s(d.filename, 160).replace(/[\r\n"\\/]+/g, " ").trim() || "document.pdf"), pdf, de:s(d.de, 200).replace(/[^\w.@+-]/g, ""), nom:s(d.nom, 120).replace(/[\r\n<>"]+/g, " ").trim(), client:s(d.client, 120), at:Date.now()};
+}
+window.addEventListener("message", async e => {
+  const o = opener(); if (!o || e.source !== o) return;
+  const d = clean(e.data); if (!d) return;
+  if (DATA && DATA.id === d.id) return;   // déjà affiché : on garde ce que tu as modifié
+  await DB.put("envoi", d); start(d);
+});
+
+async function start(d){
+  if (DATA && DATA.id === d.id) return; DATA = d;
+  $("sous").textContent = [d.numero, d.client].filter(Boolean).join(" · ") || "Comptabilité";
+  const t = tok();
+  if (t && hasMail(t)) return showForm(t);
+  if (authErr) return status("err", "Google n'a pas donné la permission d'envoyer", "Pour envoyer depuis l'application, Google doit permettre l'envoi de courriels avec ton compte" + (d.de ? " <b>" + esc(d.de) + "</b>" : "") + ". Si Google affiche « Google n'a pas validé cette application », clique sur Paramètres avancés, puis Accéder : c'est ta propre application.",
+    B("auth", "Réessayer", true) + B("manuel", "Méthode manuelle"));
+  if (back && Date.now() - back < 90000) return status("err", "La connexion à Gmail n'a pas fonctionné", "Réessaie. Si ça bloque encore, utilise la méthode manuelle : Gmail s'ouvre et le PDF se télécharge.", B("auth", "Réessayer", true) + B("manuel", "Méthode manuelle"));
+  await DB.put("envoi", d); goAuth(false);
+}
+function goAuth(choose){
+  LS.set("envoiAuth", Date.now());
+  status("busy", "Connexion à Gmail…", "La première fois, Google te demande la permission d'envoyer des courriels avec ton compte.");
+  const hint = DATA && DATA.de ? "&hint=" + encodeURIComponent(DATA.de) : "";
+  setTimeout(() => location.assign("./?auth=" + (choose ? "2" : "3") + "&retour=envoi.html&mail=1" + hint), 150);
+}
+
+async function showForm(t){
+  const d = DATA;
+  $("to").value = d.to; $("su").value = d.subject; $("bo").value = d.body;
+  $("pj-nom").textContent = d.filename; $("pj-taille").textContent = "PDF · " + taille(d.pdf.length);
+  ACCT = LS.get("envoiCompte", "") || ""; deTxt();
+  show("f"); setTimeout(() => (d.to ? $("envoyer") : $("to")).focus(), 30);
+  try {
+    const r = await fetch(API + "/drive/v3/about?fields=user(emailAddress)", {headers:{Authorization:"Bearer " + t.t}, cache:"no-store"});
+    if (r.ok){ const j = await r.json(), em = j && j.user && j.user.emailAddress; if (em){ ACCT = em; LS.set("envoiCompte", em); deTxt(); } }
+  } catch(e){}
+}
+function deTxt(){
+  const d = DATA, em = ACCT || d.de;
+  $("de").innerHTML = esc(d.nom || em || "Ton compte Gmail") + (d.nom && em ? "<small>" + esc(em) + "</small>" : "");
+  const diff = ACCT && d.de && ACCT.toLowerCase() !== d.de.toLowerCase();
+  $("compte").hidden = !diff;
+  if (diff) $("compte").innerHTML = '<div class="t"><b>Ce n\'est pas le compte de l\'entreprise</b>Tu es connecté avec ' + esc(ACCT) + ". Le courriel partira de ce compte, pas de " + esc(d.de) + '.<div class="acts">' + B("auth", "Changer de compte") + "</div></div>";
+}
+
+function parseTo(v){
+  const list = String(v || "").split(/[\s,;]+/).filter(Boolean), re = /^[^@\s<>()",;:\\]+@[^@\s<>()",;:\\]+\.[^@\s<>()",;:\\]+$/;
+  const bad = list.filter(x => !re.test(x));
+  return {ok: list.length > 0 && !bad.length, list, bad};
+}
+
+/* ----- Courriel au format standard (MIME), avec le PDF joint ----- */
+const enc = new TextEncoder();
+function b64(bytes){ let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+const wrap = s => (s.match(/.{1,76}/g) || [""]).join("\r\n");
+const ascii = s => /^[\x20-\x7e]*$/.test(s);
+const word1 = s => ascii(s) ? s : "=?UTF-8?B?" + b64(enc.encode(s)) + "?=";
+function words(s){ if (ascii(s)) return s; const c = Array.from(s), out = []; for (let i = 0; i < c.length; i += 12) out.push("=?UTF-8?B?" + b64(enc.encode(c.slice(i, i + 12).join(""))) + "?="); return out.join("\r\n "); }
+const pct = s => encodeURIComponent(s).replace(/['()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+const plain = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "");
+function mime(o){
+  const Bd = "compta_" + Math.random().toString(36).slice(2) + Date.now().toString(36), H = [];
+  if (o.from) H.push("From: " + (o.name ? (ascii(o.name) ? '"' + o.name.replace(/["\\]/g, "") + '"' : words(o.name)) + " " : "") + "<" + o.from + ">");
+  H.push("To: " + o.to.join(", "), "Subject: " + words(o.subject), "MIME-Version: 1.0", 'Content-Type: multipart/mixed; boundary="' + Bd + '"');
+  return H.join("\r\n") + "\r\n\r\n" +
+    "--" + Bd + "\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" + wrap(b64(enc.encode(o.body.replace(/\r?\n/g, "\r\n")))) + "\r\n" +
+    "--" + Bd + '\r\nContent-Type: application/pdf; name="' + word1(o.file) + '"\r\nContent-Disposition: attachment; filename="' + plain(o.file) + "\"; filename*=UTF-8''" + pct(o.file) +
+    "\r\nContent-Transfer-Encoding: base64\r\n\r\n" + wrap(b64(o.bytes)) + "\r\n--" + Bd + "--\r\n";
+}
+
+function err(title, text, acts){ $("err").innerHTML = '<div class="t"><b>' + title + "</b>" + text + (acts ? '<div class="acts">' + acts + "</div>" : "") + "</div>"; $("err").hidden = false; $("err").scrollIntoView({block:"nearest"}); }
+function setBusy(on){ busy = on; $("envoyer").disabled = on; $("annuler").disabled = on; $("envoyer").textContent = on ? "Envoi…" : "Envoyer"; }
+async function send(){
+  if (busy || sent || !DATA) return;
+  const to = parseTo($("to").value);
+  $("to-row").classList.toggle("bad", !to.ok); $("to-hint").hidden = to.ok;
+  if (!to.ok){ $("to-hint").textContent = to.list.length ? "Adresse à vérifier : " + to.bad.join(", ") : "Écris l'adresse courriel du client."; $("to").focus(); return; }
+  DATA.to = $("to").value.trim(); DATA.subject = ($("su").value.trim() || DATA.subject).replace(/[\r\n]+/g, " "); DATA.body = $("bo").value;
+  await DB.put("envoi", DATA);
+  const t = tok(); if (!t || !hasMail(t)) return goAuth(false);
+  $("err").hidden = true; setBusy(true);
+  const raw = mime({from:ACCT, name:DATA.nom, to:to.list, subject:DATA.subject, body:DATA.body, file:DATA.filename, bytes:DATA.pdf});
+  let r;
+  for (const host of GMAIL){
+    try { r = await fetch(host + "/upload/gmail/v1/users/me/messages/send?uploadType=media", {method:"POST", headers:{Authorization:"Bearer " + t.t, "Content-Type":"message/rfc822"}, body:raw}); break; }
+    catch(e){ r = null; }
+  }
+  if (!r){ setBusy(false); return err("Gmail ne répond pas", "Vérifie la connexion Internet, puis réessaie.", B("renvoyer", "Réessayer", true) + B("manuel", "Méthode manuelle")); }
+  if (r.status === 401){ LS.set("tok", null); return goAuth(false); }
+  if (!r.ok){
+    let j = {}; try { j = await r.json(); } catch(e){}
+    const E = j.error || {}, m = E.message || ("Erreur " + r.status), why = m + " " + JSON.stringify(E.errors || E.details || "");
+    setBusy(false);
+    if (r.status === 403 && /accessNotConfigured|SERVICE_DISABLED|has not been used|is disabled/i.test(why))
+      return err("L'envoi par Gmail n'est pas encore activé", "Il faut l'activer une seule fois dans Google Cloud : ouvre la page ci-dessous, clique <b>Activer</b>, attends une minute, puis reviens cliquer « Réessayer ».",
+        '<a class="btn prim" href="' + CONSOLE + '" target="_blank" rel="noopener">Activer l\'API Gmail</a>' + B("renvoyer", "Réessayer") + B("manuel", "Méthode manuelle"));
+    if (r.status === 403 && /insufficient|scope/i.test(why)){ if (!back || Date.now() - back > 90000) return goAuth(false); }
+    return err("Gmail a refusé l'envoi", esc(m), B("renvoyer", "Réessayer", true) + B("manuel", "Méthode manuelle"));
+  }
+  let j = {}; try { j = await r.json(); } catch(e){}
+  sent = true; DB.del("envoi");
+  $("fini-t").innerHTML = "À " + esc(to.list.join(", ")) + (ACCT ? ", depuis " + esc(ACCT) : "") + ".<br>Tu le retrouves dans Gmail, dans « Messages envoyés ».";
+  show("fini");
+  tell({t:"envoi-fait", id:DATA.id, kind:DATA.kind, to:to.list.join(", "), de:ACCT, msg:j.id || ""});
+  if (opener()) setTimeout(() => window.close(), 3500);
+}
+$("f").addEventListener("submit", e => { e.preventDefault(); send(); });
+$("annuler").onclick = async () => { await DB.del("envoi"); tell({t:"envoi-annule", id:DATA && DATA.id}); window.close(); status("err", "Envoi annulé", "Tu peux fermer cette fenêtre."); };
+$("fermer").onclick = () => window.close();
+$("pj-voir").onclick = () => { const u = URL.createObjectURL(new Blob([DATA.pdf], {type:"application/pdf"})); window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 120000); };
+$("to").addEventListener("input", () => { $("to-row").classList.remove("bad"); $("to-hint").hidden = true; });
+
+/* Méthode manuelle : Gmail s'ouvre avec le message et le PDF se télécharge */
+function manuel(){
+  const d = DATA; if (!d) return;
+  const url = "https://mail.google.com/mail/?view=cm&fs=1&tf=1" + (d.de ? "&authuser=" + encodeURIComponent(d.de) : "") + "&to=" + encodeURIComponent(($("to").value || d.to).trim()) + "&su=" + encodeURIComponent($("su").value || d.subject) + "&body=" + encodeURIComponent($("bo").value || d.body);
+  const u = URL.createObjectURL(new Blob([d.pdf], {type:"application/pdf"})), a = document.createElement("a"); a.href = u; a.download = d.filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000);
+  window.open(url, "_blank", "noopener");
+  status("err", "Gmail s'ouvre avec le message", "Le PDF <b>" + esc(d.filename) + "</b> est dans tes Téléchargements : glisse-le dans le courriel ou clique sur le trombone 📎 de Gmail.", B("fermer", "Fermer"));
+}
+
+/* Démarrage : on prévient l'application qu'on est prête, sinon on reprend l'envoi gardé ici (retour de la connexion Google) */
+(async function(){
+  const kept = await DB.get("envoi"), fresh = kept && kept.pdf && Date.now() - (kept.at || 0) < 6 * 3600e3 ? kept : null;
+  if (fresh && (back || authErr || !opener())) return start(fresh);
+  tell({t:"envoi-pret"});
+  setTimeout(() => { if (DATA) return; if (fresh && !opener()) return start(fresh);
+    status("err", "Rien à envoyer", "Retourne dans l'application Comptabilité, ouvre la soumission ou la facture, puis clique <b>Envoyer › Envoyer par Gmail</b>.", B("fermer", "Fermer")); }, opener() ? 8000 : 50);
+})();
+})();
+</script>
+</body>
+</html>

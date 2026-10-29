@@ -27,3 +27,7 @@ Format des changements déposés dans `Comptabilite/telephone/` : voir `POUR-CLA
 ## Styles des documents (v3.9)
 
 `style_core.js` (inséré par `patch9_style.py`) : styles « Nature » (par défaut), « Moderne » et « Épuré » des factures et soumissions, en plus du modèle d'origine (`docLayoutOrigine`). Le moteur PDF dessine maintenant des chemins, des rectangles arrondis et des cercles (emblème feuille). Le style se choisit dans Réglages (`reglages.styleDoc`), avec un aperçu.
+
+## Envoi par Gmail avec le PDF joint (v3.11)
+
+`envoi.html` (copiée telle quelle à la racine par `build.py`) : page d'envoi ouverte par l'application de l'ordinateur. Elle reçoit le message et le PDF par `postMessage` (`envoi-pret` → `envoi` → `envoi-fait`), montre le courriel et l'envoie par l'API Gmail (`users.messages.send`, téléversement `message/rfc822`, portée `gmail.send`) quand on clique « Envoyer ». La connexion Google passe par `index.html?auth=3&retour=envoi.html&mail=1` (`patch12_tel_gmail.py`), puisque `/compta/` est la seule adresse de retour autorisée. `patch12_gmail.py` branche le bouton « Envoyer par Gmail » de l'ordinateur et garde l'ancienne façon en dépannage. Il faut activer l'API Gmail une fois dans le projet Google Cloud. Test : `test_gmail.py` (faux Gmail dans `mock.py`).

@@ -710,6 +710,7 @@ details.more .form-grid{padding-bottom:14px}
 .send-opt .ic{flex:none;margin-top:2px;color:var(--accent)}
 .send-opt span{min-width:0;overflow-wrap:anywhere}
 .send-opt.prim{grid-column:1/-1;border-color:var(--accent);background:var(--accent-soft, var(--surface))}
+#snd-guide{flex-direction:column;align-items:stretch}#snd-guide small{color:var(--muted)}.snd-acts{margin-top:8px}
 #snd-guide{margin-top:10px}
 .tarifs{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px}
 .tarifs .tarif{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 10px;border-top:1px solid var(--line);font-size:.88rem}
@@ -4507,7 +4508,7 @@ async function shareDoc(kind, id){
   const opt = (k, icon, t, s) => '<button type="button" class="send-opt" data-send="' + k + '">' + ico(icon) + "<span><b>" + esc(t) + "</b><small>" + esc(s) + "</small></span></button>";
   openForm("Envoyer " + G.la + " " + doc.numero, '<p class="muted small">' + esc(doc.client) + " · " + esc(fmt(docTotals(doc).total)) + '</p><label class="field full"><span>Message</span><textarea id="snd-msg" class="ctl" rows="7">' + esc(msg) + "</textarea></label>" +
     '<div class="send-opts">' + (canShare ? opt("pdf", "i-pdf", "Envoyer le PDF", "Courriel, Messenger, WhatsApp, Outlook…") + opt("img", "i-image", "Envoyer en image", "Texto, Snapchat, Messenger, Instagram…") : "") +
-    (!CLOUD ? opt("gmail", "i-mail", "Envoyer par Gmail", (acct ? "Depuis " + acct + ". " : "") + "Le message est prêt" + (mail ? " pour " + c.courriel : "") + " ; le PDF se télécharge pour le joindre.").replace('class="send-opt"', 'class="send-opt prim"') : "") +
+    (!CLOUD ? opt("gmail", "i-mail", "Envoyer par Gmail", (acct ? "Depuis " + acct + ", " : "") + "avec le PDF déjà joint" + (mail ? ", à " + c.courriel : "") + ". Tu vérifies, puis tu cliques Envoyer.").replace('class="send-opt"', 'class="send-opt prim"') : "") +
     (CLOUD ? (mail ? opt("mail", "i-mail", "Courriel à " + c.courriel, "Le PDF est joint par le partage") : opt("mail", "i-mail", "Courriel", "Ton application de courriel s'ouvre avec le message"))
       : opt("mail", "i-mail", "Autre logiciel de courriel", "Outlook ou Courrier de Windows ; joins le PDF")) +
     (tel && CLOUD ? opt("sms", "i-phone", "Texto à " + c.telephone, "Le message seulement, sans pièce jointe") : "") +
@@ -4519,7 +4520,24 @@ async function shareDoc(kind, id){
         const b = e.target.closest("[data-send]"); if (!b) return; const how = b.dataset.send, text = $("snd-msg").value, subj = docTitre(kind) + " " + doc.numero + (R().nom ? " · " + R().nom : "");
         const mark = () => mutate(d => { const x = (isF ? d.factures : d.devis).find(y => y.id === id); if (!x) return false; const t = today(); if ((isF ? x.envoyeeLe : x.envoyeLe) === t) return false; if (isF) x.envoyeeLe = t; else x.envoyeLe = t; });
         const guide = html => { const g = $("snd-guide"); g.innerHTML = html; g.hidden = false; g.scrollIntoView({block:"nearest"}); };
+        const fnPdf = fileSafe(doc.numero + " " + (doc.client || "")) + ".pdf";
+        const manuel = '<div class="snd-acts"><button type="button" class="btn sm" data-send="gmailm">' + ico("i-download") + "Autre façon : ouvrir Gmail et télécharger le PDF</button></div>";
         if (how === "gmail"){
+          const w = window.open(ENVOI_URL, "compta-envoi", "popup,width=780,height=900");
+          if (!w){ guide("<span><b>La fenêtre d'envoi a été bloquée par le navigateur.</b> Clique sur l'icône de fenêtre bloquée à droite de la barre d'adresse, choisis « Toujours autoriser », puis clique de nouveau « Envoyer par Gmail ».</span>" + manuel); return; }
+          ENVOI.start(w, {
+            done: m => { mark(); toast("Courriel envoyé à " + (m.to || "ton client"));
+              if ($("snd-guide")) guide('<span><b>✓ Courriel envoyé</b> à ' + esc(m.to || "") + (m.de ? ", depuis " + esc(m.de) : "") + ", avec le PDF " + esc(fnPdf) + ". Tu le retrouves dans Gmail, dans « Messages envoyés ».</span>"); },
+            late: () => { if ($("snd-guide")) guide("<span><b>La fenêtre d'envoi ne répond pas.</b> Vérifie ta connexion Internet et réessaie, ou utilise l'autre façon.</span>" + manuel); }
+          });
+          guide("<span><b>Une fenêtre Gmail s'ouvre</b> avec le message et le PDF <b>" + esc(fnPdf) + "</b> déjà joint. Vérifie le courriel, puis clique <b>Envoyer</b>." +
+            "<br><small>La première fois, Google te demande la permission d'envoyer des courriels avec ton compte" + (acct ? " " + esc(acct) : "") + ".</small></span>" + manuel);
+          try { const logo = await loadLogo(), sigs = await docSigs(kind, doc), pdf = docPDF(kind, doc, logo, sigs);
+            ENVOI.set({t:"envoi", v:1, id:doc.id, kind, numero:doc.numero, client:doc.client || "", to:mail, subject:subj, body:text, filename:fnPdf, pdf:new Uint8Array(pdf), de:acct, nom:R().nom || ""});
+          } catch(er){ toast("PDF non créé : " + ((er && er.message) || er)); try { w.close(); } catch(e){} }
+          return;
+        }
+        if (how === "gmailm"){
           const url = "https://mail.google.com/mail/?view=cm&fs=1&tf=1" + (acct ? "&authuser=" + encodeURIComponent(acct) : "") + "&to=" + encodeURIComponent(mail) + "&su=" + encodeURIComponent(subj) + "&body=" + encodeURIComponent(text);
           const w = window.open(url, "_blank");
           try { const logo = await loadLogo(), sigs = await docSigs(kind, doc), fn = fileSafe(doc.numero + " " + (doc.client || "")) + ".pdf";
@@ -5405,6 +5423,21 @@ function applyOp(d, op){
 
 /* ----- Téléphone : réception des changements (bureau) ----- */
 const PHONE_URL = "https://emondagehamel-gif.github.io/compta/";
+/* Page d'envoi par Gmail : elle reçoit le PDF par message entre fenêtres et l'envoie avec ton compte Gmail */
+const ENVOI_URL = window.__ENVOI || PHONE_URL + "envoi.html";
+const ENVOI = {w:null, ori:"", data:null, cb:null, got:false, timer:0, tries:0,
+  start(w, cb){ Object.assign(this, {w, cb, ori:new URL(ENVOI_URL).origin, data:null, got:false, tries:0}); this.arm(); },
+  set(d){ this.data = d; if (this.got) this.post(); },
+  post(){ if (this.w && this.data && !this.w.closed) try { this.w.postMessage(this.data, this.ori); } catch(e){} },
+  /* La page ne répond pas (ancienne version gardée par le navigateur) : on la recharge deux fois, puis on propose l'autre façon */
+  arm(){ clearTimeout(this.timer); this.timer = setTimeout(() => { if (this.got || !this.w || this.w.closed) return;
+    if (++this.tries <= 2){ try { this.w.location.href = ENVOI_URL + "?essai=" + this.tries; } catch(e){} this.arm(); } else if (this.cb) this.cb.late(); }, 9000); }
+};
+window.addEventListener("message", e => {
+  const E = ENVOI, m = e.data; if (!E.w || e.source !== E.w || e.origin !== E.ori || !m || typeof m !== "object") return;
+  if (m.t === "envoi-pret"){ E.got = true; clearTimeout(E.timer); E.post(); }
+  else if (m.t === "envoi-fait" && E.data && m.id === E.data.id && E.cb){ const cb = E.cb; E.cb = null; cb.done(m); }
+});
 async function phoneSync(){
   if (CLOUD) return;
   if (!S.dir || !S.d || S.phoneBusy || S.busy) return; S.phoneBusy = true;

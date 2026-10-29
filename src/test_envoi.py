@@ -20,8 +20,11 @@ async def main():
         await pg.click("#sp-pick"); await pg.wait_for_selector("#app:not([hidden])")
         await pg.evaluate("location.hash='ventes'"); await pg.click('[data-vt="devis"]'); await pg.click('[data-dmail="dv-e1"]'); await pg.wait_for_selector("#ent-form .send-opts")
         print("1 options:", await pg.eval_on_selector_all("#ent-form [data-send]", "a => a.map(x => x.dataset.send + ': ' + x.querySelector('b').textContent)"))
+        await ctx.route("https://emondagehamel-gif.github.io/**", lambda r: r.fulfill(body="<title>Envoi</title>envoi", content_type="text/html"))
+        async with ctx.expect_page() as pop0: await pg.click('[data-send="gmail"]')
+        w0 = await pop0.value; await w0.wait_for_load_state(); print("1b page d'envoi:", w0.url); await w0.close()
         async with ctx.expect_page() as pop, pg.expect_download() as dl:
-            await pg.click('[data-send="gmail"]')
+            await pg.click('[data-send="gmailm"]')
         w = await pop.value; d = await dl.value; await w.wait_for_load_state()
         u = urllib.parse.urlsplit(w.url); q = urllib.parse.parse_qs(u.query)
         print("2 gmail:", u.netloc + u.path, "| compte:", q.get("authuser"), "| à:", q.get("to"), "| sujet:", q.get("su"), "| corps:", (q.get("body") or [""])[0][:60].replace("\n", " / "))
