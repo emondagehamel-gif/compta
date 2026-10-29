@@ -730,78 +730,127 @@ function fEntretien(eqId){
 }
 
 /* ===== Factures et devis ===== */
+/* Les nouveautés (types de frais, rabais, taxes incluses) attendent que l'ordinateur soit en version 3.7 */
+const telDocV2 = () => { const t = (S.d && S.d.telephone) || {}; return Array.isArray(t.ops) && t.ops.includes("doc-v2"); };
 function fDoc(kind, doc, p){
-  p = p || {}; const isF = kind === "facture", r = R();
-  const lignes = doc ? clone(doc.lignes) : (p.lignes ? clone(p.lignes) : [{description:"", qte:1, prix:0}]);
+  p = p || {}; const isF = kind === "facture", r = R(), v2 = telDocV2(), titre = docTitre(kind);
+  const lignes = doc ? clone(doc.lignes) : (p.lignes ? clone(p.lignes) : [{type:"service", description:"", qte:1, unite:"", prix:0}]);
+  lignes.forEach(l => { if (!l.type) l.type = "service"; });
   const cli = S.d.clients.find(c => norm(c.nom) === norm(doc ? doc.client : p.client || "")) || {};
   const date0 = doc ? doc.date : today(), n0 = String(doc ? daysBetween(doc.date, doc.echeance || doc.date) : (isF ? (r.termes != null ? r.termes : 30) : (r.validiteDevis || 30)));
   const terms = isF ? TERMS_F : TERMS_D, termVal = terms.some(t => t[0] === n0) ? n0 : "autre";
-  const prods = S.d.produits;
+  const prods = S.d.produits, tfs = r.tarifs || [], ttc0 = v2 && !!(doc ? doc.taxesIncluses : (p.taxesIncluses != null ? p.taxesIncluses : r.docTTC));
+  const addOpts = '<option value="">+ Ajouter une ligne…</option><optgroup label="Nouvelle ligne">' + LT.filter(t => t.k !== "rabais" || v2).map(t => '<option value="t:' + t.k + '">' + esc(t.l) + "</option>").join("") + "</optgroup>" +
+    (tfs.length ? '<optgroup label="Tarifs enregistrés">' + tfs.map(t => '<option value="f:' + esc(t.id) + '">' + esc(t.description + " · " + fmt(t.prix) + (t.unite ? " / " + t.unite : "")) + "</option>").join("") + "</optgroup>" : "") +
+    (prods.length ? '<optgroup label="Produits du stock">' + prods.map(x => '<option value="p:' + esc(x.id) + '">' + esc(x.nom + " (" + fq(stockOf(x)) + ")") + "</option>").join("") + "</optgroup>" : "");
   const body = '<label class="field"><span>Client</span><input class="ctl" id="d-cli" list="d-dl" maxlength="120" autocomplete="off" value="' + esc(doc ? doc.client : p.client || "") + '" placeholder="Nom du client"><datalist id="d-dl">' + S.d.clients.map(c => '<option value="' + esc(c.nom) + '">').join("") + "</datalist></label>" +
     '<details class="more"><summary>Coordonnées du client</summary><div><label class="field"><span>Téléphone</span><input class="ctl" id="d-tel" type="tel" value="' + esc(cli.telephone || "") + '"></label><label class="field"><span>Courriel</span><input class="ctl" id="d-mail" type="email" value="' + esc(cli.courriel || "") + '"></label><label class="field"><span>Adresse</span><textarea class="ctl" id="d-adr" rows="2">' + esc(cli.adresse || "") + "</textarea></label></div></details>" +
     '<div class="two"><label class="field"><span>Date</span><input class="ctl" type="date" id="d-date" value="' + esc(date0) + '"></label><label class="field"><span>' + (isF ? "Payable" : "Valide") + '</span><select class="ctl" id="d-terms">' + terms.map(([k, l]) => '<option value="' + k + '"' + (k === termVal ? " selected" : "") + ">" + esc(l) + "</option>").join("") + "</select></label></div>" +
     '<label class="field" id="d-ech-f"' + (termVal === "autre" ? "" : " hidden") + '><span>' + (isF ? "Échéance" : "Valide jusqu'au") + '</span><input class="ctl" type="date" id="d-ech" value="' + esc(doc ? doc.echeance : addDays(date0, Number(n0) || 0)) + '"></label>' +
-    '<div class="field"><span>Produits et services</span><div id="d-lines" style="display:flex;flex-direction:column;gap:8px"></div><div class="row"><button class="btn sm" type="button" data-dl="add">' + ico("i-plus") + "Ligne</button>" + (prods.length ? '<select class="ctl" id="d-prod" style="flex:1;min-height:34px;padding:5px 8px"><option value="">+ Produit du stock</option>' + prods.map(x => '<option value="' + esc(x.id) + '">' + esc(x.nom + " (" + fq(stockOf(x)) + ")") + "</option>").join("") + "</select>" : "") + "</div></div>" +
+    '<label class="field"><span>Description des travaux (facultatif)</span><textarea class="ctl" id="d-trav" rows="2" maxlength="1500" placeholder="Ex. : Émondage de 3 érables en façade et ramassage des branches">' + esc(doc ? doc.travaux || "" : p.travaux || "") + "</textarea></label>" +
+    '<div class="two"><label class="field"><span>Lieu des travaux</span><input class="ctl" id="d-lieu" maxlength="200" value="' + esc(doc ? doc.lieu || "" : p.lieu || "") + '" placeholder="Si différent"></label><label class="field"><span>' + (isF ? "Date des travaux" : "Date prévue") + '</span><input class="ctl" type="date" id="d-dtrav" value="' + esc(doc ? doc.dateTravaux || "" : p.dateTravaux || "") + '"></label></div>' +
+    '<div class="field"><span>Services et frais</span>' + (v2 ? '<div class="picks" style="margin-bottom:8px"><button type="button" class="pick" data-ttc="0" aria-pressed="' + !ttc0 + '">Prix avant taxes</button><button type="button" class="pick" data-ttc="1" aria-pressed="' + ttc0 + '">Prix taxes incluses</button></div>' : "") +
+    '<div id="d-lines" style="display:flex;flex-direction:column;gap:8px"></div><select class="ctl" id="d-add" style="margin-top:8px">' + addOpts + "</select></div>" +
     '<div class="tot" id="d-tot"></div>' +
     '<label class="field"><span>Taxes</span><select class="ctl" id="d-code">' + TAXCODES.map(c => '<option value="' + c + '"' + ((doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE"))) === c ? " selected" : "") + ">" + esc(taxLabel(c)) + "</option>").join("") + "</select></label>" +
     (isF && !doc ? '<div class="field"><span>Paiement</span><div class="picks"><button type="button" class="pick" data-dpay="" aria-pressed="true">' + ico("i-cal") + "À encaisser</button>" + S.d.comptes.filter(c => c.sorte === "banque" || c.sorte === "caisse").map(c => '<button type="button" class="pick" data-dpay="' + esc(c.id) + '" aria-pressed="false">' + ico("i-bank") + "Déjà payée : " + esc(c.nom) + "</button>").join("") + "</div></div>" : "") +
     '<label class="field"><span>Message sur le document</span><textarea class="ctl" id="d-msg" rows="2" maxlength="600">' + esc(doc ? doc.message || "" : (p.message != null ? p.message : r.messageFacture || "")) + "</textarea></label>" +
+    (v2 ? "" : '<p class="hint">Les rabais et les prix taxes incluses seront offerts quand l\'application de l\'ordinateur aura été ouverte une fois après sa mise à jour.</p>') +
     '<p class="hint" id="d-hint" hidden></p>';
-  const linesHTML = () => S.form.lignes.map((l, i) => '<div class="line" data-li="' + i + '"><textarea class="ctl" rows="2" data-lf="description" placeholder="Description, ex. : Abattage d\'un érable de 60 pi" aria-label="Description">' + esc(l.description) + '</textarea><div class="three"><label class="field"><span>Qté</span><input class="ctl" data-lf="qte" inputmode="decimal" value="' + esc(fq(l.qte)) + '"></label><label class="field"><span>Prix unitaire</span><input class="ctl" data-lf="prix" inputmode="decimal" value="' + (l.prix ? esc(n2s(l.prix)) : "") + '" placeholder="0,00"></label><button class="icon-btn" type="button" data-dl="rm" data-i="' + i + '" aria-label="Retirer la ligne"' + (S.form.lignes.length < 2 ? " disabled" : "") + ">" + ico("i-x") + '</button></div><span class="muted small" data-amt="' + i + '">' + fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))) + "</span></div>").join("");
-  const recalc = () => { const t = docTotals({lignes:S.form.lignes, codeTaxe:$("d-code").value}); $("d-tot").innerHTML = "<div><span>Sous-total</span><span>" + fmt(t.st) + "</span></div>" + taxLines($("d-code").value, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total</span><span>' + fmt(t.total) + "</span></div>";
-    S.form.lignes.forEach((l, i) => { const a = document.querySelector('[data-amt="' + i + '"]'); if (a) a.textContent = fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))); });
+  const types = LT.filter(t => t.k !== "rabais" || v2 || lignes.some(l => l.type === "rabais"));
+  const mtTxt = l => { const m = ligneMt(l); return (m < 0 ? "−" : "") + fmt(Math.abs(m)); };
+  const linesHTML = () => S.form.lignes.map((l, i) => { const t = LTM[ligneType(l)];
+    return '<div class="line' + (l.type === "rabais" ? " rabais" : "") + '" data-li="' + i + '"><div class="row" style="justify-content:space-between"><select class="ctl lt-sel" data-lf="type" aria-label="Type">' + types.map(x => '<option value="' + x.k + '"' + (x.k === t.k ? " selected" : "") + ">" + esc(x.l) + "</option>").join("") + '</select><button class="icon-btn" type="button" data-dl="rm" data-i="' + i + '" aria-label="Retirer la ligne"' + (S.form.lignes.length < 2 ? " disabled" : "") + ">" + ico("i-x") + "</button></div>" +
+      '<textarea class="ctl" rows="2" data-lf="description" placeholder="' + esc(t.ph) + '" aria-label="Description">' + esc(l.description) + "</textarea>" +
+      '<div class="three q3"><label class="field"><span>Qté</span><input class="ctl" data-lf="qte" inputmode="decimal" value="' + esc(fq(l.qte)) + '"></label><label class="field"><span>Unité</span><input class="ctl" data-lf="unite" list="d-units" maxlength="12" value="' + esc(l.unite || "") + '"></label><label class="field"><span>' + (S.form.ttc ? "Prix (tx incl.)" : "Prix unitaire") + '</span><input class="ctl" data-lf="prix" inputmode="decimal" value="' + (l.prix ? esc(n2s(l.prix)) : "") + '" placeholder="0,00"></label></div>' +
+      '<span class="muted small" data-amt="' + i + '">' + mtTxt(l) + "</span></div>"; }).join("") + '<datalist id="d-units">' + LUNITES.map(u => '<option value="' + esc(u) + '">').join("") + "</datalist>";
+  const recalc = () => { const t = docTotals({lignes:S.form.lignes, codeTaxe:$("d-code").value, taxesIncluses:S.form.ttc});
+    $("d-tot").innerHTML = "<div><span>" + (t.ttc ? "Montant avant taxes" : "Sous-total") + "</span><span>" + fmt(t.st) + "</span></div>" + taxLines($("d-code").value, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total' + (t.ttc ? " (taxes incl.)" : "") + "</span><span>" + fmt(t.total) + "</span></div>";
+    S.form.lignes.forEach((l, i) => { const a = document.querySelector('[data-amt="' + i + '"]'); if (a) a.textContent = mtTxt(l); });
     const msgs = []; if (isF && t.total >= 100 && (t.tx || t.tq) && (!r.noTPS || (t.tq && !r.noTVQ))) msgs.push("Ajoute tes numéros de TPS et de TVQ dans les Réglages de l'application de l'ordinateur : ils doivent figurer sur les factures de 100 $ et plus."); $("d-hint").innerHTML = msgs.map(esc).join("<br>"); $("d-hint").hidden = !msgs.length; return t; };
   const drawLines = () => { $("d-lines").innerHTML = linesHTML(); recalc(); };
-  const title = doc ? (isF ? "Facture " : "Devis ") + doc.numero : isF ? (p.fromDevis ? "Facture du devis" : "Nouvelle facture") : "Nouveau devis";
-  openSheet(title, body, {primary:"Enregistrer", state:{lignes, pay:""},
-    secondary:'<button class="btn" type="button" data-dsave="pdf">' + ico("i-pdf") + "Enregistrer + PDF</button>",
+  const prixPour = (prix, ttc) => { const [a, b] = taxRates($("d-code").value || "AUCUNE"); if (!!ttc === !!S.form.ttc || !(a || b)) return r2(prix); return ttc ? r2(prix * 100 / (100 + a + b)) : r2(prix * (100 + a + b) / 100); };
+  const addLine = ln => { const L = S.form.lignes; if (L.length === 1 && !L[0].description && !L[0].prix) L[0] = ln; else L.push(ln); drawLines(); if (!ln.description){ const t = document.querySelectorAll('[data-lf="description"]'); t[t.length - 1].focus(); } };
+  const title = doc ? titre + " " + doc.numero : isF ? (p.fromDevis ? "Facture " + docGenre("devis").de : "Nouvelle facture") : (titre === "Devis" ? "Nouveau devis" : "Nouvelle " + titre.toLowerCase());
+  openSheet(title, body, {primary:"Enregistrer", state:{lignes, pay:"", ttc:ttc0},
+    secondary:'<button class="btn" type="button" data-dsave="send">' + ico("i-send") + "Enregistrer et envoyer</button>",
     ready: drawLines,
-    onInput: e => { const f = e.target.closest("[data-lf]"); if (f){ const l = S.form.lignes[Number(f.closest("[data-li]").dataset.li)]; if (f.dataset.lf === "description") l.description = f.value; else { const v = num(f.value); l[f.dataset.lf] = isFinite(v) ? v : 0; } recalc(); } },
+    onInput: e => { const f = e.target.closest("[data-lf]"); if (f && f.dataset.lf !== "type"){ const l = S.form.lignes[Number(f.closest("[data-li]").dataset.li)]; if (f.dataset.lf === "description") l.description = f.value; else if (f.dataset.lf === "unite") l.unite = f.value; else { const v = num(f.value); l[f.dataset.lf] = isFinite(v) ? v : 0; } recalc(); } },
     onChange: e => { const id = e.target.id;
       if (id === "d-code") recalc();
+      if (e.target.dataset && e.target.dataset.lf === "type"){ const l = S.form.lignes[Number(e.target.closest("[data-li]").dataset.li)], was = LTM[ligneType(l)]; l.type = e.target.value; if (!l.unite || l.unite === was.u) l.unite = (LTM[l.type] || {}).u || ""; drawLines(); }
       if (id === "d-terms" || id === "d-date"){ const t = $("d-terms").value; $("d-ech-f").hidden = t !== "autre"; if (t !== "autre") $("d-ech").value = addDays($("d-date").value || today(), Number(t) || 0); }
       if (id === "d-cli"){ const c = S.d.clients.find(x => norm(x.nom) === norm(e.target.value)) || {}; $("d-tel").value = c.telephone || ""; $("d-mail").value = c.courriel || ""; $("d-adr").value = c.adresse || ""; }
-      if (id === "d-prod"){ const x = S.d.produits.find(q => q.id === e.target.value); e.target.value = ""; if (x){ const L = S.form.lignes, ln = {description:x.nom + (x.code ? " (" + x.code + ")" : ""), qte:1, prix:Number(x.prix) || 0, produit:x.id}; if (L.length === 1 && !L[0].description && !L[0].prix) L[0] = ln; else L.push(ln); drawLines(); } } },
+      if (id === "d-add"){ const v = e.target.value; e.target.value = ""; if (!v) return; const k = v.slice(2);
+        if (v[0] === "t") addLine({type:k, description:"", qte:1, unite:(LTM[k] || {}).u || "", prix:0});
+        else if (v[0] === "f"){ const t = tfs.find(x => x.id === k); if (t) addLine({type:t.type || "service", description:t.description, qte:1, unite:t.unite || "", prix:prixPour(t.prix, t.ttc)}); }
+        else if (v[0] === "p"){ const x = S.d.produits.find(q => q.id === k); if (x) addLine({type:"materiaux", description:x.nom + (x.code ? " (" + x.code + ")" : ""), qte:1, unite:x.unite || "unité", prix:prixPour(Number(x.prix) || 0, false), produit:x.id}); } } },
     onClick: e => { const b = e.target.closest("button"); if (!b) return;
-      if (b.dataset.dl === "add"){ S.form.lignes.push({description:"", qte:1, prix:0}); drawLines(); const t = document.querySelectorAll('[data-lf="description"]'); t[t.length - 1].focus(); }
-      else if (b.dataset.dl === "rm"){ S.form.lignes.splice(Number(b.dataset.i), 1); drawLines(); }
+      if (b.dataset.dl === "rm"){ S.form.lignes.splice(Number(b.dataset.i), 1); drawLines(); }
+      else if (b.dataset.ttc != null){ S.form.ttc = b.dataset.ttc === "1"; pressSet("[data-ttc]", "data-ttc", b.dataset.ttc); drawLines(); }
       else if (b.dataset.dpay != null){ S.form.pay = b.dataset.dpay; pressSet("[data-dpay]", "data-dpay", b.dataset.dpay); }
-      else if (b.dataset.dsave){ S.form.withPdf = true; $("sheet-f").requestSubmit(); } },
+      else if (b.dataset.dsave){ S.form.withSend = true; $("sheet-f").requestSubmit(); } },
     onSubmit: async () => {
       const client = $("d-cli").value.trim(), date = $("d-date").value; if (!client) return fail("Entre le nom du client."); if (!date) return fail("Choisis la date.");
-      const L = S.form.lignes.map(l => { const x = {description:String(l.description || "").trim(), qte:Number(l.qte) || 0, prix:r2(l.prix)}; if (l.produit) x.produit = l.produit; return x; }).filter(l => l.description || l.prix);
+      const L = S.form.lignes.map(l => { const x = {type:ligneType(l), description:String(l.description || "").trim(), qte:Number(l.qte) || 0, unite:String(l.unite || "").trim(), prix:r2(l.prix)}; if (l.produit) x.produit = l.produit; return x; }).filter(l => l.description || l.prix);
       if (!L.length) return fail("Ajoute au moins une ligne avec une description et un prix."); if (L.some(l => !l.description)) return fail("Chaque ligne doit avoir une description.");
       const t = $("d-terms").value, ech = t === "autre" ? ($("d-ech").value || date) : addDays(date, Number(t) || 0);
-      const data = Object.assign({}, doc || {id: uid(isF ? "fa" : "dv"), numero: nextNum(kind, date)}, {date, echeance: ech < date ? date : ech, client, lignes:L, codeTaxe:$("d-code").value, message:$("d-msg").value.trim(), clientInfo:{telephone:$("d-tel").value.trim(), courriel:$("d-mail").value.trim(), adresse:$("d-adr").value.trim()}});
+      const data = Object.assign({}, doc || {id: uid(isF ? "fa" : "dv"), numero: nextNum(kind, date)}, {date, echeance: ech < date ? date : ech, client, lignes:L, codeTaxe:$("d-code").value, message:$("d-msg").value.trim(), clientInfo:{telephone:$("d-tel").value.trim(), courriel:$("d-mail").value.trim(), adresse:$("d-adr").value.trim()},
+        travaux:$("d-trav").value.trim(), lieu:$("d-lieu").value.trim(), dateTravaux:$("d-dtrav").value || ""});
+      if (S.form.ttc) data.taxesIncluses = true; else delete data.taxesIncluses;
+      ["travaux","lieu","dateTravaux"].forEach(k => { if (!data[k]) delete data[k]; });
       if (isF){ data.categorie = (doc && doc.categorie) || "ventes"; if (p.fromDevis) data.devis = p.fromDevis; if (!doc) data.paye = S.form.pay || ""; }
       else if (!doc) data.statut = "ouvert";
-      const withPdf = S.form.withPdf; closeSheet(); toast((isF ? "Facture " : "Devis ") + data.numero + (doc ? " modifié" + (isF ? "e" : "") : " envoyé" + (isF ? "e" : "") + " à tes livres"));
+      const withSend = S.form.withSend; if (!withSend) closeSheet(); toast(titre + " " + data.numero + (doc ? " modifié" + (isF || titre !== "Devis" ? "e" : "") : " envoyé" + (isF || titre !== "Devis" ? "e" : "") + " à tes livres"));
       await sendOp(kind, data);
-      if (withPdf){ const fresh = (isF ? S.d.factures : S.d.devis).find(x => x.id === data.id); if (fresh) savePDF(kind, fresh); }
-      S.vt = isF ? "factures" : "devis"; if (isF) S.vtF = "tous"; if (S.tab === "ventes") vVentes(); }});
+      S.vt = isF ? "factures" : "devis"; if (isF) S.vtF = "tous"; if (S.tab === "ventes") vVentes();
+      if (withSend){ const fresh = (isF ? S.d.factures : S.d.devis).find(x => x.id === data.id) || Object.assign({}, data, {clientId: cli.id || ""}); sendDoc(kind, fresh); return false; } }});
 }
 function docBody(kind, x){
-  const t = docTotals(x), isF = kind === "facture", s = isF ? facStatus(x) : devStatus(x), c = clientOf(x) || {};
-  return '<div><span class="eyebrow">' + esc((isF ? "Facture" : "Devis") + " · " + dLong(x.date)) + "</span><h2>" + esc(x.numero + " · " + x.client) + '</h2><div class="row" style="margin-top:6px"><span class="chip ' + s.cls + '">' + esc(s.l) + '</span><span class="muted small">' + esc(isF ? (x.echeance && x.echeance > x.date ? "Payable d'ici le " + dLong(x.echeance) : "Payable à réception") : "Valide jusqu'au " + dLong(x.echeance)) + "</span></div></div>" +
-    '<table class="doc-lines">' + x.lignes.map(l => "<tr><td>" + esc(l.description) + '<br><span class="muted small">' + esc(fq(l.qte) + " × " + fmt(l.prix)) + '</span></td><td class="n">' + fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))) + "</td></tr>").join("") + "</table>" +
-    '<div class="tot"><div><span>Sous-total</span><span>' + fmt(t.st) + "</span></div>" + taxLines(x.codeTaxe, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total</span><span>' + fmt(t.total) + "</span></div></div>" +
+  const t = docTotals(x), isF = kind === "facture", s = isF ? facStatus(x) : devStatus(x), c = clientOf(x) || {}, G = docGroupes(x);
+  return '<div><span class="eyebrow">' + esc(docTitre(kind) + " · " + dLong(x.date)) + "</span><h2>" + esc(x.numero + " · " + x.client) + '</h2><div class="row" style="margin-top:6px"><span class="chip ' + s.cls + '">' + esc(s.l) + '</span><span class="muted small">' + esc(isF ? (x.echeance && x.echeance > x.date ? "Payable d'ici le " + dLong(x.echeance) : "Payable à réception") : "Valide jusqu'au " + dLong(x.echeance)) + "</span></div></div>" +
+    (x.travaux ? '<p class="small">' + esc(x.travaux) + "</p>" : "") + (x.lieu ? '<p class="muted small">Lieu : ' + esc(x.lieu) + "</p>" : "") +
+    '<table class="doc-lines">' + G.map(g => (G.length > 1 ? '<tr><td colspan="2" class="grp">' + esc(g.t.g) + "</td></tr>" : "") + g.lignes.map(l => { const m = ligneMt(l); return "<tr><td>" + esc(l.description).replace(/\n/g, "<br>") + '<br><span class="muted small">' + esc(qteTxt(l) + " × " + fmt(l.prix)) + '</span></td><td class="n">' + (m < 0 ? "−" : "") + fmt(Math.abs(m)) + "</td></tr>"; }).join("")).join("") + "</table>" +
+    '<div class="tot"><div><span>' + (t.ttc ? "Montant avant taxes" : "Sous-total") + "</span><span>" + fmt(t.st) + "</span></div>" + taxLines(x.codeTaxe, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total' + (t.ttc ? " (taxes incl.)" : "") + "</span><span>" + fmt(t.total) + "</span></div></div>" +
     (c.telephone ? '<div class="copy"><span>' + esc(c.telephone) + '</span><a class="btn sm" href="tel:' + esc(c.telephone.replace(/[^\d+]/g, "")) + '">Appeler</a><button class="btn sm" type="button" data-copy="' + esc(c.telephone) + '">Copier</button></div>' : "") +
     (c.courriel ? '<div class="copy"><span>' + esc(c.courriel) + '</span><button class="btn sm" type="button" data-copy="' + esc(c.courriel) + '">Copier</button></div>' : "");
+}
+/* Envoyer une facture ou une soumission : PDF ou image (courriel, texto, Messenger, Snapchat…) */
+function sendDoc(kind, x){
+  const isF = kind === "facture", G = docGenre(kind), c = clientOf(x) || {}, tel = String(c.telephone || "").replace(/[^\d+]/g, ""), share = !!(navigator.canShare && navigator.share);
+  const opt = (k, icon, t, s) => '<button type="button" class="item send-opt" data-send="' + k + '">' + ico(icon) + '<span class="t"><b>' + esc(t) + "</b><small>" + esc(s) + "</small></span></button>";
+  openSheet("Envoyer " + G.la + " " + x.numero, '<p class="muted small">' + esc(x.client) + " · " + esc(fmt(docTotals(x).total)) + '</p><label class="field"><span>Message</span><textarea class="ctl" id="snd-msg" rows="6">' + esc(docMessage(kind, x)) + "</textarea></label>" +
+    '<div class="list">' + (share ? opt("img", "i-image", "Envoyer en image", "Texto, Snapchat, Messenger, Instagram…") + opt("pdf", "i-pdf", "Envoyer le PDF", "Courriel (Gmail), Messenger, WhatsApp, Drive…") : "") +
+    (tel ? opt("sms", "i-phone", "Texto à " + c.telephone, "Le message seulement ; ajoute l'image avec « Envoyer en image »") : "") +
+    opt("copy", "i-copy", "Copier le message", "Pour le coller où tu veux") + opt("save", "i-download", "Enregistrer le PDF", "Dans Téléchargements") + "</div>",
+    {onClick: async ev => { const b = ev.target.closest("[data-send]"); if (!b) return; const how = b.dataset.send, text = $("snd-msg").value, name = fileSafe(x.numero + " " + x.client), subj = docTitre(kind) + " " + x.numero + (R().nom ? " · " + R().nom : "");
+      const mark = () => { if (!(isF ? x.envoyeeLe : x.envoyeLe)) sendOp("envoye", {kind, id:x.id, date:today()}); };
+      try { b.disabled = true;
+        if (how === "copy"){ await copyTxt(text); return; }
+        if (how === "sms"){ location.href = "sms:" + tel + "?body=" + encodeURIComponent(text); mark(); return; }
+        const logo = await phoneLogo();
+        if (how === "save"){ const f = new File([docPDF(kind, x, logo)], name + ".pdf", {type:"application/pdf"}), url = URL.createObjectURL(f), a = document.createElement("a"); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); toast("PDF enregistré dans Téléchargements."); return; }
+        const files = how === "img" ? await docImages(kind, x, logo) : [new File([docPDF(kind, x, logo)], name + ".pdf", {type:"application/pdf"})];
+        if (!navigator.canShare({files})) throw new Error("ce téléphone ne partage pas ce fichier");
+        if (how === "pdf" && c.courriel){ try { await navigator.clipboard.writeText(c.courriel); toast("Courriel du client copié : colle-le dans « À »"); } catch(e){} }
+        await navigator.share({files, title: subj, text}); mark(); closeSheet();
+      } catch(e){ if (e && e.name === "AbortError") return; toast("Envoi impossible : " + ((e && e.message) || "erreur")); }
+      finally { b.disabled = false; } }});
 }
 async function copyTxt(v){ try { await navigator.clipboard.writeText(v); toast("Copié"); } catch(e){ toast("Copie impossible : sélectionne le texte."); } }
 function openFacture(id){
   const f = S.d.factures.find(x => x.id === id); if (!f) return; const t = S.tmap[f.transaction];
   openSheet("Facture " + f.numero, docBody("facture", f) + '<p class="muted small">Le PDF est aussi créé sur l\'ordinateur, dans le dossier factures, quand il reçoit la facture.</p>',
-    {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-pdf") + "PDF</button>" + (f.statut !== "annulee" ? '<button class="btn" type="button" data-x="mod">Modifier</button>' : "") + (t && unpaid(t) ? '<button class="btn primary" type="button" data-x="pay">Encaisser</button>' : ""),
+    {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-send") + "Envoyer</button>" + (f.statut !== "annulee" ? '<button class="btn" type="button" data-x="mod">Modifier</button>' : "") + (t && unpaid(t) ? '<button class="btn primary" type="button" data-x="pay">Encaisser</button>' : ""),
      onClick: ev => { const b = ev.target.closest("button"); if (!b) return; if (b.dataset.copy) return copyTxt(b.dataset.copy);
-       const x = b.dataset.x; if (x === "pdf") savePDF("facture", f); else if (x === "mod") fDoc("facture", f); else if (x === "pay") fEncaisser(f); }});
+       const x = b.dataset.x; if (x === "pdf") sendDoc("facture", f); else if (x === "mod") fDoc("facture", f); else if (x === "pay") fEncaisser(f); }});
 }
 function openDevis(id){
   const v = S.d.devis.find(x => x.id === id); if (!v) return; const s = devStatus(v);
-  openSheet("Devis " + v.numero, docBody("devis", v) + (s.k !== "facture" ? '<div class="row"><button class="btn sm" type="button" data-x="accepte">Accepté par le client</button><button class="btn sm" type="button" data-x="refuse">Refusé</button></div>' : ""),
-    {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-pdf") + "PDF</button>" + (s.k !== "facture" ? '<button class="btn" type="button" data-x="mod">Modifier</button><button class="btn primary" type="button" data-x="fac">Facturer</button>' : ""),
+  openSheet(docTitre("devis") + " " + v.numero, docBody("devis", v) + (s.k !== "facture" ? '<div class="row"><button class="btn sm" type="button" data-x="accepte">Accepté par le client</button><button class="btn sm" type="button" data-x="refuse">Refusé</button></div>' : ""),
+    {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-send") + "Envoyer</button>" + (s.k !== "facture" ? '<button class="btn" type="button" data-x="mod">Modifier</button><button class="btn primary" type="button" data-x="fac">Facturer</button>' : ""),
      onClick: async ev => { const b = ev.target.closest("button"); if (!b) return; if (b.dataset.copy) return copyTxt(b.dataset.copy);
-       const x = b.dataset.x; if (x === "pdf") savePDF("devis", v); else if (x === "mod") fDoc("devis", v); else if (x === "fac") fDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, message:v.message, fromDevis:v.id});
+       const x = b.dataset.x; if (x === "pdf") sendDoc("devis", v); else if (x === "mod") fDoc("devis", v); else if (x === "fac") fDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});
        else if (x === "accepte" || x === "refuse"){ closeSheet(); toast("Devis " + (x === "accepte" ? "accepté" : "refusé")); await sendOp("devis-statut", {id:v.id, statut:x}); } }});
 }
 function openClient(id){

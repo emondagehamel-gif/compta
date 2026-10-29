@@ -207,6 +207,13 @@ details.more>div{display:flex;flex-direction:column;gap:12px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab) + 14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:.9rem;z-index:80;max-width:calc(100% - 32px);display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
 .toast-a{background:none;border:none;color:var(--bg);font-weight:700;text-decoration:underline;padding:2px 4px}
 .sheet-open .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.line.rabais [data-amt]{color:var(--pos)}
+.line .three.q3{grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.3fr)}
+.lt-sel{flex:1;min-height:36px;padding:6px 8px;font-weight:600}
+.doc-lines td.grp{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);padding-top:12px}
+.send-opt{display:flex;gap:12px;align-items:flex-start;text-align:left}
+.send-opt .ic{flex:none;margin-top:3px;color:var(--accent)}
+.send-opt .t small{display:block;color:var(--muted);font-size:.8rem;font-weight:400}
 </style>
 <style>html,body{margin:0}body{min-height:100dvh;overscroll-behavior-y:contain}[hidden]{display:none!important}.sync.off i{background:var(--muted)}img{max-width:100%}
 .full-link{flex-direction:row;align-items:center;gap:12px;text-decoration:none;color:inherit;border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:var(--accent-soft)}
@@ -278,6 +285,10 @@ details.more>div{display:flex;flex-direction:column;gap:12px}
   <symbol id="i-tool" viewBox="0 0 24 24"><path d="M4 14h16v6H4zM8 14V9h8v5M10 9V5h4v4"/></symbol>
   <symbol id="i-laptop" viewBox="0 0 24 24"><path d="M5 5h14v10H5zM2.5 19h19"/></symbol>
   <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M9.5 13h5M9.5 16.5h5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/></symbol>
   <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M8.5 18h.01M12 18h.01M15.5 14.5V18"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
@@ -411,7 +422,8 @@ const SORTES = {
 const TYPES = {depense:"Dépense", revenu:"Revenu", transfert:"Transfert", tvh:"TPS/TVH", dividende:"Dividende"};
 const DEF_REGLAGES = {nom:"Mon entreprise", numero:"", structure:"societe", province:"QC", regime:"federal", dateConstitution:"", obligations:{}, finExercice:12, exerciceConfirme:false, inscritTVH:true, inscritTVQ:true, tauxTPS:5, tauxTVQ:9.975, tauxTVH:13, frequence:"trimestrielle",
   dateOuverture:"2026-01-01", tvhOuverture:0, capitalActions:0, tauxKm:{"2025":[0.72,0.66], "2026":[0.73,0.67]}, compteKm:"c-actionnaire", declarations:{},
-  adresse:"", telephone:"", courriel:"", noTPS:"", noTVQ:"", termes:30, validiteDevis:30, messageFacture:"Merci de votre confiance!", logo:""};
+  adresse:"", telephone:"", courriel:"", noTPS:"", noTVQ:"", termes:30, validiteDevis:30, messageFacture:"Merci de votre confiance!", logo:"",
+  slogan:"", neq:"", modePaiement:"", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
 const COLLECTIONS = ["comptes","transactions","fournisseurs","projets","km","rapprochements","clients","factures","devis","agenda","equipements","produits","lieux"];
 function normalize(d){
   d = d && typeof d === "object" ? d : {};
@@ -423,6 +435,7 @@ function normalize(d){
   if (!d.reglages.tauxKm || typeof d.reglages.tauxKm !== "object") d.reglages.tauxKm = clone(DEF_REGLAGES.tauxKm);
   if (!d.reglages.declarations || typeof d.reglages.declarations !== "object") d.reglages.declarations = {};
   if (!d.reglages.obligations || typeof d.reglages.obligations !== "object") d.reglages.obligations = {};
+  if (!Array.isArray(d.reglages.tarifs)) d.reglages.tarifs = [];
   if (!d.reglages.onboarding || typeof d.reglages.onboarding !== "object") d.reglages.onboarding = {};
   if (!d.reglages.fiscal || typeof d.reglages.fiscal !== "object") d.reglages.fiscal = {};
   d.format = d.format || "comptabilite-v1"; d.rev = Number(d.rev) || 1;
@@ -600,8 +613,8 @@ const fmtKm = v => (Math.round(Number(v) || 0)).toLocaleString("fr-CA") + " km";
 const fq = q => (Number(q) || 0).toLocaleString("fr-CA", {maximumFractionDigits:2});
 const HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
 const HELVB = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
-const WIN = {"€":128,"‚":130,"„":132,"…":133,"‘":145,"’":146,"“":147,"”":148,"•":149,"–":150,"—":151,"™":153,"œ":156,"Œ":140};
-const WIN_W = {128:556,130:222,132:333,133:1000,140:1000,145:222,146:222,147:333,148:333,149:350,150:556,151:1000,153:1000,156:944,160:278,167:556,169:737,171:556,174:737,176:400,178:333,179:333,183:278,185:333,187:556,188:834,189:834,190:834,215:584,223:611,247:584};
+const WIN = {"€":128,"‚":130,"„":132,"…":133,"‘":145,"’":146,"“":147,"”":148,"•":149,"–":150,"—":151,"™":153,"œ":156,"Œ":140,"‹":139,"›":155};
+const WIN_W = {139:333,155:333,128:556,130:222,132:333,133:1000,140:1000,145:222,146:222,147:333,148:333,149:350,150:556,151:1000,153:1000,156:944,160:278,167:556,169:737,171:556,174:737,176:400,178:333,179:333,183:278,185:333,187:556,188:834,189:834,190:834,215:584,223:611,247:584};
 const pdfChars = s => String(s == null ? "" : s).normalize("NFC").replace(/[     ]/g, " ").replace(/−/g, "-").replace(/[\r\t]/g, " ");
 function winCode(ch){ const c = ch.charCodeAt(0); if (c < 128) return c >= 32 ? c : 32; if (c >= 160 && c <= 255) return c; return WIN[ch] || 63; }
 function charW(ch, bold){ const c = winCode(ch), T = bold ? HELVB : HELV; if (c < 127) return T[c - 32]; if (WIN_W[c]) return WIN_W[c]; const b = ch.normalize("NFD").charCodeAt(0); return b >= 32 && b < 127 ? T[b - 32] : 556; }
@@ -621,33 +634,35 @@ function wrapText(s, size, bold, maxW){
   return out;
 }
 function PDF(){
-  const W = 612, H = 792, pages = [], imgs = [];
-  let ops = null;
+  const W = 612, H = 792, pages = [], imgs = [], draws = [];
+  let ops = null, cv = null;
   const n = v => String(Math.round(v * 100) / 100);
   const col = c => { const h = String(c).replace("#", ""); return [0, 2, 4].map(i => n(parseInt(h.slice(i, i + 2), 16) / 255)).join(" "); };
   const P = {
-    W, H, pages,
-    page(){ ops = []; pages.push(ops); return P; },
-    at(i){ ops = pages[i]; return P; },
-    text(x, y, s, o){ o = o || {}; const size = o.size || 10, bold = !!o.bold, w = textW(s, size, bold); let tx = x; if (o.align === "right") tx = x - w; else if (o.align === "center") tx = x - w / 2;
-      ops.push((o.color ? col(o.color) + " rg " : "") + "BT /" + (bold ? "F2" : "F1") + " " + n(size) + " Tf " + n(tx) + " " + n(H - y) + " Td (" + pdfStr(s) + ") Tj ET" + (o.color ? " 0 0 0 rg" : "")); return w; },
-    line(x1, y1, x2, y2, o){ o = o || {}; ops.push(col(o.color || "#000000") + " RG " + n(o.w || 0.6) + " w " + n(x1) + " " + n(H - y1) + " m " + n(x2) + " " + n(H - y2) + " l S"); },
-    rect(x, y, w, h, color){ ops.push(col(color) + " rg " + n(x) + " " + n(H - y - h) + " " + n(w) + " " + n(h) + " re f 0 0 0 rg"); },
-    image(img, x, y, w, h){ if (!imgs.includes(img)) imgs.push(img); ops.push("q " + n(w) + " 0 0 " + n(h) + " " + n(x) + " " + n(H - y - h) + " cm /Im" + (imgs.indexOf(img) + 1) + " Do Q"); },
+    W, H, pages, draws,
+    page(){ ops = []; pages.push(ops); cv = []; draws.push(cv); return P; },
+    at(i){ ops = pages[i]; cv = draws[i]; return P; },
+    text(x, y, s, o){ o = o || {}; const size = o.size || 10, bold = !!o.bold, ls = Number(o.ls) || 0, nc = [...pdfChars(s)].length, w = textW(s, size, bold) + (nc > 1 ? ls * (nc - 1) : 0); let tx = x; if (o.align === "right") tx = x - w; else if (o.align === "center") tx = x - w / 2;
+      ops.push((o.color ? col(o.color) + " rg " : "") + "BT /" + (bold ? "F2" : o.italic ? "F3" : "F1") + " " + n(size) + " Tf " + (ls ? n(ls) + " Tc " : "") + n(tx) + " " + n(H - y) + " Td (" + pdfStr(s) + ") Tj " + (ls ? "0 Tc " : "") + "ET" + (o.color ? " 0 0 0 rg" : ""));
+      cv.push({k:"t", x:tx, y, s:pdfChars(s), size, bold, italic:!!o.italic, ls, color:o.color || "#000000"}); return w; },
+    line(x1, y1, x2, y2, o){ o = o || {}; ops.push(col(o.color || "#000000") + " RG " + n(o.w || 0.6) + " w " + n(x1) + " " + n(H - y1) + " m " + n(x2) + " " + n(H - y2) + " l S"); cv.push({k:"l", x1, y1, x2, y2, color:o.color || "#000000", w:o.w || 0.6}); },
+    rect(x, y, w, h, color){ ops.push(col(color) + " rg " + n(x) + " " + n(H - y - h) + " " + n(w) + " " + n(h) + " re f 0 0 0 rg"); cv.push({k:"r", x, y, w, h, color}); },
+    image(img, x, y, w, h){ if (!imgs.includes(img)) imgs.push(img); ops.push("q " + n(w) + " 0 0 " + n(h) + " " + n(x) + " " + n(H - y - h) + " cm /Im" + (imgs.indexOf(img) + 1) + " Do Q"); cv.push({k:"i", img, x, y, w, h}); },
     bytes(){
       const enc = new TextEncoder(), chunks = [], offs = []; let len = 0;
       const push = x => { const b = typeof x === "string" ? enc.encode(x) : x; chunks.push(b); len += b.length; };
       const obj = (num, parts) => { offs[num] = len; push(num + " 0 obj\n"); parts.forEach(push); push("\nendobj\n"); };
       push("%PDF-1.4\n"); push(new Uint8Array([37, 226, 227, 207, 211, 10]));
-      const first = 5 + imgs.length;
+      const first = 6 + imgs.length;
       obj(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
       obj(2, ["<< /Type /Pages /Kids [" + pages.map((_, i) => (first + i * 2) + " 0 R").join(" ") + "] /Count " + pages.length + " >>"]);
       obj(3, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"]);
       obj(4, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"]);
-      imgs.forEach((im, i) => obj(5 + i, ["<< /Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + im.data.length + " >>\nstream\n", im.data, "\nendstream"]));
-      const xo = imgs.length ? " /XObject << " + imgs.map((_, i) => "/Im" + (i + 1) + " " + (5 + i) + " 0 R").join(" ") + " >>" : "";
+      obj(5, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>"]);
+      imgs.forEach((im, i) => obj(6 + i, ["<< /Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + im.data.length + " >>\nstream\n", im.data, "\nendstream"]));
+      const xo = imgs.length ? " /XObject << " + imgs.map((_, i) => "/Im" + (i + 1) + " " + (6 + i) + " 0 R").join(" ") + " >>" : "";
       pages.forEach((o, i) => { const pn = first + i * 2, c = o.join("\n");
-        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>" + xo + " >> /Contents " + (pn + 1) + " 0 R >>"]);
+        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>" + xo + " >> /Contents " + (pn + 1) + " 0 R >>"]);
         obj(pn + 1, ["<< /Length " + c.length + " >>\nstream\n" + c + "\nendstream"]); });
       const total = first + pages.length * 2, xref = len;
       let x = "xref\n0 " + total + "\n0000000000 65535 f \n"; for (let i = 1; i < total; i++) x += String(offs[i]).padStart(10, "0") + " 00000 n \n";
@@ -658,75 +673,169 @@ function PDF(){
   return P;
 }
 function taxLines(code, tot){ const [a, b] = taxRates(code), out = []; if (code === "ON") out.push(["TVH (" + pct(a) + ")", tot.tx]); else if (a) out.push(["TPS (" + pct(a) + ")", tot.tx]); if (b) out.push(["TVQ (" + pct(b) + ")", tot.tq]); return out; }
-function docPDF(kind, doc, logo){
-  const r = R(), P = PDF(), M = 50, RX = P.W - M, ACC = "#2347A6", MUT = "#5F6F67", LINE = "#C7D1C9", BAND = "#EEF2FA", isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
-  const CQ = RX - 190, CP = RX - 95, DW = CQ - 45 - (M + 8), BOTTOM = P.H - 78;
-  let y = 0;
-  const tableHead = () => { P.rect(M, y, RX - M, 22, BAND); P.text(M + 8, y + 14.5, "Description", {size:8.5, bold:true, color:MUT}); P.text(CQ, y + 14.5, "Qté", {size:8.5, bold:true, color:MUT, align:"right"}); P.text(CP, y + 14.5, "Prix unitaire", {size:8.5, bold:true, color:MUT, align:"right"}); P.text(RX - 8, y + 14.5, "Montant", {size:8.5, bold:true, color:MUT, align:"right"}); y += 22; };
-  const newPage = () => { P.page(); y = M; P.text(M, y + 10, r.nom || "", {size:10, bold:true}); P.text(RX, y + 10, (isF ? "Facture " : "Devis ") + doc.numero + " (suite)", {size:9.5, color:MUT, align:"right"}); y += 30; tableHead(); };
+const LT = [
+  ["service", "Service", "Main-d'œuvre et services", "h", "Ex. : Émondage de 3 érables, 2 hommes"],
+  ["location", "Location de matériel", "Location de matériel", "jour", "Ex. : Nacelle de 60 pi"],
+  ["outils", "Outils et équipement", "Outils et équipement", "jour", "Ex. : Déchiqueteuse à branches"],
+  ["deplacement", "Déplacement", "Déplacement", "km", "Ex. : Aller-retour au chantier"],
+  ["consommables", "Consommables", "Consommables", "forfait", "Ex. : Essence, huile à chaîne"],
+  ["materiaux", "Matériaux", "Matériaux", "unité", "Ex. : Haubans, paillis"],
+  ["disposition", "Ramassage et disposition", "Ramassage et disposition", "voyage", "Ex. : Ramassage et transport des branches"],
+  ["autre", "Autres frais", "Autres frais", "", "Ex. : Permis de coupe de la ville"],
+  ["rabais", "Rabais", "Rabais", "", "Ex. : Rabais client fidèle"]
+].map(([k, l, g, u, ph]) => ({k, l, g, u, ph}));
+const LTM = Object.fromEntries(LT.map(t => [t.k, t]));
+const LUNITES = ["h", "jour", "sem.", "km", "unité", "forfait", "arbre", "souche", "voyage", "m³", "pi lin."];
+const ligneType = l => LTM[l && l.type] ? l.type : "service";
+const ligneMt = l => { const m = r2((Number(l.qte) || 0) * (Number(l.prix) || 0)); return l.type === "rabais" ? -Math.abs(m) : m; };
+const qteTxt = l => { const u = String(l.unite || "").trim(), pl = Number(l.qte) >= 2 && /^[a-zà-ÿ]{3,}$/i.test(u) && !/[sx]$/i.test(u); return fq(l.qte) + (u ? " " + u + (pl ? "s" : "") : ""); };
+function ligneHT(doc, l){ const m = ligneMt(l); if (!doc.taxesIncluses) return m; const [a, b] = taxRates(doc.codeTaxe || "AUCUNE"); return r2(m * 100 / (100 + a + b)); }
+function docTotals(doc){
+  const brut = r2((doc.lignes || []).reduce((s, l) => s + ligneMt(l), 0)), [a, b] = taxRates(doc.codeTaxe || "AUCUNE");
+  if (doc.taxesIncluses && (a || b)){ const k = 100 + a + b, tx = r2(brut * a / k), tq = r2(brut * b / k); return {st: r2(brut - tx - tq), tx, tq, total: brut, ttc: true}; }
+  const tx = r2(brut * a / 100), tq = r2(brut * b / 100); return {st: brut, tx, tq, total: r2(brut + tx + tq), ttc: false};
+}
+function docGroupes(doc){
+  const out = []; LT.forEach(t => { const L = (doc.lignes || []).filter(l => ligneType(l) === t.k); if (L.length) out.push({t, lignes: L, mt: r2(L.reduce((s, l) => s + ligneMt(l), 0))}); }); return out;
+}
+function docMessage(kind, doc){
+  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind);
+  return "Bonjour" + (cli ? " " + cli : "") + ",\n\nVoici " + G.la + " " + doc.numero + (r.nom ? (/^[aeiouyàâäéèêëîïôöûüù]/i.test(r.nom) ? " d'" : " de ") + r.nom : "") + " : " + fmt(t.total) + (t.tx || t.tq ? " taxes incluses" : "") +
+    (isF ? (doc.echeance && doc.echeance > doc.date ? ", payable d'ici le " + dLong(doc.echeance) : ", payable à réception") : ", valide jusqu'au " + dLong(doc.echeance)) + "." +
+    (!isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
+}
+const DOC_COUL = {g:"#2F6B3B", tint:"#EDF4EE", ink:"#1E2622", mut:"#67716B", line:"#D2DBD4"};
+function docTitre(kind){ return kind === "facture" ? "Facture" : (R().titreDevis || "Devis"); }
+function docGenre(kind){ const t = docTitre(kind), f = t !== "Devis", m = t.toLowerCase(); return {t, m, la: (f ? "la " : "le ") + m, de: (f ? "de la " : "du ") + m, cette: (f ? "Cette " : "Ce ") + m, prep: f ? "préparée" : "préparé", presente: (f ? "la présente " : "le présent ") + m}; }
+function docLayout(kind, doc, logo){
+  const r = R(), P = PDF(), C = DOC_COUL, M = 54, RX = P.W - M, W = RX - M, isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
+  const G = docGenre(kind), titre = G.t, nom = String(r.nom || "Mon entreprise").trim(), BOTTOM = P.H - 74, grp = docGroupes(doc), multi = grp.length > 1;
+  const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16;
+  let y = 0, inTable = false;
+  const T = (x, yy, s, o) => P.text(x, yy, s, Object.assign({color:C.ink}, o || {}));
+  const h2 = (s) => { T(M, y + 13, s, {size:12.5, bold:true, color:C.g}); y += 29; };
+  const label = (x, yy, s, w) => { T(x, yy, s.toUpperCase(), {size:7.8, bold:true, color:C.g, ls:1.1}); P.line(x, yy + 6, x + w, yy + 6, {color:C.line, w:0.8}); };
+  const tableHead = () => { P.rect(M, y, W, 22, C.g);
+    [["Qté", (M + XQ) / 2], ["Description", (XQ + XP) / 2], ["Prix unit." + (tot.ttc ? " (tx incl.)" : ""), (XP + XT) / 2], ["Total", (XT + RX) / 2]].forEach(([s, x]) => T(x, y + 14.5, s, {size:9, bold:true, color:"#FFFFFF", align:"center"}));
+    y += 22; };
+  const newPage = () => { P.page(); y = M; T(M, y + 10, nom.toUpperCase(), {size:10, bold:true, color:C.g, ls:0.8}); T(RX, y + 10, titre + " " + doc.numero + " (suite)", {size:9, color:C.mut, align:"right"}); y += 20; P.line(M, y, RX, y, {color:C.g, w:1}); y += 18; if (inTable) tableHead(); };
+  const need = h => { if (y + h > BOTTOM) newPage(); };
   P.page();
-  /* En-tête : entreprise à gauche, titre et numéros à droite */
-  let ly = M;
-  if (logo){ let h = 54, w = logo.w * h / logo.h; if (w > 170){ w = 170; h = logo.h * w / logo.w; } P.image(logo, M, ly, w, h); ly += h + 16; } else ly += 12;
-  P.text(M, ly, r.nom || "Mon entreprise", {size:13, bold:true}); ly += 14;
-  String(r.adresse || "").split(/\r?\n/).filter(s => s.trim()).forEach(s => { P.text(M, ly, s.trim(), {size:9, color:MUT}); ly += 11.5; });
-  const contact = [r.telephone, r.courriel].filter(Boolean).join("   ·   "); if (contact){ P.text(M, ly, contact, {size:9, color:MUT}); ly += 11.5; }
-  let ry = M + 22; P.text(RX, ry, isF ? "FACTURE" : "DEVIS", {size:22, bold:true, color:ACC, align:"right"}); ry += 20;
-  const meta = [["Numéro", doc.numero], ["Date", dLong(doc.date)], isF ? ["Échéance", doc.echeance && doc.echeance > doc.date ? dLong(doc.echeance) : "À réception"] : ["Valide jusqu'au", dLong(doc.echeance)]];
-  if (isF && doc.devis){ const v = S.d.devis.find(x => x.id === doc.devis); if (v) meta.push(["Selon le devis", v.numero]); }
-  meta.forEach(([k, v]) => { P.text(RX - 165, ry, k, {size:9, color:MUT}); P.text(RX, ry, v, {size:9.5, bold:true, align:"right"}); ry += 13; });
-  y = Math.max(ly, ry) + 16;
-  /* Client */
-  P.text(M, y, isF ? "FACTURÉ À" : "PRÉPARÉ POUR", {size:7.5, bold:true, color:MUT}); y += 14;
-  P.text(M, y, doc.client || "", {size:11, bold:true}); y += 13;
-  String(cli.adresse || "").split(/\r?\n/).filter(s => s.trim()).forEach(s => { P.text(M, y, s.trim(), {size:9.5}); y += 12; });
-  const cc = [cli.courriel, cli.telephone].filter(Boolean).join("   ·   "); if (cc){ P.text(M, y, cc, {size:9.5, color:MUT}); y += 12; }
-  y += 14; tableHead();
-  /* Lignes */
-  (doc.lignes || []).forEach(l => {
-    const lines = wrapText(l.description || "", 10, false, DW), h = Math.max(1, lines.length) * 12.5 + 9;
-    if (y + h > BOTTOM){ newPage(); }
-    lines.forEach((s, i) => P.text(M + 8, y + 15 + i * 12.5, s, {size:10}));
-    P.text(CQ, y + 15, fq(l.qte), {size:10, align:"right"});
-    P.text(CP, y + 15, fmt(l.prix), {size:10, align:"right"});
-    P.text(RX - 8, y + 15, fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))), {size:10, align:"right"});
-    y += h; P.line(M, y, RX, y, {color:LINE, w:0.5});
+  /* En-tête : nom et slogan à gauche, coordonnées et numéros de taxes à droite */
+  let lx = M, ly = M + 18;
+  if (logo){ let h = 50, w = logo.w * h / logo.h; if (w > 140){ w = 140; h = logo.h * w / logo.w; } P.image(logo, M, M, w, h); lx = M + w + 14; ly = M + Math.max(18, h / 2 + 4); }
+  T(lx, ly, nom.toUpperCase(), {size:20, bold:true, color:C.g, ls:1}); ly += 17;
+  if (r.slogan){ T(lx, ly, r.slogan, {size:9.5, italic:true, color:C.mut}); ly += 13; }
+  String(r.adresse || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => { T(lx, ly, s, {size:8.8, color:C.mut}); ly += 11.5; });
+  let ry = M + 8;
+  if (r.telephone){ T(RX, ry, r.telephone, {size:10, align:"right"}); ry += 13; }
+  if (r.courriel){ T(RX, ry, r.courriel, {size:10, align:"right"}); ry += 14; }
+  [r.noTPS ? "TPS : " + r.noTPS : "", r.noTVQ && quebec() ? "TVQ : " + r.noTVQ : "", r.neq ? "NEQ : " + r.neq : ""].filter(Boolean).forEach(s => { T(RX, ry, s, {size:8, color:C.mut, align:"right"}); ry += 10.5; });
+  y = Math.max(ly, ry, logo ? M + 54 : 0) + 10; P.line(M, y, RX, y, {color:C.g, w:1.6});
+  /* Titre */
+  y += 36; T(P.W / 2, y, titre.toUpperCase(), {size:24, bold:true, color:C.g, align:"center", ls:3}); y += 26;
+  /* Client et détails */
+  const cw = (W - 30) / 2, rx2 = M + cw + 30, top = y;
+  label(M, y, isF ? "Facturé à" : titre + " " + G.prep + " pour", cw); label(rx2, y, "Détails " + G.de, cw);
+  let a = y + 24; T(M, a, doc.client || "", {size:11, bold:true}); a += 15;
+  String(cli.adresse || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => { T(M, a, s, {size:10}); a += 13; });
+  [cli.telephone, cli.courriel].filter(Boolean).forEach(s => { T(M, a, s, {size:9, color:C.mut}); a += 12; });
+  const det = [[titre + " n°", doc.numero], [isF ? "Date de facturation" : "Date", dLong(doc.date)]];
+  if (doc.dateTravaux) det.push([isF ? "Date des travaux" : "Date prévue des travaux", dLong(doc.dateTravaux)]);
+  det.push(isF ? ["Échéance", doc.echeance && doc.echeance > doc.date ? dLong(doc.echeance) : "À réception"] : ["Valide jusqu'au", dLong(doc.echeance)]);
+  if (isF && doc.devis){ const v = S.d.devis.find(x => x.id === doc.devis); if (v) det.push(["Selon " + docGenre("devis").la + " n°", v.numero]); }
+  let b = y + 24; det.forEach(([k, v]) => { const w = T(rx2, b, k + " :", {size:10, bold:true}); T(rx2 + w + 4, b, v, {size:10}); b += 15; });
+  if (String(doc.lieu || "").trim()){ const w = T(rx2, b, "Lieu des travaux :", {size:10, bold:true}); const L = wrapText(String(doc.lieu).trim(), 10, false, cw - w - 4); L.forEach((s, i) => T(rx2 + w + 4, b + i * 13, s, {size:10})); b += L.length * 13 + 2; }
+  y = Math.max(a, b) + 8;
+  /* Description des travaux (texte libre) */
+  if (String(doc.travaux || "").trim()){ const L = wrapText(String(doc.travaux).trim(), 10, false, W); need(36 + Math.min(L.length, 6) * 13); y += 6; h2("Description des travaux"); L.forEach(s => { need(14); T(M, y, s, {size:10}); y += 13; }); }
+  /* Détail des travaux */
+  need(31 + 22 + 30); y += 8; h2("Détail des travaux"); y -= 8; inTable = true; tableHead();
+  const rowLines = (x1, x2) => { P.line(M, x1, M, x2, {color:C.line, w:0.6}); [XQ, XP, XT].forEach(x => P.line(x, x1, x, x2, {color:C.line, w:0.6})); P.line(RX, x1, RX, x2, {color:C.line, w:0.6}); P.line(M, x2, RX, x2, {color:C.line, w:0.6}); };
+  const hdr = multi && grp.some(g => g.lignes.length > 1);
+  grp.forEach(g => {
+    if (hdr){ need(20 + 30); P.rect(M, y, W, 20, C.tint); T(XQ + 8, y + 13.5, g.t.g.toUpperCase(), {size:7.8, bold:true, color:C.g, ls:0.8}); T(RX - 8, y + 13.5, (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)), {size:8.8, bold:true, color:C.g, align:"right"}); P.line(M, y, M, y + 20, {color:C.line, w:0.6}); P.line(RX, y, RX, y + 20, {color:C.line, w:0.6}); P.line(M, y + 20, RX, y + 20, {color:C.line, w:0.6}); y += 20; }
+    g.lignes.forEach(l => {
+      const parts = String(l.description || "").split(/\r?\n/), main = wrapText(parts[0] || "", 10, false, DW), sub = parts.slice(1).join("\n").trim() ? wrapText(parts.slice(1).join("\n").trim(), 8.8, false, DW) : [];
+      const cap = multi && !hdr ? 10.5 : 0, h = cap + Math.max(1, main.length) * 12.5 + sub.length * 11 + 10, mt = ligneMt(l), yb = y + 14 + cap;
+      need(h); const y0 = y;
+      if (cap) T(XQ + 8, y + 12, g.t.g.toUpperCase(), {size:6.8, bold:true, color:C.g, ls:0.7});
+      main.forEach((s, i) => T(XQ + 8, yb + i * 12.5, s, {size:10}));
+      sub.forEach((s, i) => T(XQ + 8, yb + main.length * 12.5 + i * 11 - 1, s, {size:8.8, italic:true, color:C.mut}));
+      T((M + XQ) / 2, yb, qteTxt(l), {size:10, align:"center"});
+      T(XT - 8, yb, fmt(l.prix), {size:10, align:"right"});
+      T(RX - 8, yb, (mt < 0 ? "−" : "") + fmt(Math.abs(mt)), {size:10, align:"right", color: mt < 0 ? C.g : C.ink});
+      y += h; rowLines(y0, y);
+    });
   });
-  /* Totaux et message */
-  const tl = [["Sous-total", tot.st], ...taxLines(doc.codeTaxe, tot)];
+  inTable = false;
+  /* Sommaire */
   const t = isF && doc.transaction ? S.tmap[doc.transaction] : null, paid = t && !unpaid(t);
-  const msg = wrapText(doc.message || "", 9, false, CQ - M - 40), terms = isF ? (doc.echeance && doc.echeance > doc.date ? "Payable d'ici le " + dLong(doc.echeance) + "." : "Payable à réception.") : "Ce devis est valide jusqu'au " + dLong(doc.echeance) + ".";
-  const blockH = Math.max(tl.length * 15 + 34 + (isF ? 30 : 0), msg.length * 11.5 + 40) + (isF ? 0 : 60);
-  if (y + 14 + blockH > BOTTOM) newPage();
-  y += 14; let ty = y + 4;
-  tl.forEach(([k, v]) => { P.text(RX - 200, ty + 10, k, {size:9.5, color:MUT}); P.text(RX - 8, ty + 10, fmt(v), {size:10, align:"right"}); ty += 15; });
-  P.line(RX - 200, ty + 3, RX, ty + 3, {color:"#888888", w:0.8}); ty += 6;
-  P.text(RX - 200, ty + 15, "Total", {size:12, bold:true}); P.text(RX - 8, ty + 15, fmt(tot.total), {size:12, bold:true, align:"right"}); ty += 22;
+  const rows = [["Sous-total", tot.st], ...taxLines(doc.codeTaxe, tot)], bw = 240, bx = RX - bw, rh = 21;
+  need(16 + rows.length * rh + 26 + (paid ? rh : 0)); y += 16; const sTop = y;
+  const cell = (k, v, o) => { o = o || {}; if (o.fill) P.rect(bx, y, bw, o.h || rh, o.fill); P.line(bx, y, RX, y, {color:C.line, w:0.6}); P.line(bx, y, bx, y + (o.h || rh), {color:C.line, w:0.6}); P.line(RX - 96, y, RX - 96, y + (o.h || rh), {color:C.line, w:0.6}); P.line(RX, y, RX, y + (o.h || rh), {color:C.line, w:0.6});
+    T(RX - 104, y + (o.h || rh) / 2 + 3.5, k + " :", {size:o.size || 10, bold:!!o.bold, align:"right", color:o.kc || C.ink}); T(RX - 8, y + (o.h || rh) / 2 + 3.5, v, {size:o.size || 10, bold:!!o.bold, align:"right", color:o.vc || C.ink}); y += o.h || rh; };
+  rows.forEach(([k, v]) => cell(k, fmt(v)));
+  cell(isF ? "Total à payer" : "Total", fmt(tot.total), {fill:C.tint, bold:true, size:12, vc:C.g, h:26});
+  if (isF && paid) cell("Payée le " + dShort((t.paiement && t.paiement.date) || t.date) + " · Solde", fmt(0), {size:9.5, vc:C.g});
+  P.line(bx, y, RX, y, {color:C.line, w:0.6});
+  /* À gauche du sommaire : rappel des taxes incluses */
+  let ny = sTop + 14; if (tot.ttc) wrapText((isF ? "Montant total convenu avec le client" : "Prix forfaitaire convenu avec le client") + ", taxes incluses.", 8.5, false, bx - M - 24).forEach(s => { T(M, ny, s, {size:8.5, italic:true, color:C.mut}); ny += 11; });
+  y = Math.max(y, ny);
+  /* Modalités */
+  const pay = String(r.modePaiement || "").trim();
+  const bullet = (parts) => { const full = parts.map(p => p[0]).join(""); const L = wrapText(full, 10, false, W - 16); need(L.length * 13 + 2); T(M + 4, y, "•", {size:10});
+    if (L.length === 1 && parts.length > 1){ let x = M + 16; parts.forEach(([s, bo]) => { x += T(x, y, s, {size:10, bold:!!bo}); }); y += 13; } else { L.forEach(s => { T(M + 16, y, s, {size:10}); y += 13; }); } };
   if (isF){
-    if (paid){ P.text(RX - 200, ty + 10, "Payée le " + dLong((t.paiement && t.paiement.date) || t.date), {size:9.5, color:"#1F7A4A", bold:true}); P.text(RX - 8, ty + 10, "Solde : " + fmt(0), {size:9.5, align:"right"}); }
-    else { P.rect(RX - 206, ty, 206, 22, BAND); P.text(RX - 200, ty + 15, "Solde dû", {size:10.5, bold:true, color:ACC}); P.text(RX - 8, ty + 15, fmt(tot.total), {size:10.5, bold:true, color:ACC, align:"right"}); }
-    ty += 26;
+    need(60); y += 18; h2("Modalités de paiement");
+    const txt = paid ? "Cette facture a été payée le " + dLong((t.paiement && t.paiement.date) || t.date) + ". Merci!" : (doc.dateTravaux ? "Les travaux décrits ci-dessus ont été complétés le " + dLong(doc.dateTravaux) + ". " : "") + (doc.echeance && doc.echeance > doc.date ? "Le solde est payable d'ici le " + dLong(doc.echeance) + "." : "Le solde est payable à réception de la présente facture.");
+    wrapText(txt, 10, false, W).forEach(s => { need(13); T(M, y, s, {size:10}); y += 13; });
+    if (pay && !paid){ y += 3; const w = T(M, y, "Mode de paiement :", {size:10, bold:true}); T(M + w + 4, y, pay, {size:10}); y += 13; }
+  } else {
+    need(70); y += 14; h2("Modalités");
+    String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
+    const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
+    if (pay) bullet([["Mode de paiement : "], [pay, true]]);
+    /* Acceptation */
+    need(120); y += 8; h2("Acceptation " + G.de);
+    wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
+    y += 8; [[M, nom], [rx2, "Client"]].forEach(([x, s]) => { T(x, y, s, {size:10, bold:true}); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut}); T(x, y + 67, "Date : ______________________", {size:8.5, color:C.mut}); });
+    y += 72;
   }
-  let my = y + 14; P.text(M, my, terms, {size:9, bold:true}); my += 14;
-  msg.forEach(s => { P.text(M, my, s, {size:9, color:MUT}); my += 11.5; });
-  y = Math.max(ty, my) + 10;
-  if (!isF){
-    y += 26; P.text(M, y, "Accepté par le client", {size:8.5, color:MUT}); P.line(M + 100, y + 2, M + 300, y + 2, {color:"#888888"}); P.text(M + 320, y, "Date", {size:8.5, color:MUT}); P.line(M + 345, y + 2, RX, y + 2, {color:"#888888"});
+  /* Remerciements */
+  const msg = String(doc.message || "").trim(), extra = msg && !/^merci de votre confiance\s*[.!]?$/i.test(msg) ? wrapText(msg, 9, false, W - 40) : [];
+  if (y + 30 + extra.length * 12 > P.H - 56) newPage(); y += 16; T(P.W / 2, y, "Merci de votre confiance.", {size:11, bold:true, color:C.g, align:"center"}); y += 15;
+  extra.forEach(s => { T(P.W / 2, y, s, {size:9, italic:true, color:C.mut, align:"center"}); y += 12; });
+  /* Pied de page */
+  const pied = [nom, r.telephone, r.courriel].filter(Boolean).join("  |  ");
+  P.pages.forEach((_, i) => { P.at(i); P.line(M, P.H - 50, RX, P.H - 50, {color:C.line, w:0.6}); T(P.W / 2, P.H - 36, pied + (P.pages.length > 1 ? "   ·   Page " + (i + 1) + " de " + P.pages.length : ""), {size:8.5, color:C.mut, align:"center"}); });
+  return P;
+}
+function docPDF(kind, doc, logo){ return docLayout(kind, doc, logo).bytes(); }
+async function pdfImages(P, scale){
+  scale = scale || 2.5; const out = [];
+  for (const list of P.draws){
+    const c = document.createElement("canvas"); c.width = Math.round(P.W * scale); c.height = Math.round(P.H * scale);
+    const g = c.getContext("2d"); g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, c.width, c.height); g.scale(scale, scale); g.textBaseline = "alphabetic";
+    for (const o of list){
+      if (o.k === "t"){ g.fillStyle = o.color || "#000000"; g.font = (o.italic ? "italic " : "") + (o.bold ? "bold " : "") + o.size + "px Helvetica, Arial, sans-serif"; g.textAlign = "left"; try { g.letterSpacing = (o.ls || 0) + "px"; } catch(e){} g.fillText(o.s, o.x, o.y); }
+      else if (o.k === "l"){ g.strokeStyle = o.color; g.lineWidth = o.w; g.beginPath(); g.moveTo(o.x1, o.y1); g.lineTo(o.x2, o.y2); g.stroke(); }
+      else if (o.k === "r"){ g.fillStyle = o.color; g.fillRect(o.x, o.y, o.w, o.h); }
+      else if (o.k === "i"){ try { const bm = await createImageBitmap(new Blob([o.img.data], {type:"image/jpeg"})); g.drawImage(bm, o.x, o.y, o.w, o.h); } catch(e){} }
+    }
+    out.push(await new Promise(res => c.toBlob(res, "image/jpeg", 0.9)));
   }
-  /* Pied de page : numéros de taxes et pagination */
-  const nos = [r.noTPS ? "No TPS : " + r.noTPS : "", r.noTVQ && quebec() ? "No TVQ : " + r.noTVQ : "", r.numero && !/RT\d/i.test(r.numero) ? "NEQ : " + r.numero : ""].filter(Boolean).join("     ");
-  P.pages.forEach((_, i) => { P.at(i); P.line(M, P.H - 52, RX, P.H - 52, {color:LINE, w:0.5}); if (nos) P.text(M, P.H - 38, nos, {size:8, color:MUT}); P.text(RX, P.H - 38, (r.nom || "") + (P.pages.length > 1 ? "   ·   Page " + (i + 1) + " de " + P.pages.length : ""), {size:8, color:MUT, align:"right"}); });
-  return P.bytes();
+  return out;
+}
+async function docImages(kind, doc, logo){
+  const P = docLayout(kind, doc, logo), blobs = await pdfImages(P), base = fileSafe(doc.numero + " " + (doc.client || ""));
+  return blobs.filter(Boolean).map((b, i) => new File([b], base + (blobs.length > 1 ? "-page-" + (i + 1) : "") + ".jpg", {type:"image/jpeg"}));
 }
 function clientOf(doc){ return S.d.clients.find(c => c.id === doc.clientId) || S.d.clients.find(c => norm(c.nom) === norm(doc.client)) || null; }
 function nextNum(kind, date){
   const y = String(date || today()).slice(0, 4), P = kind === "facture" ? "F" : "D", list = kind === "facture" ? S.d.factures : S.d.devis; let max = 0;
   list.forEach(x => { const m = String(x.numero || "").match(/^([A-Za-z]+)-(\d{4})-(\d+)$/); if (m && m[1].toUpperCase() === P && m[2] === y) max = Math.max(max, Number(m[3])); });
   return P + "-" + y + "-" + String(max + 1).padStart(3, "0");
-}
-function docTotals(doc){
-  const st = r2((doc.lignes || []).reduce((s, l) => s + r2((Number(l.qte) || 0) * (Number(l.prix) || 0)), 0)), [a, b] = taxRates(doc.codeTaxe || "AUCUNE");
-  const tx = r2(st * a / 100), tq = r2(st * b / 100); return {st, tx, tq, total: r2(st + tx + tq)};
 }
 function facStatus(f){
   if (f.statut === "annulee") return {k:"annulee", l:"Annulée", cls:"open"};
@@ -877,7 +986,7 @@ function nextNumIn(d, kind, date){
   list.forEach(x => { const m = String(x.numero || "").match(/^([A-Za-z]+)-(\d{4})-(\d+)$/); if (m && m[1].toUpperCase() === P && m[2] === y) max = Math.max(max, Number(m[3])); });
   return P + "-" + y + "-" + String(max + 1).padStart(3, "0");
 }
-const OPS_CONNUS = ["evenement","evenement-suppr","evenement-fait","obligation","operation","photo","trajet","lieu","lieu-suppr","paiement","facture","devis","devis-statut","envoye","entretien","odometre","client","patch","fichier","deplacer","fichier-suppr"];
+const OPS_CONNUS = ["evenement","evenement-suppr","evenement-fait","obligation","operation","photo","trajet","lieu","lieu-suppr","paiement","facture","devis","devis-statut","envoye","entretien","odometre","client","patch","fichier","deplacer","fichier-suppr","doc-v2"];
 function safePath(p){ p = String(p || ""); return /^(recus|a-traiter|documents|exports)\/[^\/\\:*?"<>|]+$/.test(p) && !/\.\./.test(p) ? p : ""; }
 function applyOp(d, op){
   const x = op.data || {}, now = op.creeLe || new Date().toISOString(), res = {msg:"", moves:[], removes:[], pdf:null, pdfs:[]};
@@ -1686,78 +1795,127 @@ function fEntretien(eqId){
 }
 
 /* ===== Factures et devis ===== */
+/* Les nouveautés (types de frais, rabais, taxes incluses) attendent que l'ordinateur soit en version 3.7 */
+const telDocV2 = () => { const t = (S.d && S.d.telephone) || {}; return Array.isArray(t.ops) && t.ops.includes("doc-v2"); };
 function fDoc(kind, doc, p){
-  p = p || {}; const isF = kind === "facture", r = R();
-  const lignes = doc ? clone(doc.lignes) : (p.lignes ? clone(p.lignes) : [{description:"", qte:1, prix:0}]);
+  p = p || {}; const isF = kind === "facture", r = R(), v2 = telDocV2(), titre = docTitre(kind);
+  const lignes = doc ? clone(doc.lignes) : (p.lignes ? clone(p.lignes) : [{type:"service", description:"", qte:1, unite:"", prix:0}]);
+  lignes.forEach(l => { if (!l.type) l.type = "service"; });
   const cli = S.d.clients.find(c => norm(c.nom) === norm(doc ? doc.client : p.client || "")) || {};
   const date0 = doc ? doc.date : today(), n0 = String(doc ? daysBetween(doc.date, doc.echeance || doc.date) : (isF ? (r.termes != null ? r.termes : 30) : (r.validiteDevis || 30)));
   const terms = isF ? TERMS_F : TERMS_D, termVal = terms.some(t => t[0] === n0) ? n0 : "autre";
-  const prods = S.d.produits;
+  const prods = S.d.produits, tfs = r.tarifs || [], ttc0 = v2 && !!(doc ? doc.taxesIncluses : (p.taxesIncluses != null ? p.taxesIncluses : r.docTTC));
+  const addOpts = '<option value="">+ Ajouter une ligne…</option><optgroup label="Nouvelle ligne">' + LT.filter(t => t.k !== "rabais" || v2).map(t => '<option value="t:' + t.k + '">' + esc(t.l) + "</option>").join("") + "</optgroup>" +
+    (tfs.length ? '<optgroup label="Tarifs enregistrés">' + tfs.map(t => '<option value="f:' + esc(t.id) + '">' + esc(t.description + " · " + fmt(t.prix) + (t.unite ? " / " + t.unite : "")) + "</option>").join("") + "</optgroup>" : "") +
+    (prods.length ? '<optgroup label="Produits du stock">' + prods.map(x => '<option value="p:' + esc(x.id) + '">' + esc(x.nom + " (" + fq(stockOf(x)) + ")") + "</option>").join("") + "</optgroup>" : "");
   const body = '<label class="field"><span>Client</span><input class="ctl" id="d-cli" list="d-dl" maxlength="120" autocomplete="off" value="' + esc(doc ? doc.client : p.client || "") + '" placeholder="Nom du client"><datalist id="d-dl">' + S.d.clients.map(c => '<option value="' + esc(c.nom) + '">').join("") + "</datalist></label>" +
     '<details class="more"><summary>Coordonnées du client</summary><div><label class="field"><span>Téléphone</span><input class="ctl" id="d-tel" type="tel" value="' + esc(cli.telephone || "") + '"></label><label class="field"><span>Courriel</span><input class="ctl" id="d-mail" type="email" value="' + esc(cli.courriel || "") + '"></label><label class="field"><span>Adresse</span><textarea class="ctl" id="d-adr" rows="2">' + esc(cli.adresse || "") + "</textarea></label></div></details>" +
     '<div class="two"><label class="field"><span>Date</span><input class="ctl" type="date" id="d-date" value="' + esc(date0) + '"></label><label class="field"><span>' + (isF ? "Payable" : "Valide") + '</span><select class="ctl" id="d-terms">' + terms.map(([k, l]) => '<option value="' + k + '"' + (k === termVal ? " selected" : "") + ">" + esc(l) + "</option>").join("") + "</select></label></div>" +
     '<label class="field" id="d-ech-f"' + (termVal === "autre" ? "" : " hidden") + '><span>' + (isF ? "Échéance" : "Valide jusqu'au") + '</span><input class="ctl" type="date" id="d-ech" value="' + esc(doc ? doc.echeance : addDays(date0, Number(n0) || 0)) + '"></label>' +
-    '<div class="field"><span>Produits et services</span><div id="d-lines" style="display:flex;flex-direction:column;gap:8px"></div><div class="row"><button class="btn sm" type="button" data-dl="add">' + ico("i-plus") + "Ligne</button>" + (prods.length ? '<select class="ctl" id="d-prod" style="flex:1;min-height:34px;padding:5px 8px"><option value="">+ Produit du stock</option>' + prods.map(x => '<option value="' + esc(x.id) + '">' + esc(x.nom + " (" + fq(stockOf(x)) + ")") + "</option>").join("") + "</select>" : "") + "</div></div>" +
+    '<label class="field"><span>Description des travaux (facultatif)</span><textarea class="ctl" id="d-trav" rows="2" maxlength="1500" placeholder="Ex. : Émondage de 3 érables en façade et ramassage des branches">' + esc(doc ? doc.travaux || "" : p.travaux || "") + "</textarea></label>" +
+    '<div class="two"><label class="field"><span>Lieu des travaux</span><input class="ctl" id="d-lieu" maxlength="200" value="' + esc(doc ? doc.lieu || "" : p.lieu || "") + '" placeholder="Si différent"></label><label class="field"><span>' + (isF ? "Date des travaux" : "Date prévue") + '</span><input class="ctl" type="date" id="d-dtrav" value="' + esc(doc ? doc.dateTravaux || "" : p.dateTravaux || "") + '"></label></div>' +
+    '<div class="field"><span>Services et frais</span>' + (v2 ? '<div class="picks" style="margin-bottom:8px"><button type="button" class="pick" data-ttc="0" aria-pressed="' + !ttc0 + '">Prix avant taxes</button><button type="button" class="pick" data-ttc="1" aria-pressed="' + ttc0 + '">Prix taxes incluses</button></div>' : "") +
+    '<div id="d-lines" style="display:flex;flex-direction:column;gap:8px"></div><select class="ctl" id="d-add" style="margin-top:8px">' + addOpts + "</select></div>" +
     '<div class="tot" id="d-tot"></div>' +
     '<label class="field"><span>Taxes</span><select class="ctl" id="d-code">' + TAXCODES.map(c => '<option value="' + c + '"' + ((doc ? doc.codeTaxe : (p.codeTaxe || (inscrit() ? defCode() : "AUCUNE"))) === c ? " selected" : "") + ">" + esc(taxLabel(c)) + "</option>").join("") + "</select></label>" +
     (isF && !doc ? '<div class="field"><span>Paiement</span><div class="picks"><button type="button" class="pick" data-dpay="" aria-pressed="true">' + ico("i-cal") + "À encaisser</button>" + S.d.comptes.filter(c => c.sorte === "banque" || c.sorte === "caisse").map(c => '<button type="button" class="pick" data-dpay="' + esc(c.id) + '" aria-pressed="false">' + ico("i-bank") + "Déjà payée : " + esc(c.nom) + "</button>").join("") + "</div></div>" : "") +
     '<label class="field"><span>Message sur le document</span><textarea class="ctl" id="d-msg" rows="2" maxlength="600">' + esc(doc ? doc.message || "" : (p.message != null ? p.message : r.messageFacture || "")) + "</textarea></label>" +
+    (v2 ? "" : '<p class="hint">Les rabais et les prix taxes incluses seront offerts quand l\'application de l\'ordinateur aura été ouverte une fois après sa mise à jour.</p>') +
     '<p class="hint" id="d-hint" hidden></p>';
-  const linesHTML = () => S.form.lignes.map((l, i) => '<div class="line" data-li="' + i + '"><textarea class="ctl" rows="2" data-lf="description" placeholder="Description, ex. : Abattage d\'un érable de 60 pi" aria-label="Description">' + esc(l.description) + '</textarea><div class="three"><label class="field"><span>Qté</span><input class="ctl" data-lf="qte" inputmode="decimal" value="' + esc(fq(l.qte)) + '"></label><label class="field"><span>Prix unitaire</span><input class="ctl" data-lf="prix" inputmode="decimal" value="' + (l.prix ? esc(n2s(l.prix)) : "") + '" placeholder="0,00"></label><button class="icon-btn" type="button" data-dl="rm" data-i="' + i + '" aria-label="Retirer la ligne"' + (S.form.lignes.length < 2 ? " disabled" : "") + ">" + ico("i-x") + '</button></div><span class="muted small" data-amt="' + i + '">' + fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))) + "</span></div>").join("");
-  const recalc = () => { const t = docTotals({lignes:S.form.lignes, codeTaxe:$("d-code").value}); $("d-tot").innerHTML = "<div><span>Sous-total</span><span>" + fmt(t.st) + "</span></div>" + taxLines($("d-code").value, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total</span><span>' + fmt(t.total) + "</span></div>";
-    S.form.lignes.forEach((l, i) => { const a = document.querySelector('[data-amt="' + i + '"]'); if (a) a.textContent = fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))); });
+  const types = LT.filter(t => t.k !== "rabais" || v2 || lignes.some(l => l.type === "rabais"));
+  const mtTxt = l => { const m = ligneMt(l); return (m < 0 ? "−" : "") + fmt(Math.abs(m)); };
+  const linesHTML = () => S.form.lignes.map((l, i) => { const t = LTM[ligneType(l)];
+    return '<div class="line' + (l.type === "rabais" ? " rabais" : "") + '" data-li="' + i + '"><div class="row" style="justify-content:space-between"><select class="ctl lt-sel" data-lf="type" aria-label="Type">' + types.map(x => '<option value="' + x.k + '"' + (x.k === t.k ? " selected" : "") + ">" + esc(x.l) + "</option>").join("") + '</select><button class="icon-btn" type="button" data-dl="rm" data-i="' + i + '" aria-label="Retirer la ligne"' + (S.form.lignes.length < 2 ? " disabled" : "") + ">" + ico("i-x") + "</button></div>" +
+      '<textarea class="ctl" rows="2" data-lf="description" placeholder="' + esc(t.ph) + '" aria-label="Description">' + esc(l.description) + "</textarea>" +
+      '<div class="three q3"><label class="field"><span>Qté</span><input class="ctl" data-lf="qte" inputmode="decimal" value="' + esc(fq(l.qte)) + '"></label><label class="field"><span>Unité</span><input class="ctl" data-lf="unite" list="d-units" maxlength="12" value="' + esc(l.unite || "") + '"></label><label class="field"><span>' + (S.form.ttc ? "Prix (tx incl.)" : "Prix unitaire") + '</span><input class="ctl" data-lf="prix" inputmode="decimal" value="' + (l.prix ? esc(n2s(l.prix)) : "") + '" placeholder="0,00"></label></div>' +
+      '<span class="muted small" data-amt="' + i + '">' + mtTxt(l) + "</span></div>"; }).join("") + '<datalist id="d-units">' + LUNITES.map(u => '<option value="' + esc(u) + '">').join("") + "</datalist>";
+  const recalc = () => { const t = docTotals({lignes:S.form.lignes, codeTaxe:$("d-code").value, taxesIncluses:S.form.ttc});
+    $("d-tot").innerHTML = "<div><span>" + (t.ttc ? "Montant avant taxes" : "Sous-total") + "</span><span>" + fmt(t.st) + "</span></div>" + taxLines($("d-code").value, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total' + (t.ttc ? " (taxes incl.)" : "") + "</span><span>" + fmt(t.total) + "</span></div>";
+    S.form.lignes.forEach((l, i) => { const a = document.querySelector('[data-amt="' + i + '"]'); if (a) a.textContent = mtTxt(l); });
     const msgs = []; if (isF && t.total >= 100 && (t.tx || t.tq) && (!r.noTPS || (t.tq && !r.noTVQ))) msgs.push("Ajoute tes numéros de TPS et de TVQ dans les Réglages de l'application de l'ordinateur : ils doivent figurer sur les factures de 100 $ et plus."); $("d-hint").innerHTML = msgs.map(esc).join("<br>"); $("d-hint").hidden = !msgs.length; return t; };
   const drawLines = () => { $("d-lines").innerHTML = linesHTML(); recalc(); };
-  const title = doc ? (isF ? "Facture " : "Devis ") + doc.numero : isF ? (p.fromDevis ? "Facture du devis" : "Nouvelle facture") : "Nouveau devis";
-  openSheet(title, body, {primary:"Enregistrer", state:{lignes, pay:""},
-    secondary:'<button class="btn" type="button" data-dsave="pdf">' + ico("i-pdf") + "Enregistrer + PDF</button>",
+  const prixPour = (prix, ttc) => { const [a, b] = taxRates($("d-code").value || "AUCUNE"); if (!!ttc === !!S.form.ttc || !(a || b)) return r2(prix); return ttc ? r2(prix * 100 / (100 + a + b)) : r2(prix * (100 + a + b) / 100); };
+  const addLine = ln => { const L = S.form.lignes; if (L.length === 1 && !L[0].description && !L[0].prix) L[0] = ln; else L.push(ln); drawLines(); if (!ln.description){ const t = document.querySelectorAll('[data-lf="description"]'); t[t.length - 1].focus(); } };
+  const title = doc ? titre + " " + doc.numero : isF ? (p.fromDevis ? "Facture " + docGenre("devis").de : "Nouvelle facture") : (titre === "Devis" ? "Nouveau devis" : "Nouvelle " + titre.toLowerCase());
+  openSheet(title, body, {primary:"Enregistrer", state:{lignes, pay:"", ttc:ttc0},
+    secondary:'<button class="btn" type="button" data-dsave="send">' + ico("i-send") + "Enregistrer et envoyer</button>",
     ready: drawLines,
-    onInput: e => { const f = e.target.closest("[data-lf]"); if (f){ const l = S.form.lignes[Number(f.closest("[data-li]").dataset.li)]; if (f.dataset.lf === "description") l.description = f.value; else { const v = num(f.value); l[f.dataset.lf] = isFinite(v) ? v : 0; } recalc(); } },
+    onInput: e => { const f = e.target.closest("[data-lf]"); if (f && f.dataset.lf !== "type"){ const l = S.form.lignes[Number(f.closest("[data-li]").dataset.li)]; if (f.dataset.lf === "description") l.description = f.value; else if (f.dataset.lf === "unite") l.unite = f.value; else { const v = num(f.value); l[f.dataset.lf] = isFinite(v) ? v : 0; } recalc(); } },
     onChange: e => { const id = e.target.id;
       if (id === "d-code") recalc();
+      if (e.target.dataset && e.target.dataset.lf === "type"){ const l = S.form.lignes[Number(e.target.closest("[data-li]").dataset.li)], was = LTM[ligneType(l)]; l.type = e.target.value; if (!l.unite || l.unite === was.u) l.unite = (LTM[l.type] || {}).u || ""; drawLines(); }
       if (id === "d-terms" || id === "d-date"){ const t = $("d-terms").value; $("d-ech-f").hidden = t !== "autre"; if (t !== "autre") $("d-ech").value = addDays($("d-date").value || today(), Number(t) || 0); }
       if (id === "d-cli"){ const c = S.d.clients.find(x => norm(x.nom) === norm(e.target.value)) || {}; $("d-tel").value = c.telephone || ""; $("d-mail").value = c.courriel || ""; $("d-adr").value = c.adresse || ""; }
-      if (id === "d-prod"){ const x = S.d.produits.find(q => q.id === e.target.value); e.target.value = ""; if (x){ const L = S.form.lignes, ln = {description:x.nom + (x.code ? " (" + x.code + ")" : ""), qte:1, prix:Number(x.prix) || 0, produit:x.id}; if (L.length === 1 && !L[0].description && !L[0].prix) L[0] = ln; else L.push(ln); drawLines(); } } },
+      if (id === "d-add"){ const v = e.target.value; e.target.value = ""; if (!v) return; const k = v.slice(2);
+        if (v[0] === "t") addLine({type:k, description:"", qte:1, unite:(LTM[k] || {}).u || "", prix:0});
+        else if (v[0] === "f"){ const t = tfs.find(x => x.id === k); if (t) addLine({type:t.type || "service", description:t.description, qte:1, unite:t.unite || "", prix:prixPour(t.prix, t.ttc)}); }
+        else if (v[0] === "p"){ const x = S.d.produits.find(q => q.id === k); if (x) addLine({type:"materiaux", description:x.nom + (x.code ? " (" + x.code + ")" : ""), qte:1, unite:x.unite || "unité", prix:prixPour(Number(x.prix) || 0, false), produit:x.id}); } } },
     onClick: e => { const b = e.target.closest("button"); if (!b) return;
-      if (b.dataset.dl === "add"){ S.form.lignes.push({description:"", qte:1, prix:0}); drawLines(); const t = document.querySelectorAll('[data-lf="description"]'); t[t.length - 1].focus(); }
-      else if (b.dataset.dl === "rm"){ S.form.lignes.splice(Number(b.dataset.i), 1); drawLines(); }
+      if (b.dataset.dl === "rm"){ S.form.lignes.splice(Number(b.dataset.i), 1); drawLines(); }
+      else if (b.dataset.ttc != null){ S.form.ttc = b.dataset.ttc === "1"; pressSet("[data-ttc]", "data-ttc", b.dataset.ttc); drawLines(); }
       else if (b.dataset.dpay != null){ S.form.pay = b.dataset.dpay; pressSet("[data-dpay]", "data-dpay", b.dataset.dpay); }
-      else if (b.dataset.dsave){ S.form.withPdf = true; $("sheet-f").requestSubmit(); } },
+      else if (b.dataset.dsave){ S.form.withSend = true; $("sheet-f").requestSubmit(); } },
     onSubmit: async () => {
       const client = $("d-cli").value.trim(), date = $("d-date").value; if (!client) return fail("Entre le nom du client."); if (!date) return fail("Choisis la date.");
-      const L = S.form.lignes.map(l => { const x = {description:String(l.description || "").trim(), qte:Number(l.qte) || 0, prix:r2(l.prix)}; if (l.produit) x.produit = l.produit; return x; }).filter(l => l.description || l.prix);
+      const L = S.form.lignes.map(l => { const x = {type:ligneType(l), description:String(l.description || "").trim(), qte:Number(l.qte) || 0, unite:String(l.unite || "").trim(), prix:r2(l.prix)}; if (l.produit) x.produit = l.produit; return x; }).filter(l => l.description || l.prix);
       if (!L.length) return fail("Ajoute au moins une ligne avec une description et un prix."); if (L.some(l => !l.description)) return fail("Chaque ligne doit avoir une description.");
       const t = $("d-terms").value, ech = t === "autre" ? ($("d-ech").value || date) : addDays(date, Number(t) || 0);
-      const data = Object.assign({}, doc || {id: uid(isF ? "fa" : "dv"), numero: nextNum(kind, date)}, {date, echeance: ech < date ? date : ech, client, lignes:L, codeTaxe:$("d-code").value, message:$("d-msg").value.trim(), clientInfo:{telephone:$("d-tel").value.trim(), courriel:$("d-mail").value.trim(), adresse:$("d-adr").value.trim()}});
+      const data = Object.assign({}, doc || {id: uid(isF ? "fa" : "dv"), numero: nextNum(kind, date)}, {date, echeance: ech < date ? date : ech, client, lignes:L, codeTaxe:$("d-code").value, message:$("d-msg").value.trim(), clientInfo:{telephone:$("d-tel").value.trim(), courriel:$("d-mail").value.trim(), adresse:$("d-adr").value.trim()},
+        travaux:$("d-trav").value.trim(), lieu:$("d-lieu").value.trim(), dateTravaux:$("d-dtrav").value || ""});
+      if (S.form.ttc) data.taxesIncluses = true; else delete data.taxesIncluses;
+      ["travaux","lieu","dateTravaux"].forEach(k => { if (!data[k]) delete data[k]; });
       if (isF){ data.categorie = (doc && doc.categorie) || "ventes"; if (p.fromDevis) data.devis = p.fromDevis; if (!doc) data.paye = S.form.pay || ""; }
       else if (!doc) data.statut = "ouvert";
-      const withPdf = S.form.withPdf; closeSheet(); toast((isF ? "Facture " : "Devis ") + data.numero + (doc ? " modifié" + (isF ? "e" : "") : " envoyé" + (isF ? "e" : "") + " à tes livres"));
+      const withSend = S.form.withSend; if (!withSend) closeSheet(); toast(titre + " " + data.numero + (doc ? " modifié" + (isF || titre !== "Devis" ? "e" : "") : " envoyé" + (isF || titre !== "Devis" ? "e" : "") + " à tes livres"));
       await sendOp(kind, data);
-      if (withPdf){ const fresh = (isF ? S.d.factures : S.d.devis).find(x => x.id === data.id); if (fresh) savePDF(kind, fresh); }
-      S.vt = isF ? "factures" : "devis"; if (isF) S.vtF = "tous"; if (S.tab === "ventes") vVentes(); }});
+      S.vt = isF ? "factures" : "devis"; if (isF) S.vtF = "tous"; if (S.tab === "ventes") vVentes();
+      if (withSend){ const fresh = (isF ? S.d.factures : S.d.devis).find(x => x.id === data.id) || Object.assign({}, data, {clientId: cli.id || ""}); sendDoc(kind, fresh); return false; } }});
 }
 function docBody(kind, x){
-  const t = docTotals(x), isF = kind === "facture", s = isF ? facStatus(x) : devStatus(x), c = clientOf(x) || {};
-  return '<div><span class="eyebrow">' + esc((isF ? "Facture" : "Devis") + " · " + dLong(x.date)) + "</span><h2>" + esc(x.numero + " · " + x.client) + '</h2><div class="row" style="margin-top:6px"><span class="chip ' + s.cls + '">' + esc(s.l) + '</span><span class="muted small">' + esc(isF ? (x.echeance && x.echeance > x.date ? "Payable d'ici le " + dLong(x.echeance) : "Payable à réception") : "Valide jusqu'au " + dLong(x.echeance)) + "</span></div></div>" +
-    '<table class="doc-lines">' + x.lignes.map(l => "<tr><td>" + esc(l.description) + '<br><span class="muted small">' + esc(fq(l.qte) + " × " + fmt(l.prix)) + '</span></td><td class="n">' + fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))) + "</td></tr>").join("") + "</table>" +
-    '<div class="tot"><div><span>Sous-total</span><span>' + fmt(t.st) + "</span></div>" + taxLines(x.codeTaxe, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total</span><span>' + fmt(t.total) + "</span></div></div>" +
+  const t = docTotals(x), isF = kind === "facture", s = isF ? facStatus(x) : devStatus(x), c = clientOf(x) || {}, G = docGroupes(x);
+  return '<div><span class="eyebrow">' + esc(docTitre(kind) + " · " + dLong(x.date)) + "</span><h2>" + esc(x.numero + " · " + x.client) + '</h2><div class="row" style="margin-top:6px"><span class="chip ' + s.cls + '">' + esc(s.l) + '</span><span class="muted small">' + esc(isF ? (x.echeance && x.echeance > x.date ? "Payable d'ici le " + dLong(x.echeance) : "Payable à réception") : "Valide jusqu'au " + dLong(x.echeance)) + "</span></div></div>" +
+    (x.travaux ? '<p class="small">' + esc(x.travaux) + "</p>" : "") + (x.lieu ? '<p class="muted small">Lieu : ' + esc(x.lieu) + "</p>" : "") +
+    '<table class="doc-lines">' + G.map(g => (G.length > 1 ? '<tr><td colspan="2" class="grp">' + esc(g.t.g) + "</td></tr>" : "") + g.lignes.map(l => { const m = ligneMt(l); return "<tr><td>" + esc(l.description).replace(/\n/g, "<br>") + '<br><span class="muted small">' + esc(qteTxt(l) + " × " + fmt(l.prix)) + '</span></td><td class="n">' + (m < 0 ? "−" : "") + fmt(Math.abs(m)) + "</td></tr>"; }).join("")).join("") + "</table>" +
+    '<div class="tot"><div><span>' + (t.ttc ? "Montant avant taxes" : "Sous-total") + "</span><span>" + fmt(t.st) + "</span></div>" + taxLines(x.codeTaxe, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="g"><span>Total' + (t.ttc ? " (taxes incl.)" : "") + "</span><span>" + fmt(t.total) + "</span></div></div>" +
     (c.telephone ? '<div class="copy"><span>' + esc(c.telephone) + '</span><a class="btn sm" href="tel:' + esc(c.telephone.replace(/[^\d+]/g, "")) + '">Appeler</a><button class="btn sm" type="button" data-copy="' + esc(c.telephone) + '">Copier</button></div>' : "") +
     (c.courriel ? '<div class="copy"><span>' + esc(c.courriel) + '</span><button class="btn sm" type="button" data-copy="' + esc(c.courriel) + '">Copier</button></div>' : "");
+}
+/* Envoyer une facture ou une soumission : PDF ou image (courriel, texto, Messenger, Snapchat…) */
+function sendDoc(kind, x){
+  const isF = kind === "facture", G = docGenre(kind), c = clientOf(x) || {}, tel = String(c.telephone || "").replace(/[^\d+]/g, ""), share = !!(navigator.canShare && navigator.share);
+  const opt = (k, icon, t, s) => '<button type="button" class="item send-opt" data-send="' + k + '">' + ico(icon) + '<span class="t"><b>' + esc(t) + "</b><small>" + esc(s) + "</small></span></button>";
+  openSheet("Envoyer " + G.la + " " + x.numero, '<p class="muted small">' + esc(x.client) + " · " + esc(fmt(docTotals(x).total)) + '</p><label class="field"><span>Message</span><textarea class="ctl" id="snd-msg" rows="6">' + esc(docMessage(kind, x)) + "</textarea></label>" +
+    '<div class="list">' + (share ? opt("img", "i-image", "Envoyer en image", "Texto, Snapchat, Messenger, Instagram…") + opt("pdf", "i-pdf", "Envoyer le PDF", "Courriel (Gmail), Messenger, WhatsApp, Drive…") : "") +
+    (tel ? opt("sms", "i-phone", "Texto à " + c.telephone, "Le message seulement ; ajoute l'image avec « Envoyer en image »") : "") +
+    opt("copy", "i-copy", "Copier le message", "Pour le coller où tu veux") + opt("save", "i-download", "Enregistrer le PDF", "Dans Téléchargements") + "</div>",
+    {onClick: async ev => { const b = ev.target.closest("[data-send]"); if (!b) return; const how = b.dataset.send, text = $("snd-msg").value, name = fileSafe(x.numero + " " + x.client), subj = docTitre(kind) + " " + x.numero + (R().nom ? " · " + R().nom : "");
+      const mark = () => { if (!(isF ? x.envoyeeLe : x.envoyeLe)) sendOp("envoye", {kind, id:x.id, date:today()}); };
+      try { b.disabled = true;
+        if (how === "copy"){ await copyTxt(text); return; }
+        if (how === "sms"){ location.href = "sms:" + tel + "?body=" + encodeURIComponent(text); mark(); return; }
+        const logo = await phoneLogo();
+        if (how === "save"){ const f = new File([docPDF(kind, x, logo)], name + ".pdf", {type:"application/pdf"}), url = URL.createObjectURL(f), a = document.createElement("a"); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); toast("PDF enregistré dans Téléchargements."); return; }
+        const files = how === "img" ? await docImages(kind, x, logo) : [new File([docPDF(kind, x, logo)], name + ".pdf", {type:"application/pdf"})];
+        if (!navigator.canShare({files})) throw new Error("ce téléphone ne partage pas ce fichier");
+        if (how === "pdf" && c.courriel){ try { await navigator.clipboard.writeText(c.courriel); toast("Courriel du client copié : colle-le dans « À »"); } catch(e){} }
+        await navigator.share({files, title: subj, text}); mark(); closeSheet();
+      } catch(e){ if (e && e.name === "AbortError") return; toast("Envoi impossible : " + ((e && e.message) || "erreur")); }
+      finally { b.disabled = false; } }});
 }
 async function copyTxt(v){ try { await navigator.clipboard.writeText(v); toast("Copié"); } catch(e){ toast("Copie impossible : sélectionne le texte."); } }
 function openFacture(id){
   const f = S.d.factures.find(x => x.id === id); if (!f) return; const t = S.tmap[f.transaction];
   openSheet("Facture " + f.numero, docBody("facture", f) + '<p class="muted small">Le PDF est aussi créé sur l\'ordinateur, dans le dossier factures, quand il reçoit la facture.</p>',
-    {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-pdf") + "PDF</button>" + (f.statut !== "annulee" ? '<button class="btn" type="button" data-x="mod">Modifier</button>' : "") + (t && unpaid(t) ? '<button class="btn primary" type="button" data-x="pay">Encaisser</button>' : ""),
+    {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-send") + "Envoyer</button>" + (f.statut !== "annulee" ? '<button class="btn" type="button" data-x="mod">Modifier</button>' : "") + (t && unpaid(t) ? '<button class="btn primary" type="button" data-x="pay">Encaisser</button>' : ""),
      onClick: ev => { const b = ev.target.closest("button"); if (!b) return; if (b.dataset.copy) return copyTxt(b.dataset.copy);
-       const x = b.dataset.x; if (x === "pdf") savePDF("facture", f); else if (x === "mod") fDoc("facture", f); else if (x === "pay") fEncaisser(f); }});
+       const x = b.dataset.x; if (x === "pdf") sendDoc("facture", f); else if (x === "mod") fDoc("facture", f); else if (x === "pay") fEncaisser(f); }});
 }
 function openDevis(id){
   const v = S.d.devis.find(x => x.id === id); if (!v) return; const s = devStatus(v);
-  openSheet("Devis " + v.numero, docBody("devis", v) + (s.k !== "facture" ? '<div class="row"><button class="btn sm" type="button" data-x="accepte">Accepté par le client</button><button class="btn sm" type="button" data-x="refuse">Refusé</button></div>' : ""),
-    {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-pdf") + "PDF</button>" + (s.k !== "facture" ? '<button class="btn" type="button" data-x="mod">Modifier</button><button class="btn primary" type="button" data-x="fac">Facturer</button>' : ""),
+  openSheet(docTitre("devis") + " " + v.numero, docBody("devis", v) + (s.k !== "facture" ? '<div class="row"><button class="btn sm" type="button" data-x="accepte">Accepté par le client</button><button class="btn sm" type="button" data-x="refuse">Refusé</button></div>' : ""),
+    {secondary:'<button class="btn" type="button" data-x="pdf">' + ico("i-send") + "Envoyer</button>" + (s.k !== "facture" ? '<button class="btn" type="button" data-x="mod">Modifier</button><button class="btn primary" type="button" data-x="fac">Facturer</button>' : ""),
      onClick: async ev => { const b = ev.target.closest("button"); if (!b) return; if (b.dataset.copy) return copyTxt(b.dataset.copy);
-       const x = b.dataset.x; if (x === "pdf") savePDF("devis", v); else if (x === "mod") fDoc("devis", v); else if (x === "fac") fDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, message:v.message, fromDevis:v.id});
+       const x = b.dataset.x; if (x === "pdf") sendDoc("devis", v); else if (x === "mod") fDoc("devis", v); else if (x === "fac") fDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});
        else if (x === "accepte" || x === "refuse"){ closeSheet(); toast("Devis " + (x === "accepte" ? "accepté" : "refusé")); await sendOp("devis-statut", {id:v.id, statut:x}); } }});
 }
 function openClient(id){

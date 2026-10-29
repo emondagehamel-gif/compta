@@ -15,3 +15,7 @@ Format des changements déposés dans `Comptabilite/telephone/` : voir `POUR-CLA
 ## Impôts de fin d'année (v3.6)
 
 `impots.js` (inséré dans `Comptabilite.html` par `patch4_impots.py`) : section qui prépare les montants du T2 et de la CO-17 (DPA, annexe 1, impôt estimé, dividendes T5 et RL-3, dates, dossier PDF). Les saisies sont gardées dans `reglages.fiscal["AAAA"]`. Ce sont des estimations : la transmission se fait avec un logiciel homologué. Tests : `test_impots.py` (calculs vérifiés à la main) et `test_impots_tel.py` (téléphone).
+
+## Soumissions et factures complètes (v3.7)
+
+`devis_core.js` (inséré dans `Comptabilite.html` par `patch5_devis.py`) : lignes par type de frais avec unité, prix taxes incluses, tarifs enregistrés, nouvelle mise en page (`docLayout`, d'après le modèle d'Émondage Hamel) et images JPEG des documents (`docImages`) pour l'envoi par texto, Messenger ou Snapchat. `patch6_tel.py` met à jour le formulaire et l'envoi de l'app terrain (`ui.js`). Tests : `test_devis.py`, `test_devis_tel.py`, `test_integ_devis.py`.

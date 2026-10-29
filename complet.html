@@ -673,6 +673,41 @@ details.more .form-grid{padding-bottom:14px}
 .fa-bien .row{display:flex;gap:10px;align-items:baseline}
 .fa-sel{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .fa-sel select{max-width:100%}
+/* Éditeur de factures et soumissions : lignes sur deux rangées */
+.lines-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.lines-top>span{font-size:.8rem;font-weight:600;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:6px 12px;font:inherit;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.le-row.le2{grid-template-columns:176px 70px 96px 124px minmax(0,1fr) 64px;grid-template-areas:"desc desc desc desc desc desc" "type qte unit prix amt acts";row-gap:6px;align-items:end}
+.le2 .le-desc{grid-area:desc;resize:none;min-height:36px;line-height:1.35}
+.le2 .le-type{grid-area:type}
+.le2 .le-mini:nth-of-type(1){grid-area:qte}.le2 .le-mini:nth-of-type(2){grid-area:unit}.le2 .le-mini:nth-of-type(3){grid-area:prix}
+.le2 .amt{grid-area:amt;align-self:center;padding-top:14px}
+.le2 .le-acts{grid-area:acts;display:flex;gap:2px;justify-content:flex-end;align-self:center;padding-top:14px}
+.le-mini{display:flex;flex-direction:column;gap:2px;min-width:0}
+.le-mini span{font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.le2.rabais .amt{color:var(--pos)}
+.le2 small{grid-column:1/-1}
+@media (max-width:620px){.le-row.le2{grid-template-columns:1fr 1fr 1fr;grid-template-areas:"desc desc desc" "type type type" "qte unit prix" "amt amt acts"}.le2 .amt{display:block;text-align:left;padding-top:0}.le2 .le-acts{padding-top:0}}
+.lt-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip-btn{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line-strong);background:var(--surface);border-radius:999px;padding:5px 10px;font:inherit;font-size:.8rem;font-weight:600;color:var(--ink);cursor:pointer}
+.chip-btn .ic{width:14px;height:14px}
+.chip-btn:hover{border-style:solid;border-color:var(--accent);color:var(--accent)}
+.chip-btn.alt{color:var(--pos)}
+.doc-tot .sep{border-top:1px dashed var(--line);padding:0;margin:4px 0}
+.send-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:10px}
+.send-opt{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:10px 12px;font:inherit;cursor:pointer;color:var(--ink)}
+.send-opt:hover{border-color:var(--accent)}
+.send-opt span{display:flex;flex-direction:column;gap:2px}
+.send-opt small{color:var(--muted);font-size:.78rem}
+.send-opt .ic{flex:none;margin-top:2px;color:var(--accent)}
+.tarifs{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px}
+.tarifs .tarif{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 10px;border-top:1px solid var(--line);font-size:.88rem}
+.tarifs .tarif:first-child{border-top:0}
+.tarifs p{padding:8px 10px;margin:0}
+.tarif-add{flex-wrap:wrap}
+.tarif-add #r-tf-desc{flex:1;min-width:180px}
 </style>
 </head>
 <body>
@@ -731,6 +766,10 @@ details.more .form-grid{padding-bottom:14px}
   <symbol id="i-tool" viewBox="0 0 24 24"><path d="M4 14h16v6H4zM8 14V9h8v5M10 9V5h4v4"/></symbol>
   <symbol id="i-laptop" viewBox="0 0 24 24"><path d="M5 5h14v10H5zM2.5 19h19"/></symbol>
   <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M9.5 13h5M9.5 16.5h5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/></symbol>
   <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M8.5 18h.01M12 18h.01M15.5 14.5V18"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
@@ -1093,7 +1132,15 @@ details.more .form-grid{padding-bottom:14px}
           <label class="field"><span>Numéro de TVQ</span><input id="r-notvq" class="ctl" type="text" maxlength="30" placeholder="1234567890 TQ0001"></label>
           <label class="field"><span>Délai de paiement par défaut</span><select id="r-termes" class="ctl"><option value="0">Payable à réception</option><option value="15">15 jours</option><option value="30">30 jours</option><option value="45">45 jours</option><option value="60">60 jours</option></select></label>
           <label class="field"><span>Validité des devis (jours)</span><input id="r-validite" class="ctl" type="text" inputmode="numeric" maxlength="3"></label>
-          <label class="field full"><span>Message au bas des factures</span><textarea id="r-msg" class="ctl" rows="2" maxlength="400"></textarea></label>
+          <label class="field"><span>Slogan (sous le nom)</span><input id="r-slogan" class="ctl" type="text" maxlength="80" placeholder="Élagage · Abattage · Entretien d'arbres"></label>
+          <label class="field"><span>NEQ (Registraire des entreprises)</span><input id="r-neq" class="ctl" type="text" maxlength="20" placeholder="1234567890"></label>
+          <label class="field"><span>Mode de paiement</span><input id="r-paiement" class="ctl" type="text" maxlength="120" placeholder="virement Interac à courriel@exemple.com"></label>
+          <label class="field"><span>Titre des devis sur le document</span><select id="r-titredevis" class="ctl"><option value="Soumission">Soumission</option><option value="Devis">Devis</option></select></label>
+          <label class="field full"><span>Modalités des soumissions (une par ligne)</span><textarea id="r-condev" class="ctl" rows="2" maxlength="600"></textarea></label>
+          <label class="field full"><span>Message au bas des factures et soumissions</span><textarea id="r-msg" class="ctl" rows="2" maxlength="400"></textarea><small>Il s'affiche en italique sous « Merci de votre confiance. »</small></label>
+          <div class="field full"><span>Tarifs enregistrés</span><div id="r-tarifs" class="tarifs"></div>
+            <div class="inline-form tarif-add"><select id="r-tf-type" class="ctl auto"></select><input id="r-tf-desc" class="ctl" type="text" maxlength="200" placeholder="Description, ex. : Taux horaire, émondeur"><input id="r-tf-unite" class="ctl" type="text" maxlength="12" list="dl-unites" placeholder="Unité" style="width:90px"><input id="r-tf-prix" class="ctl fig" type="text" inputmode="decimal" placeholder="Prix" style="width:100px"><label class="check"><input id="r-tf-ttc" type="checkbox"><span>Taxes incluses</span></label><button class="btn sm" type="button" id="r-tf-ok"><svg class="ic"><use href="#i-plus"/></svg>Ajouter</button></div>
+            <small>Tes prix habituels (taux horaire, location, déplacement…) : ils s'ajoutent en un clic dans une facture ou une soumission. Tu peux aussi enregistrer une ligne avec l'étoile dans l'éditeur.</small></div>
           <div class="field full"><span>Logo (facultatif)</span><div class="inline-form"><span class="muted small" id="r-logo-st">Aucun logo</span><label class="btn sm"><svg class="ic"><use href="#i-upload"/></svg>Choisir une image<input id="r-logo" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only"></label><button class="btn link" type="button" id="r-logo-rm" hidden>Retirer</button></div></div>
         </div>
         <h2>Taxes de vente</h2>
@@ -1243,6 +1290,8 @@ details.more .form-grid{padding-bottom:14px}
         <label class="field"><span>Date</span><input id="d-date" class="ctl" type="date"></label>
         <label class="field"><span id="d-terms-lbl">Payable</span><select id="d-terms" class="ctl"></select></label>
         <label class="field"><span id="d-ech-lbl">Échéance</span><input id="d-ech" class="ctl" type="date"></label>
+        <label class="field"><span id="d-dtrav-lbl">Date des travaux</span><input id="d-dtrav" class="ctl" type="date"></label>
+        <label class="field" style="grid-column:span 2"><span>Lieu des travaux</span><input id="d-lieu" class="ctl" type="text" maxlength="200" placeholder="Si différent de l'adresse du client"></label>
       </div>
       <details class="more" id="d-cli-more">
         <summary><svg class="ic"><use href="#i-chev"/></svg>Coordonnées du client <span class="muted small" id="d-cli-sum"></span></summary>
@@ -1252,12 +1301,15 @@ details.more .form-grid{padding-bottom:14px}
           <label class="field full"><span>Adresse</span><textarea id="d-cadr" class="ctl" rows="2" maxlength="300"></textarea></label>
         </div>
       </details>
-      <div class="field"><span>Produits et services</span>
+      <label class="field full"><span>Description des travaux (sur le document, facultatif)</span><textarea id="d-travaux" class="ctl" rows="2" maxlength="1500" placeholder="Ex. : Émondage de 3 érables argentés en façade, dégagement de la toiture et ramassage des branches."></textarea></label>
+      <div class="field"><div class="lines-top"><span>Services et frais</span><div class="seg" id="d-ttc" role="group" aria-label="Les prix entrés sont"><button type="button" data-ttc="0">Prix avant taxes</button><button type="button" data-ttc="1">Prix taxes incluses</button></div></div>
         <div class="lines-ed" id="d-lines"></div>
+        <div class="lt-add" id="d-lt-add"></div>
         <div class="inline-form" style="margin-top:8px">
-          <button class="btn sm" type="button" id="d-add-line"><svg class="ic"><use href="#i-plus"/></svg>Ajouter une ligne</button>
+          <select id="d-add-tarif" class="ctl auto" hidden></select>
           <select id="d-add-prod" class="ctl auto" hidden></select>
         </div>
+        <datalist id="dl-unites"></datalist>
       </div>
       <div class="doc-tot" id="d-tot"></div>
       <div class="form-grid">
@@ -1276,7 +1328,8 @@ details.more .form-grid{padding-bottom:14px}
       <p class="err" id="d-err" hidden></p>
       <button class="btn" type="button" id="d-cancel">Annuler</button>
       <span class="spacer"></span>
-      <button class="btn" type="button" id="d-save-pdf"><svg class="ic"><use href="#i-pdf"/></svg>Enregistrer et créer le PDF</button>
+      <button class="btn" type="button" id="d-save-pdf"><svg class="ic"><use href="#i-pdf"/></svg>Enregistrer et voir le PDF</button>
+      <button class="btn" type="button" id="d-save-send"><svg class="ic"><use href="#i-mail"/></svg>Enregistrer et envoyer</button>
       <button class="btn primary" type="submit">Enregistrer</button>
     </footer>
   </form>
@@ -1407,7 +1460,8 @@ const SORTES = {
 const TYPES = {depense:"Dépense", revenu:"Revenu", transfert:"Transfert", tvh:"TPS/TVH", dividende:"Dividende"};
 const DEF_REGLAGES = {nom:"Mon entreprise", numero:"", structure:"societe", province:"QC", regime:"federal", dateConstitution:"", obligations:{}, finExercice:12, exerciceConfirme:false, inscritTVH:true, inscritTVQ:true, tauxTPS:5, tauxTVQ:9.975, tauxTVH:13, frequence:"trimestrielle",
   dateOuverture:"2026-01-01", tvhOuverture:0, capitalActions:0, tauxKm:{"2025":[0.72,0.66], "2026":[0.73,0.67]}, compteKm:"c-actionnaire", declarations:{},
-  adresse:"", telephone:"", courriel:"", noTPS:"", noTVQ:"", termes:30, validiteDevis:30, messageFacture:"Merci de votre confiance!", logo:""};
+  adresse:"", telephone:"", courriel:"", noTPS:"", noTVQ:"", termes:30, validiteDevis:30, messageFacture:"Merci de votre confiance!", logo:"",
+  slogan:"", neq:"", modePaiement:"", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
 const COLLECTIONS = ["comptes","transactions","fournisseurs","projets","km","rapprochements","clients","factures","devis","agenda","equipements","produits","lieux"];
 
 function defaultData(){
@@ -1443,6 +1497,7 @@ function normalize(d){
   if (!d.reglages.tauxKm || typeof d.reglages.tauxKm !== "object") d.reglages.tauxKm = clone(DEF_REGLAGES.tauxKm);
   if (!d.reglages.declarations || typeof d.reglages.declarations !== "object") d.reglages.declarations = {};
   if (!d.reglages.obligations || typeof d.reglages.obligations !== "object") d.reglages.obligations = {};
+  if (!Array.isArray(d.reglages.tarifs)) d.reglages.tarifs = [];
   if (!d.reglages.onboarding || typeof d.reglages.onboarding !== "object") d.reglages.onboarding = {};
   if (!d.reglages.fiscal || typeof d.reglages.fiscal !== "object") d.reglages.fiscal = {};
   d.format = d.format || "comptabilite-v1"; d.rev = Number(d.rev) || 1;
@@ -3527,8 +3582,8 @@ function closeForm(){ $("ov-ent").hidden = true; $("ent-form").classList.remove(
 /* ----- PDF : moteur minimal (Helvetica, encodage WinAnsi) ----- */
 const HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
 const HELVB = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
-const WIN = {"€":128,"‚":130,"„":132,"…":133,"‘":145,"’":146,"“":147,"”":148,"•":149,"–":150,"—":151,"™":153,"œ":156,"Œ":140};
-const WIN_W = {128:556,130:222,132:333,133:1000,140:1000,145:222,146:222,147:333,148:333,149:350,150:556,151:1000,153:1000,156:944,160:278,167:556,169:737,171:556,174:737,176:400,178:333,179:333,183:278,185:333,187:556,188:834,189:834,190:834,215:584,223:611,247:584};
+const WIN = {"€":128,"‚":130,"„":132,"…":133,"‘":145,"’":146,"“":147,"”":148,"•":149,"–":150,"—":151,"™":153,"œ":156,"Œ":140,"‹":139,"›":155};
+const WIN_W = {139:333,155:333,128:556,130:222,132:333,133:1000,140:1000,145:222,146:222,147:333,148:333,149:350,150:556,151:1000,153:1000,156:944,160:278,167:556,169:737,171:556,174:737,176:400,178:333,179:333,183:278,185:333,187:556,188:834,189:834,190:834,215:584,223:611,247:584};
 const pdfChars = s => String(s == null ? "" : s).normalize("NFC").replace(/[     ]/g, " ").replace(/−/g, "-").replace(/[\r\t]/g, " ");
 function winCode(ch){ const c = ch.charCodeAt(0); if (c < 128) return c >= 32 ? c : 32; if (c >= 160 && c <= 255) return c; return WIN[ch] || 63; }
 function charW(ch, bold){ const c = winCode(ch), T = bold ? HELVB : HELV; if (c < 127) return T[c - 32]; if (WIN_W[c]) return WIN_W[c]; const b = ch.normalize("NFD").charCodeAt(0); return b >= 32 && b < 127 ? T[b - 32] : 556; }
@@ -3548,33 +3603,35 @@ function wrapText(s, size, bold, maxW){
   return out;
 }
 function PDF(){
-  const W = 612, H = 792, pages = [], imgs = [];
-  let ops = null;
+  const W = 612, H = 792, pages = [], imgs = [], draws = [];
+  let ops = null, cv = null;
   const n = v => String(Math.round(v * 100) / 100);
   const col = c => { const h = String(c).replace("#", ""); return [0, 2, 4].map(i => n(parseInt(h.slice(i, i + 2), 16) / 255)).join(" "); };
   const P = {
-    W, H, pages,
-    page(){ ops = []; pages.push(ops); return P; },
-    at(i){ ops = pages[i]; return P; },
-    text(x, y, s, o){ o = o || {}; const size = o.size || 10, bold = !!o.bold, w = textW(s, size, bold); let tx = x; if (o.align === "right") tx = x - w; else if (o.align === "center") tx = x - w / 2;
-      ops.push((o.color ? col(o.color) + " rg " : "") + "BT /" + (bold ? "F2" : "F1") + " " + n(size) + " Tf " + n(tx) + " " + n(H - y) + " Td (" + pdfStr(s) + ") Tj ET" + (o.color ? " 0 0 0 rg" : "")); return w; },
-    line(x1, y1, x2, y2, o){ o = o || {}; ops.push(col(o.color || "#000000") + " RG " + n(o.w || 0.6) + " w " + n(x1) + " " + n(H - y1) + " m " + n(x2) + " " + n(H - y2) + " l S"); },
-    rect(x, y, w, h, color){ ops.push(col(color) + " rg " + n(x) + " " + n(H - y - h) + " " + n(w) + " " + n(h) + " re f 0 0 0 rg"); },
-    image(img, x, y, w, h){ if (!imgs.includes(img)) imgs.push(img); ops.push("q " + n(w) + " 0 0 " + n(h) + " " + n(x) + " " + n(H - y - h) + " cm /Im" + (imgs.indexOf(img) + 1) + " Do Q"); },
+    W, H, pages, draws,
+    page(){ ops = []; pages.push(ops); cv = []; draws.push(cv); return P; },
+    at(i){ ops = pages[i]; cv = draws[i]; return P; },
+    text(x, y, s, o){ o = o || {}; const size = o.size || 10, bold = !!o.bold, ls = Number(o.ls) || 0, nc = [...pdfChars(s)].length, w = textW(s, size, bold) + (nc > 1 ? ls * (nc - 1) : 0); let tx = x; if (o.align === "right") tx = x - w; else if (o.align === "center") tx = x - w / 2;
+      ops.push((o.color ? col(o.color) + " rg " : "") + "BT /" + (bold ? "F2" : o.italic ? "F3" : "F1") + " " + n(size) + " Tf " + (ls ? n(ls) + " Tc " : "") + n(tx) + " " + n(H - y) + " Td (" + pdfStr(s) + ") Tj " + (ls ? "0 Tc " : "") + "ET" + (o.color ? " 0 0 0 rg" : ""));
+      cv.push({k:"t", x:tx, y, s:pdfChars(s), size, bold, italic:!!o.italic, ls, color:o.color || "#000000"}); return w; },
+    line(x1, y1, x2, y2, o){ o = o || {}; ops.push(col(o.color || "#000000") + " RG " + n(o.w || 0.6) + " w " + n(x1) + " " + n(H - y1) + " m " + n(x2) + " " + n(H - y2) + " l S"); cv.push({k:"l", x1, y1, x2, y2, color:o.color || "#000000", w:o.w || 0.6}); },
+    rect(x, y, w, h, color){ ops.push(col(color) + " rg " + n(x) + " " + n(H - y - h) + " " + n(w) + " " + n(h) + " re f 0 0 0 rg"); cv.push({k:"r", x, y, w, h, color}); },
+    image(img, x, y, w, h){ if (!imgs.includes(img)) imgs.push(img); ops.push("q " + n(w) + " 0 0 " + n(h) + " " + n(x) + " " + n(H - y - h) + " cm /Im" + (imgs.indexOf(img) + 1) + " Do Q"); cv.push({k:"i", img, x, y, w, h}); },
     bytes(){
       const enc = new TextEncoder(), chunks = [], offs = []; let len = 0;
       const push = x => { const b = typeof x === "string" ? enc.encode(x) : x; chunks.push(b); len += b.length; };
       const obj = (num, parts) => { offs[num] = len; push(num + " 0 obj\n"); parts.forEach(push); push("\nendobj\n"); };
       push("%PDF-1.4\n"); push(new Uint8Array([37, 226, 227, 207, 211, 10]));
-      const first = 5 + imgs.length;
+      const first = 6 + imgs.length;
       obj(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
       obj(2, ["<< /Type /Pages /Kids [" + pages.map((_, i) => (first + i * 2) + " 0 R").join(" ") + "] /Count " + pages.length + " >>"]);
       obj(3, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"]);
       obj(4, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"]);
-      imgs.forEach((im, i) => obj(5 + i, ["<< /Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + im.data.length + " >>\nstream\n", im.data, "\nendstream"]));
-      const xo = imgs.length ? " /XObject << " + imgs.map((_, i) => "/Im" + (i + 1) + " " + (5 + i) + " 0 R").join(" ") + " >>" : "";
+      obj(5, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>"]);
+      imgs.forEach((im, i) => obj(6 + i, ["<< /Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + im.data.length + " >>\nstream\n", im.data, "\nendstream"]));
+      const xo = imgs.length ? " /XObject << " + imgs.map((_, i) => "/Im" + (i + 1) + " " + (6 + i) + " 0 R").join(" ") + " >>" : "";
       pages.forEach((o, i) => { const pn = first + i * 2, c = o.join("\n");
-        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>" + xo + " >> /Contents " + (pn + 1) + " 0 R >>"]);
+        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>" + xo + " >> /Contents " + (pn + 1) + " 0 R >>"]);
         obj(pn + 1, ["<< /Length " + c.length + " >>\nstream\n" + c + "\nendstream"]); });
       const total = first + pages.length * 2, xref = len;
       let x = "xref\n0 " + total + "\n0000000000 65535 f \n"; for (let i = 1; i < total; i++) x += String(offs[i]).padStart(10, "0") + " 00000 n \n";
@@ -3595,66 +3652,171 @@ async function loadLogo(){
   } catch(e){ return null; }
 }
 function taxLines(code, tot){ const [a, b] = taxRates(code), out = []; if (code === "ON") out.push(["TVH (" + pct(a) + ")", tot.tx]); else if (a) out.push(["TPS (" + pct(a) + ")", tot.tx]); if (b) out.push(["TVQ (" + pct(b) + ")", tot.tq]); return out; }
-/* Mise en page d'une facture ou d'un devis */
-function docPDF(kind, doc, logo){
-  const r = R(), P = PDF(), M = 50, RX = P.W - M, ACC = "#2347A6", MUT = "#5F6F67", LINE = "#C7D1C9", BAND = "#EEF2FA", isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
-  const CQ = RX - 190, CP = RX - 95, DW = CQ - 45 - (M + 8), BOTTOM = P.H - 78;
-  let y = 0;
-  const tableHead = () => { P.rect(M, y, RX - M, 22, BAND); P.text(M + 8, y + 14.5, "Description", {size:8.5, bold:true, color:MUT}); P.text(CQ, y + 14.5, "Qté", {size:8.5, bold:true, color:MUT, align:"right"}); P.text(CP, y + 14.5, "Prix unitaire", {size:8.5, bold:true, color:MUT, align:"right"}); P.text(RX - 8, y + 14.5, "Montant", {size:8.5, bold:true, color:MUT, align:"right"}); y += 22; };
-  const newPage = () => { P.page(); y = M; P.text(M, y + 10, r.nom || "", {size:10, bold:true}); P.text(RX, y + 10, (isF ? "Facture " : "Devis ") + doc.numero + " (suite)", {size:9.5, color:MUT, align:"right"}); y += 30; tableHead(); };
+/* Lignes des factures et devis : un service ou un frais (location, outils, déplacement…), avec quantité, unité et prix */
+const LT = [
+  ["service", "Service", "Main-d'œuvre et services", "h", "Ex. : Émondage de 3 érables, 2 hommes"],
+  ["location", "Location de matériel", "Location de matériel", "jour", "Ex. : Nacelle de 60 pi"],
+  ["outils", "Outils et équipement", "Outils et équipement", "jour", "Ex. : Déchiqueteuse à branches"],
+  ["deplacement", "Déplacement", "Déplacement", "km", "Ex. : Aller-retour au chantier"],
+  ["consommables", "Consommables", "Consommables", "forfait", "Ex. : Essence, huile à chaîne"],
+  ["materiaux", "Matériaux", "Matériaux", "unité", "Ex. : Haubans, paillis"],
+  ["disposition", "Ramassage et disposition", "Ramassage et disposition", "voyage", "Ex. : Ramassage et transport des branches"],
+  ["autre", "Autres frais", "Autres frais", "", "Ex. : Permis de coupe de la ville"],
+  ["rabais", "Rabais", "Rabais", "", "Ex. : Rabais client fidèle"]
+].map(([k, l, g, u, ph]) => ({k, l, g, u, ph}));
+const LTM = Object.fromEntries(LT.map(t => [t.k, t]));
+const LUNITES = ["h", "jour", "sem.", "km", "unité", "forfait", "arbre", "souche", "voyage", "m³", "pi lin."];
+const ligneType = l => LTM[l && l.type] ? l.type : "service";
+const ligneMt = l => { const m = r2((Number(l.qte) || 0) * (Number(l.prix) || 0)); return l.type === "rabais" ? -Math.abs(m) : m; };
+const qteTxt = l => { const u = String(l.unite || "").trim(), pl = Number(l.qte) >= 2 && /^[a-zà-ÿ]{3,}$/i.test(u) && !/[sx]$/i.test(u); return fq(l.qte) + (u ? " " + u + (pl ? "s" : "") : ""); };
+/* Montant avant taxes d'une ligne (les prix peuvent être entrés taxes incluses) */
+function ligneHT(doc, l){ const m = ligneMt(l); if (!doc.taxesIncluses) return m; const [a, b] = taxRates(doc.codeTaxe || "AUCUNE"); return r2(m * 100 / (100 + a + b)); }
+/* Totaux : prix avant taxes (taxes ajoutées) ou taxes incluses (taxes extraites du total, au cent près) */
+function docTotals(doc){
+  const brut = r2((doc.lignes || []).reduce((s, l) => s + ligneMt(l), 0)), [a, b] = taxRates(doc.codeTaxe || "AUCUNE");
+  if (doc.taxesIncluses && (a || b)){ const k = 100 + a + b, tx = r2(brut * a / k), tq = r2(brut * b / k); return {st: r2(brut - tx - tq), tx, tq, total: brut, ttc: true}; }
+  const tx = r2(brut * a / 100), tq = r2(brut * b / 100); return {st: brut, tx, tq, total: r2(brut + tx + tq), ttc: false};
+}
+/* Lignes regroupées par type, dans l'ordre de LT (services d'abord, rabais à la fin) */
+function docGroupes(doc){
+  const out = []; LT.forEach(t => { const L = (doc.lignes || []).filter(l => ligneType(l) === t.k); if (L.length) out.push({t, lignes: L, mt: r2(L.reduce((s, l) => s + ligneMt(l), 0))}); }); return out;
+}
+/* Texte prêt à envoyer avec le document (courriel, texto, Messenger…) */
+function docMessage(kind, doc){
+  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind);
+  return "Bonjour" + (cli ? " " + cli : "") + ",\n\nVoici " + G.la + " " + doc.numero + (r.nom ? (/^[aeiouyàâäéèêëîïôöûüù]/i.test(r.nom) ? " d'" : " de ") + r.nom : "") + " : " + fmt(t.total) + (t.tx || t.tq ? " taxes incluses" : "") +
+    (isF ? (doc.echeance && doc.echeance > doc.date ? ", payable d'ici le " + dLong(doc.echeance) : ", payable à réception") : ", valide jusqu'au " + dLong(doc.echeance)) + "." +
+    (!isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
+}
+/* Mise en page d'une facture ou d'une soumission : style simple et rassurant, d'après le modèle d'Émondage Hamel */
+const DOC_COUL = {g:"#2F6B3B", tint:"#EDF4EE", ink:"#1E2622", mut:"#67716B", line:"#D2DBD4"};
+function docTitre(kind){ return kind === "facture" ? "Facture" : (R().titreDevis || "Devis"); }
+/* Accords : « la facture », « la soumission », mais « le devis » */
+function docGenre(kind){ const t = docTitre(kind), f = t !== "Devis", m = t.toLowerCase(); return {t, m, la: (f ? "la " : "le ") + m, de: (f ? "de la " : "du ") + m, cette: (f ? "Cette " : "Ce ") + m, prep: f ? "préparée" : "préparé", presente: (f ? "la présente " : "le présent ") + m}; }
+function docLayout(kind, doc, logo){
+  const r = R(), P = PDF(), C = DOC_COUL, M = 54, RX = P.W - M, W = RX - M, isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
+  const G = docGenre(kind), titre = G.t, nom = String(r.nom || "Mon entreprise").trim(), BOTTOM = P.H - 74, grp = docGroupes(doc), multi = grp.length > 1;
+  const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16;
+  let y = 0, inTable = false;
+  const T = (x, yy, s, o) => P.text(x, yy, s, Object.assign({color:C.ink}, o || {}));
+  const h2 = (s) => { T(M, y + 13, s, {size:12.5, bold:true, color:C.g}); y += 29; };
+  const label = (x, yy, s, w) => { T(x, yy, s.toUpperCase(), {size:7.8, bold:true, color:C.g, ls:1.1}); P.line(x, yy + 6, x + w, yy + 6, {color:C.line, w:0.8}); };
+  const tableHead = () => { P.rect(M, y, W, 22, C.g);
+    [["Qté", (M + XQ) / 2], ["Description", (XQ + XP) / 2], ["Prix unit." + (tot.ttc ? " (tx incl.)" : ""), (XP + XT) / 2], ["Total", (XT + RX) / 2]].forEach(([s, x]) => T(x, y + 14.5, s, {size:9, bold:true, color:"#FFFFFF", align:"center"}));
+    y += 22; };
+  const newPage = () => { P.page(); y = M; T(M, y + 10, nom.toUpperCase(), {size:10, bold:true, color:C.g, ls:0.8}); T(RX, y + 10, titre + " " + doc.numero + " (suite)", {size:9, color:C.mut, align:"right"}); y += 20; P.line(M, y, RX, y, {color:C.g, w:1}); y += 18; if (inTable) tableHead(); };
+  const need = h => { if (y + h > BOTTOM) newPage(); };
   P.page();
-  /* En-tête : entreprise à gauche, titre et numéros à droite */
-  let ly = M;
-  if (logo){ let h = 54, w = logo.w * h / logo.h; if (w > 170){ w = 170; h = logo.h * w / logo.w; } P.image(logo, M, ly, w, h); ly += h + 16; } else ly += 12;
-  P.text(M, ly, r.nom || "Mon entreprise", {size:13, bold:true}); ly += 14;
-  String(r.adresse || "").split(/\r?\n/).filter(s => s.trim()).forEach(s => { P.text(M, ly, s.trim(), {size:9, color:MUT}); ly += 11.5; });
-  const contact = [r.telephone, r.courriel].filter(Boolean).join("   ·   "); if (contact){ P.text(M, ly, contact, {size:9, color:MUT}); ly += 11.5; }
-  let ry = M + 22; P.text(RX, ry, isF ? "FACTURE" : "DEVIS", {size:22, bold:true, color:ACC, align:"right"}); ry += 20;
-  const meta = [["Numéro", doc.numero], ["Date", dLong(doc.date)], isF ? ["Échéance", doc.echeance && doc.echeance > doc.date ? dLong(doc.echeance) : "À réception"] : ["Valide jusqu'au", dLong(doc.echeance)]];
-  if (isF && doc.devis){ const v = S.d.devis.find(x => x.id === doc.devis); if (v) meta.push(["Selon le devis", v.numero]); }
-  meta.forEach(([k, v]) => { P.text(RX - 165, ry, k, {size:9, color:MUT}); P.text(RX, ry, v, {size:9.5, bold:true, align:"right"}); ry += 13; });
-  y = Math.max(ly, ry) + 16;
-  /* Client */
-  P.text(M, y, isF ? "FACTURÉ À" : "PRÉPARÉ POUR", {size:7.5, bold:true, color:MUT}); y += 14;
-  P.text(M, y, doc.client || "", {size:11, bold:true}); y += 13;
-  String(cli.adresse || "").split(/\r?\n/).filter(s => s.trim()).forEach(s => { P.text(M, y, s.trim(), {size:9.5}); y += 12; });
-  const cc = [cli.courriel, cli.telephone].filter(Boolean).join("   ·   "); if (cc){ P.text(M, y, cc, {size:9.5, color:MUT}); y += 12; }
-  y += 14; tableHead();
-  /* Lignes */
-  (doc.lignes || []).forEach(l => {
-    const lines = wrapText(l.description || "", 10, false, DW), h = Math.max(1, lines.length) * 12.5 + 9;
-    if (y + h > BOTTOM){ newPage(); }
-    lines.forEach((s, i) => P.text(M + 8, y + 15 + i * 12.5, s, {size:10}));
-    P.text(CQ, y + 15, fq(l.qte), {size:10, align:"right"});
-    P.text(CP, y + 15, fmt(l.prix), {size:10, align:"right"});
-    P.text(RX - 8, y + 15, fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))), {size:10, align:"right"});
-    y += h; P.line(M, y, RX, y, {color:LINE, w:0.5});
+  /* En-tête : nom et slogan à gauche, coordonnées et numéros de taxes à droite */
+  let lx = M, ly = M + 18;
+  if (logo){ let h = 50, w = logo.w * h / logo.h; if (w > 140){ w = 140; h = logo.h * w / logo.w; } P.image(logo, M, M, w, h); lx = M + w + 14; ly = M + Math.max(18, h / 2 + 4); }
+  T(lx, ly, nom.toUpperCase(), {size:20, bold:true, color:C.g, ls:1}); ly += 17;
+  if (r.slogan){ T(lx, ly, r.slogan, {size:9.5, italic:true, color:C.mut}); ly += 13; }
+  String(r.adresse || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => { T(lx, ly, s, {size:8.8, color:C.mut}); ly += 11.5; });
+  let ry = M + 8;
+  if (r.telephone){ T(RX, ry, r.telephone, {size:10, align:"right"}); ry += 13; }
+  if (r.courriel){ T(RX, ry, r.courriel, {size:10, align:"right"}); ry += 14; }
+  [r.noTPS ? "TPS : " + r.noTPS : "", r.noTVQ && quebec() ? "TVQ : " + r.noTVQ : "", r.neq ? "NEQ : " + r.neq : ""].filter(Boolean).forEach(s => { T(RX, ry, s, {size:8, color:C.mut, align:"right"}); ry += 10.5; });
+  y = Math.max(ly, ry, logo ? M + 54 : 0) + 10; P.line(M, y, RX, y, {color:C.g, w:1.6});
+  /* Titre */
+  y += 36; T(P.W / 2, y, titre.toUpperCase(), {size:24, bold:true, color:C.g, align:"center", ls:3}); y += 26;
+  /* Client et détails */
+  const cw = (W - 30) / 2, rx2 = M + cw + 30, top = y;
+  label(M, y, isF ? "Facturé à" : titre + " " + G.prep + " pour", cw); label(rx2, y, "Détails " + G.de, cw);
+  let a = y + 24; T(M, a, doc.client || "", {size:11, bold:true}); a += 15;
+  String(cli.adresse || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => { T(M, a, s, {size:10}); a += 13; });
+  [cli.telephone, cli.courriel].filter(Boolean).forEach(s => { T(M, a, s, {size:9, color:C.mut}); a += 12; });
+  const det = [[titre + " n°", doc.numero], [isF ? "Date de facturation" : "Date", dLong(doc.date)]];
+  if (doc.dateTravaux) det.push([isF ? "Date des travaux" : "Date prévue des travaux", dLong(doc.dateTravaux)]);
+  det.push(isF ? ["Échéance", doc.echeance && doc.echeance > doc.date ? dLong(doc.echeance) : "À réception"] : ["Valide jusqu'au", dLong(doc.echeance)]);
+  if (isF && doc.devis){ const v = S.d.devis.find(x => x.id === doc.devis); if (v) det.push(["Selon " + docGenre("devis").la + " n°", v.numero]); }
+  let b = y + 24; det.forEach(([k, v]) => { const w = T(rx2, b, k + " :", {size:10, bold:true}); T(rx2 + w + 4, b, v, {size:10}); b += 15; });
+  if (String(doc.lieu || "").trim()){ const w = T(rx2, b, "Lieu des travaux :", {size:10, bold:true}); const L = wrapText(String(doc.lieu).trim(), 10, false, cw - w - 4); L.forEach((s, i) => T(rx2 + w + 4, b + i * 13, s, {size:10})); b += L.length * 13 + 2; }
+  y = Math.max(a, b) + 8;
+  /* Description des travaux (texte libre) */
+  if (String(doc.travaux || "").trim()){ const L = wrapText(String(doc.travaux).trim(), 10, false, W); need(36 + Math.min(L.length, 6) * 13); y += 6; h2("Description des travaux"); L.forEach(s => { need(14); T(M, y, s, {size:10}); y += 13; }); }
+  /* Détail des travaux */
+  need(31 + 22 + 30); y += 8; h2("Détail des travaux"); y -= 8; inTable = true; tableHead();
+  const rowLines = (x1, x2) => { P.line(M, x1, M, x2, {color:C.line, w:0.6}); [XQ, XP, XT].forEach(x => P.line(x, x1, x, x2, {color:C.line, w:0.6})); P.line(RX, x1, RX, x2, {color:C.line, w:0.6}); P.line(M, x2, RX, x2, {color:C.line, w:0.6}); };
+  const hdr = multi && grp.some(g => g.lignes.length > 1);
+  grp.forEach(g => {
+    if (hdr){ need(20 + 30); P.rect(M, y, W, 20, C.tint); T(XQ + 8, y + 13.5, g.t.g.toUpperCase(), {size:7.8, bold:true, color:C.g, ls:0.8}); T(RX - 8, y + 13.5, (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)), {size:8.8, bold:true, color:C.g, align:"right"}); P.line(M, y, M, y + 20, {color:C.line, w:0.6}); P.line(RX, y, RX, y + 20, {color:C.line, w:0.6}); P.line(M, y + 20, RX, y + 20, {color:C.line, w:0.6}); y += 20; }
+    g.lignes.forEach(l => {
+      const parts = String(l.description || "").split(/\r?\n/), main = wrapText(parts[0] || "", 10, false, DW), sub = parts.slice(1).join("\n").trim() ? wrapText(parts.slice(1).join("\n").trim(), 8.8, false, DW) : [];
+      const cap = multi && !hdr ? 10.5 : 0, h = cap + Math.max(1, main.length) * 12.5 + sub.length * 11 + 10, mt = ligneMt(l), yb = y + 14 + cap;
+      need(h); const y0 = y;
+      if (cap) T(XQ + 8, y + 12, g.t.g.toUpperCase(), {size:6.8, bold:true, color:C.g, ls:0.7});
+      main.forEach((s, i) => T(XQ + 8, yb + i * 12.5, s, {size:10}));
+      sub.forEach((s, i) => T(XQ + 8, yb + main.length * 12.5 + i * 11 - 1, s, {size:8.8, italic:true, color:C.mut}));
+      T((M + XQ) / 2, yb, qteTxt(l), {size:10, align:"center"});
+      T(XT - 8, yb, fmt(l.prix), {size:10, align:"right"});
+      T(RX - 8, yb, (mt < 0 ? "−" : "") + fmt(Math.abs(mt)), {size:10, align:"right", color: mt < 0 ? C.g : C.ink});
+      y += h; rowLines(y0, y);
+    });
   });
-  /* Totaux et message */
-  const tl = [["Sous-total", tot.st], ...taxLines(doc.codeTaxe, tot)];
+  inTable = false;
+  /* Sommaire */
   const t = isF && doc.transaction ? S.tmap[doc.transaction] : null, paid = t && !unpaid(t);
-  const msg = wrapText(doc.message || "", 9, false, CQ - M - 40), terms = isF ? (doc.echeance && doc.echeance > doc.date ? "Payable d'ici le " + dLong(doc.echeance) + "." : "Payable à réception.") : "Ce devis est valide jusqu'au " + dLong(doc.echeance) + ".";
-  const blockH = Math.max(tl.length * 15 + 34 + (isF ? 30 : 0), msg.length * 11.5 + 40) + (isF ? 0 : 60);
-  if (y + 14 + blockH > BOTTOM) newPage();
-  y += 14; let ty = y + 4;
-  tl.forEach(([k, v]) => { P.text(RX - 200, ty + 10, k, {size:9.5, color:MUT}); P.text(RX - 8, ty + 10, fmt(v), {size:10, align:"right"}); ty += 15; });
-  P.line(RX - 200, ty + 3, RX, ty + 3, {color:"#888888", w:0.8}); ty += 6;
-  P.text(RX - 200, ty + 15, "Total", {size:12, bold:true}); P.text(RX - 8, ty + 15, fmt(tot.total), {size:12, bold:true, align:"right"}); ty += 22;
+  const rows = [["Sous-total", tot.st], ...taxLines(doc.codeTaxe, tot)], bw = 240, bx = RX - bw, rh = 21;
+  need(16 + rows.length * rh + 26 + (paid ? rh : 0)); y += 16; const sTop = y;
+  const cell = (k, v, o) => { o = o || {}; if (o.fill) P.rect(bx, y, bw, o.h || rh, o.fill); P.line(bx, y, RX, y, {color:C.line, w:0.6}); P.line(bx, y, bx, y + (o.h || rh), {color:C.line, w:0.6}); P.line(RX - 96, y, RX - 96, y + (o.h || rh), {color:C.line, w:0.6}); P.line(RX, y, RX, y + (o.h || rh), {color:C.line, w:0.6});
+    T(RX - 104, y + (o.h || rh) / 2 + 3.5, k + " :", {size:o.size || 10, bold:!!o.bold, align:"right", color:o.kc || C.ink}); T(RX - 8, y + (o.h || rh) / 2 + 3.5, v, {size:o.size || 10, bold:!!o.bold, align:"right", color:o.vc || C.ink}); y += o.h || rh; };
+  rows.forEach(([k, v]) => cell(k, fmt(v)));
+  cell(isF ? "Total à payer" : "Total", fmt(tot.total), {fill:C.tint, bold:true, size:12, vc:C.g, h:26});
+  if (isF && paid) cell("Payée le " + dShort((t.paiement && t.paiement.date) || t.date) + " · Solde", fmt(0), {size:9.5, vc:C.g});
+  P.line(bx, y, RX, y, {color:C.line, w:0.6});
+  /* À gauche du sommaire : rappel des taxes incluses */
+  let ny = sTop + 14; if (tot.ttc) wrapText((isF ? "Montant total convenu avec le client" : "Prix forfaitaire convenu avec le client") + ", taxes incluses.", 8.5, false, bx - M - 24).forEach(s => { T(M, ny, s, {size:8.5, italic:true, color:C.mut}); ny += 11; });
+  y = Math.max(y, ny);
+  /* Modalités */
+  const pay = String(r.modePaiement || "").trim();
+  const bullet = (parts) => { const full = parts.map(p => p[0]).join(""); const L = wrapText(full, 10, false, W - 16); need(L.length * 13 + 2); T(M + 4, y, "•", {size:10});
+    if (L.length === 1 && parts.length > 1){ let x = M + 16; parts.forEach(([s, bo]) => { x += T(x, y, s, {size:10, bold:!!bo}); }); y += 13; } else { L.forEach(s => { T(M + 16, y, s, {size:10}); y += 13; }); } };
   if (isF){
-    if (paid){ P.text(RX - 200, ty + 10, "Payée le " + dLong((t.paiement && t.paiement.date) || t.date), {size:9.5, color:"#1F7A4A", bold:true}); P.text(RX - 8, ty + 10, "Solde : " + fmt(0), {size:9.5, align:"right"}); }
-    else { P.rect(RX - 206, ty, 206, 22, BAND); P.text(RX - 200, ty + 15, "Solde dû", {size:10.5, bold:true, color:ACC}); P.text(RX - 8, ty + 15, fmt(tot.total), {size:10.5, bold:true, color:ACC, align:"right"}); }
-    ty += 26;
+    need(60); y += 18; h2("Modalités de paiement");
+    const txt = paid ? "Cette facture a été payée le " + dLong((t.paiement && t.paiement.date) || t.date) + ". Merci!" : (doc.dateTravaux ? "Les travaux décrits ci-dessus ont été complétés le " + dLong(doc.dateTravaux) + ". " : "") + (doc.echeance && doc.echeance > doc.date ? "Le solde est payable d'ici le " + dLong(doc.echeance) + "." : "Le solde est payable à réception de la présente facture.");
+    wrapText(txt, 10, false, W).forEach(s => { need(13); T(M, y, s, {size:10}); y += 13; });
+    if (pay && !paid){ y += 3; const w = T(M, y, "Mode de paiement :", {size:10, bold:true}); T(M + w + 4, y, pay, {size:10}); y += 13; }
+  } else {
+    need(70); y += 14; h2("Modalités");
+    String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
+    const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
+    if (pay) bullet([["Mode de paiement : "], [pay, true]]);
+    /* Acceptation */
+    need(120); y += 8; h2("Acceptation " + G.de);
+    wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
+    y += 8; [[M, nom], [rx2, "Client"]].forEach(([x, s]) => { T(x, y, s, {size:10, bold:true}); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, "Signature", {size:8.5, color:C.mut}); T(x, y + 67, "Date : ______________________", {size:8.5, color:C.mut}); });
+    y += 72;
   }
-  let my = y + 14; P.text(M, my, terms, {size:9, bold:true}); my += 14;
-  msg.forEach(s => { P.text(M, my, s, {size:9, color:MUT}); my += 11.5; });
-  y = Math.max(ty, my) + 10;
-  if (!isF){
-    y += 26; P.text(M, y, "Accepté par le client", {size:8.5, color:MUT}); P.line(M + 100, y + 2, M + 300, y + 2, {color:"#888888"}); P.text(M + 320, y, "Date", {size:8.5, color:MUT}); P.line(M + 345, y + 2, RX, y + 2, {color:"#888888"});
+  /* Remerciements */
+  const msg = String(doc.message || "").trim(), extra = msg && !/^merci de votre confiance\s*[.!]?$/i.test(msg) ? wrapText(msg, 9, false, W - 40) : [];
+  if (y + 30 + extra.length * 12 > P.H - 56) newPage(); y += 16; T(P.W / 2, y, "Merci de votre confiance.", {size:11, bold:true, color:C.g, align:"center"}); y += 15;
+  extra.forEach(s => { T(P.W / 2, y, s, {size:9, italic:true, color:C.mut, align:"center"}); y += 12; });
+  /* Pied de page */
+  const pied = [nom, r.telephone, r.courriel].filter(Boolean).join("  |  ");
+  P.pages.forEach((_, i) => { P.at(i); P.line(M, P.H - 50, RX, P.H - 50, {color:C.line, w:0.6}); T(P.W / 2, P.H - 36, pied + (P.pages.length > 1 ? "   ·   Page " + (i + 1) + " de " + P.pages.length : ""), {size:8.5, color:C.mut, align:"center"}); });
+  return P;
+}
+function docPDF(kind, doc, logo){ return docLayout(kind, doc, logo).bytes(); }
+/* Les mêmes pages en images JPEG (pour Snapchat, Messenger, les textos) */
+async function pdfImages(P, scale){
+  scale = scale || 2.5; const out = [];
+  for (const list of P.draws){
+    const c = document.createElement("canvas"); c.width = Math.round(P.W * scale); c.height = Math.round(P.H * scale);
+    const g = c.getContext("2d"); g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, c.width, c.height); g.scale(scale, scale); g.textBaseline = "alphabetic";
+    for (const o of list){
+      if (o.k === "t"){ g.fillStyle = o.color || "#000000"; g.font = (o.italic ? "italic " : "") + (o.bold ? "bold " : "") + o.size + "px Helvetica, Arial, sans-serif"; g.textAlign = "left"; try { g.letterSpacing = (o.ls || 0) + "px"; } catch(e){} g.fillText(o.s, o.x, o.y); }
+      else if (o.k === "l"){ g.strokeStyle = o.color; g.lineWidth = o.w; g.beginPath(); g.moveTo(o.x1, o.y1); g.lineTo(o.x2, o.y2); g.stroke(); }
+      else if (o.k === "r"){ g.fillStyle = o.color; g.fillRect(o.x, o.y, o.w, o.h); }
+      else if (o.k === "i"){ try { const bm = await createImageBitmap(new Blob([o.img.data], {type:"image/jpeg"})); g.drawImage(bm, o.x, o.y, o.w, o.h); } catch(e){} }
+    }
+    out.push(await new Promise(res => c.toBlob(res, "image/jpeg", 0.9)));
   }
-  /* Pied de page : numéros de taxes et pagination */
-  const nos = [r.noTPS ? "No TPS : " + r.noTPS : "", r.noTVQ && quebec() ? "No TVQ : " + r.noTVQ : "", r.numero && !/RT\d/i.test(r.numero) ? "NEQ : " + r.numero : ""].filter(Boolean).join("     ");
-  P.pages.forEach((_, i) => { P.at(i); P.line(M, P.H - 52, RX, P.H - 52, {color:LINE, w:0.5}); if (nos) P.text(M, P.H - 38, nos, {size:8, color:MUT}); P.text(RX, P.H - 38, (r.nom || "") + (P.pages.length > 1 ? "   ·   Page " + (i + 1) + " de " + P.pages.length : ""), {size:8, color:MUT, align:"right"}); });
-  return P.bytes();
+  return out;
+}
+async function docImages(kind, doc, logo){
+  const P = docLayout(kind, doc, logo), blobs = await pdfImages(P), base = fileSafe(doc.numero + " " + (doc.client || ""));
+  return blobs.filter(Boolean).map((b, i) => new File([b], base + (blobs.length > 1 ? "-page-" + (i + 1) : "") + ".jpg", {type:"image/jpeg"}));
 }
 
 /* ----- ZIP (sans compression) ----- */
@@ -3680,10 +3842,6 @@ function nextNum(kind, date){
   const y = String(date || today()).slice(0, 4), P = kind === "facture" ? "F" : "D", list = kind === "facture" ? S.d.factures : S.d.devis; let max = 0;
   list.forEach(x => { const m = String(x.numero || "").match(/^([A-Za-z]+)-(\d{4})-(\d+)$/); if (m && m[1].toUpperCase() === P && m[2] === y) max = Math.max(max, Number(m[3])); });
   return P + "-" + y + "-" + String(max + 1).padStart(3, "0");
-}
-function docTotals(doc){
-  const st = r2((doc.lignes || []).reduce((s, l) => s + r2((Number(l.qte) || 0) * (Number(l.prix) || 0)), 0)), [a, b] = taxRates(doc.codeTaxe || "AUCUNE");
-  const tx = r2(st * a / 100), tq = r2(st * b / 100); return {st, tx, tq, total: r2(st + tx + tq)};
 }
 function facStatus(f){
   if (f.statut === "annulee") return {k:"annulee", l:"Annulée", cls:"open"};
@@ -3727,14 +3885,14 @@ function renderVentes(){
     put($("vt-sheet"), list.length ? '<table><thead><tr><th>Numéro</th><th>Client</th><th class="hide-sm">Date</th><th>Échéance</th><th class="num">Total</th><th>État</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>' +
       list.map(({f, s, tot: tt}) => { const t = S.tmap[f.transaction];
         return '<tr><td><button class="btn link doc-no" type="button" data-fac="' + esc(f.id) + '">' + esc(f.numero) + '</button></td><td>' + esc(f.client) + ((f.lignes[0] || {}).description ? '<br><small class="muted">' + esc(f.lignes[0].description) + "</small>" : "") + '</td><td class="fig hide-sm">' + dShort(f.date) + '</td><td class="fig">' + (f.echeance && f.echeance > f.date ? dShort(f.echeance) : "À réception") + '</td><td class="num">' + fmt(tt) + '</td><td><span class="chip ' + s.cls + '">' + esc(s.l) + '</span></td><td><div class="rowacts">' +
-          (t && unpaid(t) ? payRowHtml(t, "ar") : "") + (S.payRow === (t && t.id) ? "" : '<button class="icon-btn" type="button" data-fpdf="' + esc(f.id) + '" title="PDF" aria-label="Voir le PDF">' + ico("i-pdf") + '</button><button class="icon-btn" type="button" data-fmail="' + esc(f.id) + '" title="Envoyer par courriel" aria-label="Envoyer par courriel">' + ico("i-mail") + "</button>") + "</div></td></tr>"; }).join("") +
+          (t && unpaid(t) ? payRowHtml(t, "ar") : "") + (S.payRow === (t && t.id) ? "" : '<button class="icon-btn" type="button" data-fpdf="' + esc(f.id) + '" title="PDF" aria-label="Voir le PDF">' + ico("i-pdf") + '</button><button class="icon-btn" type="button" data-fmail="' + esc(f.id) + '" title="Envoyer (courriel, texto, Messenger…)" aria-label="Envoyer">' + ico("i-send") + "</button>") + "</div></td></tr>"; }).join("") +
       '</tbody><tfoot><tr><td colspan="4">Total</td><td class="num">' + fmt(list.filter(x => x.s.k !== "annulee").reduce((s, x) => s + x.tot, 0)) + '</td><td colspan="2"></td></tr></tfoot></table>'
       : '<div class="empty">' + ico("i-invoice") + "<p>" + (F.length ? "Aucune facture ne correspond à ces filtres." : "Crée ta première facture : elle est numérotée automatiquement (" + nextNum("facture") + "), calcule la TPS et la TVQ, s'inscrit dans tes revenus à encaisser et se transforme en PDF à envoyer.") + '</p>' + (F.length ? "" : '<div class="actions"><button class="btn primary" type="button" data-new-doc="facture">' + ico("i-plus") + "Nouvelle facture</button></div>") + "</div>");
   } else if (S.vt === "devis"){
     const list = V.map(v => ({v, s:devStatus(v)})).filter(x => match(x.v, "devis") && (S.vtF === "tous" || x.s.k === S.vtF || (S.vtF === "ferme" && (x.s.k === "refuse" || x.s.k === "expire")))).sort((a, b) => b.v.date.localeCompare(a.v.date) || b.v.numero.localeCompare(a.v.numero));
     put($("vt-sheet"), list.length ? '<table><thead><tr><th>Numéro</th><th>Client</th><th class="hide-sm">Date</th><th>Valide jusqu\'au</th><th class="num">Total</th><th>État</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>' +
       list.map(({v, s}) => '<tr><td><button class="btn link doc-no" type="button" data-dev="' + esc(v.id) + '">' + esc(v.numero) + '</button></td><td>' + esc(v.client) + ((v.lignes[0] || {}).description ? '<br><small class="muted">' + esc(v.lignes[0].description) + "</small>" : "") + '</td><td class="fig hide-sm">' + dShort(v.date) + '</td><td class="fig">' + dShort(v.echeance) + '</td><td class="num">' + fmt(docTotals(v).total) + '</td><td><span class="chip ' + s.cls + '">' + esc(s.l) + '</span></td><td><div class="rowacts">' +
-        (s.k === "facture" || s.k === "refuse" ? "" : '<button class="btn sm" type="button" data-dfac="' + esc(v.id) + '">Facturer</button>') + '<button class="icon-btn" type="button" data-dpdf="' + esc(v.id) + '" title="PDF" aria-label="Voir le PDF">' + ico("i-pdf") + '</button><button class="icon-btn" type="button" data-dmail="' + esc(v.id) + '" title="Envoyer par courriel" aria-label="Envoyer par courriel">' + ico("i-mail") + "</button></div></td></tr>").join("") + "</tbody></table>"
+        (s.k === "facture" || s.k === "refuse" ? "" : '<button class="btn sm" type="button" data-dfac="' + esc(v.id) + '">Facturer</button>') + '<button class="icon-btn" type="button" data-dpdf="' + esc(v.id) + '" title="PDF" aria-label="Voir le PDF">' + ico("i-pdf") + '</button><button class="icon-btn" type="button" data-dmail="' + esc(v.id) + '" title="Envoyer (courriel, texto, Messenger…)" aria-label="Envoyer">' + ico("i-send") + "</button></div></td></tr>").join("") + "</tbody></table>"
       : '<div class="empty">' + ico("i-quote") + "<p>" + (V.length ? "Aucun devis ne correspond à ces filtres." : "Un devis présente le prix d'un travail avant de le faire. Quand le client accepte, un clic le transforme en facture, sans retaper les lignes.") + "</p>" + (V.length ? "" : '<div class="actions"><button class="btn primary" type="button" data-new-doc="devis">' + ico("i-plus") + "Nouveau devis</button></div>") + "</div>");
   } else {
     const rows = S.d.clients.filter(c => !q || norm([c.nom, c.courriel, c.telephone, c.adresse].join(" ")).includes(q)).sort((a, b) => a.nom.localeCompare(b.nom, "fr")).map(c => {
@@ -3764,8 +3922,8 @@ $("view-ventes").addEventListener("click", e => {
   else if (ds.dev) openDoc("devis", S.d.devis.find(v => v.id === ds.dev));
   else if (ds.fpdf) makeDocPDF("facture", ds.fpdf, true);
   else if (ds.dpdf) makeDocPDF("devis", ds.dpdf, true);
-  else if (ds.fmail) mailDoc("facture", ds.fmail);
-  else if (ds.dmail) mailDoc("devis", ds.dmail);
+  else if (ds.fmail) shareDoc("facture", ds.fmail);
+  else if (ds.dmail) shareDoc("devis", ds.dmail);
   else if (ds.dfac) devisToFacture(S.d.devis.find(v => v.id === ds.dfac));
   else if (b.hasAttribute("data-cli-new")) editClient(null);
   else if (ds.cliEdit) editClient(S.d.clients.find(c => c.id === ds.cliEdit));
@@ -3777,7 +3935,7 @@ $("view-ventes").addEventListener("click", e => {
 });
 function devisToFacture(v){
   if (!v) return;
-  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id});
+  openDoc("facture", null, {client:v.client, lignes:v.lignes, codeTaxe:v.codeTaxe, projet:v.projet, message:v.message, fromDevis:v.id, taxesIncluses:!!v.taxesIncluses, travaux:v.travaux || "", lieu:v.lieu || "", dateTravaux:v.dateTravaux || ""});
 }
 
 /* Éditeur de facture ou de devis */
@@ -3786,11 +3944,21 @@ const TERMS_D = [["15","Pendant 15 jours"],["30","Pendant 30 jours"],["60","Pend
 const daysBetween = (a, b) => { const [y1, m1, d1] = a.split("-").map(Number), [y2, m2, d2] = b.split("-").map(Number); return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 864e5); };
 function openDoc(kind, doc, preset){
   const p = preset || {}, r = R(), isF = kind === "facture";
-  S.doc = {kind, orig: doc || null, lignes: doc ? clone(doc.lignes) : (p.lignes ? clone(p.lignes) : [{description:"", qte:1, prix:0}]), numAuto: !doc, fromDevis: p.fromDevis || "", pay:"", confirm:null};
-  if (!S.doc.lignes.length) S.doc.lignes.push({description:"", qte:1, prix:0});
+  S.doc = {kind, orig: doc || null, lignes: doc ? clone(doc.lignes) : (p.lignes ? clone(p.lignes) : [{type:"service", description:"", qte:1, unite:"", prix:0}]), numAuto: !doc, fromDevis: p.fromDevis || "", pay:"", confirm:null,
+    ttc: docV2() && !!(doc ? doc.taxesIncluses : (p.taxesIncluses != null ? p.taxesIncluses : r.docTTC))};
+  if (!S.doc.lignes.length) S.doc.lignes.push({type:"service", description:"", qte:1, unite:"", prix:0});
+  S.doc.lignes.forEach(l => { if (!l.type) l.type = "service"; });
+  $("d-travaux").value = doc ? (doc.travaux || "") : (p.travaux || ""); $("d-lieu").value = doc ? (doc.lieu || "") : (p.lieu || ""); $("d-dtrav").value = doc ? (doc.dateTravaux || "") : (p.dateTravaux || "");
+  $("d-dtrav-lbl").textContent = isF ? "Date des travaux" : "Date prévue des travaux";
+  $("d-ttc").hidden = !docV2(); docTTCset();
+  $("dl-unites").innerHTML = LUNITES.map(u => '<option value="' + esc(u) + '">').join("");
+  $("d-lt-add").innerHTML = LT.filter(t => t.k !== "rabais" || docV2()).map(t => '<button type="button" class="chip-btn' + (t.k === "rabais" ? " alt" : "") + '" data-addlt="' + t.k + '">' + ico("i-plus") + esc(t.k === "service" ? "Service" : t.l) + "</button>").join("");
+  const tfs = (r.tarifs || []);
+  $("d-add-tarif").hidden = !tfs.length;
+  $("d-add-tarif").innerHTML = '<option value="">+ Ajouter un tarif enregistré</option>' + LT.map(t => { const L = tfs.filter(x => (x.type || "service") === t.k); return L.length ? '<optgroup label="' + esc(t.l) + '">' + L.map(x => '<option value="' + esc(x.id) + '">' + esc(x.description + " · " + fmt(x.prix) + (x.unite ? " / " + x.unite : "")) + "</option>").join("") + "</optgroup>" : ""; }).join("");
   $("d-err").hidden = true;
-  $("d-kind").textContent = isF ? "Facture" : "Devis";
-  $("d-title").textContent = doc ? doc.numero + " · " + doc.client : (isF ? (p.fromDevis ? "Facture à partir du devis " + ((S.d.devis.find(v => v.id === p.fromDevis) || {}).numero || "") : "Nouvelle facture") : "Nouveau devis");
+  $("d-kind").textContent = isF ? "Facture" : docTitre("devis");
+  $("d-title").textContent = doc ? doc.numero + " · " + doc.client : (isF ? (p.fromDevis ? "Facture à partir " + docGenre("devis").de + " " + ((S.d.devis.find(v => v.id === p.fromDevis) || {}).numero || "") : "Nouvelle facture") : (docTitre("devis") === "Devis" ? "Nouveau devis" : "Nouvelle soumission"));
   $("d-client").value = doc ? doc.client : (p.client || "");
   $("d-date").value = doc ? doc.date : (p.date || today());
   $("d-num").value = doc ? doc.numero : nextNum(kind, $("d-date").value);
@@ -3845,16 +4013,30 @@ function renderDocExtra(){
   el.innerHTML = parts.join(" "); el.hidden = !parts.length;
 }
 function renderLines(){
-  const L = S.doc.lignes, pm = {}; S.d.produits.forEach(x => pm[x.id] = x);
-  $("d-lines").innerHTML = '<div class="le-row head"><span>Description</span><span class="num-h">Qté</span><span class="num-h">Prix unitaire</span><span class="num-h">Montant</span><span></span></div>' +
-    L.map((l, i) => { const pr = l.produit ? pm[l.produit] : null;
-      return '<div class="le-row" data-l="' + i + '"><input class="ctl" data-f="description" value="' + esc(l.description) + '" maxlength="300" placeholder="Ex. : Main-d\'œuvre, installation" aria-label="Description de la ligne ' + (i + 1) + '"><input class="ctl fig" data-f="qte" inputmode="decimal" value="' + esc(fq(l.qte)) + '" aria-label="Quantité"><input class="ctl fig" data-f="prix" inputmode="decimal" value="' + (l.prix ? esc(n2s(l.prix)) : "") + '" placeholder="0,00" aria-label="Prix unitaire"><span class="amt" data-amt="' + i + '">' + fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))) + '</span><button type="button" class="icon-btn sm" data-rmline="' + i + '" aria-label="Retirer la ligne"' + (L.length < 2 ? " disabled" : "") + ">" + ico("i-x") + "</button>" +
+  const L = S.doc.lignes, pm = {}, types = LT.filter(t => t.k !== "rabais" || docV2() || L.some(l => l.type === "rabais")); S.d.produits.forEach(x => pm[x.id] = x);
+  $("d-lines").innerHTML = L.map((l, i) => { const pr = l.produit ? pm[l.produit] : null, t = LTM[ligneType(l)], mt = ligneMt(l);
+      return '<div class="le-row le2' + (l.type === "rabais" ? " rabais" : "") + '" data-l="' + i + '">' +
+        '<textarea class="ctl le-desc" data-f="description" rows="1" maxlength="600" placeholder="' + esc(t.ph) + '" aria-label="Description de la ligne ' + (i + 1) + '">' + esc(l.description) + "</textarea>" +
+        '<select class="ctl le-type" data-f="type" aria-label="Type">' + types.map(x => '<option value="' + x.k + '"' + (x.k === t.k ? " selected" : "") + ">" + esc(x.l) + "</option>").join("") + "</select>" +
+        '<label class="le-mini"><span>Qté</span><input class="ctl fig" data-f="qte" inputmode="decimal" value="' + esc(fq(l.qte)) + '"></label>' +
+        '<label class="le-mini"><span>Unité</span><input class="ctl" data-f="unite" list="dl-unites" maxlength="12" value="' + esc(l.unite || "") + '"></label>' +
+        '<label class="le-mini"><span>' + (S.doc.ttc ? "Prix (tx incl.)" : "Prix unitaire") + '</span><input class="ctl fig" data-f="prix" inputmode="decimal" value="' + (l.prix ? esc(n2s(l.prix)) : "") + '" placeholder="0,00"></label>' +
+        '<span class="amt" data-amt="' + i + '">' + (mt < 0 ? "−" : "") + fmt(Math.abs(mt)) + "</span>" +
+        '<span class="le-acts"><button type="button" class="icon-btn sm" data-tfsave="' + i + '" title="Garder comme tarif" aria-label="Garder comme tarif">' + ico("i-star") + '</button><button type="button" class="icon-btn sm" data-rmline="' + i + '" aria-label="Retirer la ligne"' + (L.length < 2 ? " disabled" : "") + ">" + ico("i-x") + "</button></span>" +
         (pr ? '<small data-stock="' + i + '">' + ico("i-box") + " Produit du stock : " + esc(fq(stockOf(pr, S.doc.orig ? S.doc.orig.id : null))) + " " + esc(pr.unite || "unité(s)") + " disponible(s)</small>" : "") + "</div>"; }).join("");
+  $("d-lines").querySelectorAll(".le-desc").forEach(autoGrow);
 }
+const autoGrow = el => { el.style.height = "auto"; el.style.height = Math.min(220, el.scrollHeight + 2) + "px"; };
+/* Les nouveautés des factures (types de frais, rabais, taxes incluses) demandent que l'ordinateur soit en version 3.7 */
+const docV2 = () => { if (!CLOUD) return true; const t = (NU.base && NU.base.telephone) || (S.d && S.d.telephone) || {}; return Array.isArray(t.ops) && t.ops.includes("doc-v2"); };
+function docTTCset(){ $("d-ttc").querySelectorAll("[data-ttc]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.ttc === "1") === !!S.doc.ttc))); }
+function ligneDe(type, extra){ return Object.assign({type, description:"", qte:1, unite:(LTM[type] || {}).u || "", prix:0}, extra || {}); }
+function addLigne(line){ const L = S.doc.lignes, empty = L.length === 1 && !L[0].description && !L[0].prix; if (empty) L[0] = line; else L.push(line); renderLines(); docRecalc(); const ins = $("d-lines").querySelectorAll('[data-f="description"]'); const el = ins[empty ? 0 : ins.length - 1]; if (el && !line.description) el.focus(); }
 function docRecalc(){
-  const doc = {lignes:S.doc.lignes, codeTaxe:$("d-code").value}, t = docTotals(doc);
-  $("d-tot").innerHTML = '<div><span>Sous-total</span><span>' + fmt(t.st) + "</span></div>" + taxLines(doc.codeTaxe, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="grand"><span>Total</span><span>' + fmt(t.total) + "</span></div>";
-  S.doc.lignes.forEach((l, i) => { const el = $("d-lines").querySelector('[data-amt="' + i + '"]'); if (el) el.textContent = fmt(r2((Number(l.qte) || 0) * (Number(l.prix) || 0))); });
+  const doc = {lignes:S.doc.lignes, codeTaxe:$("d-code").value, taxesIncluses:S.doc.ttc}, t = docTotals(doc), G = docGroupes(doc);
+  $("d-tot").innerHTML = (G.length > 1 ? G.map(g => '<div class="muted small"><span>' + esc(g.t.g) + "</span><span>" + (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)) + "</span></div>").join("") + '<div class="sep"></div>' : "") +
+    '<div><span>' + (t.ttc ? "Montant avant taxes" : "Sous-total") + "</span><span>" + fmt(t.st) + "</span></div>" + taxLines(doc.codeTaxe, t).map(([k, v]) => '<div class="muted"><span>' + esc(k) + "</span><span>" + fmt(v) + "</span></div>").join("") + '<div class="grand"><span>Total' + (t.ttc ? " (taxes incluses)" : "") + "</span><span>" + fmt(t.total) + "</span></div>";
+  S.doc.lignes.forEach((l, i) => { const el = $("d-lines").querySelector('[data-amt="' + i + '"]'); if (el){ const m = ligneMt(l); el.textContent = (m < 0 ? "−" : "") + fmt(Math.abs(m)); } });
   const r = R(), msgs = [];
   if (S.doc.kind === "facture" && t.total >= 100 && (t.tx || t.tq) && ((t.tx && !r.noTPS) || (t.tq && !r.noTVQ))) msgs.push("Ajoute tes numéros de TPS et de TVQ dans les Réglages (section Factures et devis) : ils doivent figurer sur les factures de 100 $ et plus pour que ton client récupère les taxes.");
   const pm = {}; S.d.produits.forEach(x => pm[x.id] = x); const need = {};
@@ -3873,26 +4055,43 @@ $("d-num").addEventListener("input", () => { S.doc.numAuto = false; });
 $("d-terms").addEventListener("change", () => { if ($("d-terms").value !== "autre") $("d-ech").value = addDays($("d-date").value || today(), Number($("d-terms").value) || 0); else $("d-ech").focus(); });
 $("d-ech").addEventListener("change", () => { const n = String(daysBetween($("d-date").value, $("d-ech").value)); $("d-terms").value = [...$("d-terms").options].some(o => o.value === n) ? n : "autre"; });
 $("d-code").addEventListener("change", docRecalc);
-$("d-add-line").addEventListener("click", () => { S.doc.lignes.push({description:"", qte:1, prix:0}); renderLines(); docRecalc(); const ins = $("d-lines").querySelectorAll('[data-f="description"]'); ins[ins.length - 1].focus(); });
+$("d-lt-add").addEventListener("click", e => { const b = e.target.closest("[data-addlt]"); if (b) addLigne(ligneDe(b.dataset.addlt)); });
+$("d-ttc").addEventListener("click", e => { const b = e.target.closest("[data-ttc]"); if (!b) return; S.doc.ttc = b.dataset.ttc === "1"; docTTCset(); renderLines(); docRecalc(); });
+/* Prix d'un tarif ou d'un produit dans le mode de prix de la facture (avant taxes ou taxes incluses) */
+function prixPour(prix, ttc){ const [a, b] = taxRates($("d-code").value || "AUCUNE"); if (!!ttc === !!S.doc.ttc || !(a || b)) return r2(prix); return ttc ? r2(prix * 100 / (100 + a + b)) : r2(prix * (100 + a + b) / 100); }
+$("d-add-tarif").addEventListener("change", e => {
+  const t = (R().tarifs || []).find(x => x.id === e.target.value); e.target.value = ""; if (!t) return;
+  addLigne(ligneDe(t.type || "service", {description: t.description, unite: t.unite || "", prix: prixPour(t.prix, t.ttc)}));
+});
 $("d-add-prod").addEventListener("change", e => {
   const pr = S.d.produits.find(x => x.id === e.target.value); e.target.value = ""; if (!pr) return;
-  const L = S.doc.lignes, empty = L.length === 1 && !L[0].description && !L[0].prix ? 0 : -1, line = {description: pr.nom + (pr.code ? " (" + pr.code + ")" : ""), qte:1, prix: Number(pr.prix) || 0, produit: pr.id};
-  if (empty === 0) L[0] = line; else L.push(line);
-  renderLines(); docRecalc();
+  addLigne(ligneDe("materiaux", {description: pr.nom + (pr.code ? " (" + pr.code + ")" : ""), unite: pr.unite || "unité", prix: prixPour(Number(pr.prix) || 0, false), produit: pr.id}));
 });
 $("d-lines").addEventListener("input", e => {
   const el = e.target.closest("[data-f]"), row = e.target.closest("[data-l]"); if (!el || !row) return;
   const l = S.doc.lignes[Number(row.dataset.l)], f = el.dataset.f;
-  if (f === "description") l.description = el.value; else { const v = num(el.value); l[f] = isFinite(v) ? v : 0; }
+  if (f === "description"){ l.description = el.value; autoGrow(el); } else if (f === "unite") l.unite = el.value; else if (f !== "type"){ const v = num(el.value); l[f] = isFinite(v) ? v : 0; }
   docRecalc();
+});
+$("d-lines").addEventListener("change", e => {
+  const el = e.target.closest('[data-f="type"]'), row = e.target.closest("[data-l]"); if (!el || !row) return;
+  const l = S.doc.lignes[Number(row.dataset.l)], was = LTM[ligneType(l)]; l.type = el.value; if (!l.unite || l.unite === was.u) l.unite = (LTM[l.type] || {}).u || "";
+  renderLines(); docRecalc();
 });
 $("d-lines").addEventListener("focusout", e => { const el = e.target.closest('[data-f="prix"]'); if (el && el.value.trim()){ const v = num(el.value); if (isFinite(v)) el.value = n2s(v); } });
 $("d-lines").addEventListener("keydown", e => {
-  if (e.key !== "Enter" || !e.target.closest("[data-f]")) return;
+  if (e.key !== "Enter" || !e.target.closest("[data-f]") || (e.target.tagName === "TEXTAREA" && e.shiftKey)) return;
   e.preventDefault(); const row = e.target.closest("[data-l]"), i = Number(row.dataset.l);
-  if (i === S.doc.lignes.length - 1) $("d-add-line").click(); else { const n = $("d-lines").querySelector('[data-l="' + (i + 1) + '"] [data-f="description"]'); if (n) n.focus(); }
+  if (i === S.doc.lignes.length - 1) addLigne(ligneDe(ligneType(S.doc.lignes[i]))); else { const n = $("d-lines").querySelector('[data-l="' + (i + 1) + '"] [data-f="description"]'); if (n) n.focus(); }
 });
-$("d-lines").addEventListener("click", e => { const b = e.target.closest("[data-rmline]"); if (!b) return; S.doc.lignes.splice(Number(b.dataset.rmline), 1); if (!S.doc.lignes.length) S.doc.lignes.push({description:"", qte:1, prix:0}); renderLines(); docRecalc(); });
+$("d-lines").addEventListener("click", e => {
+  const sv = e.target.closest("[data-tfsave]");
+  if (sv){ const l = S.doc.lignes[Number(sv.dataset.tfsave)]; if (!l || !String(l.description || "").trim() || !(Number(l.prix) > 0)) return toast("Entre la description et le prix de la ligne avant de la garder comme tarif.");
+    const t = {id: uid("tf"), type: ligneType(l), description: String(l.description).trim(), unite: l.unite || "", prix: r2(l.prix), ttc: !!S.doc.ttc};
+    if ((R().tarifs || []).some(x => norm(x.description) === norm(t.description) && x.prix === t.prix)) return toast("Ce tarif est déjà enregistré.");
+    mutate(d => { d.reglages.tarifs = (d.reglages.tarifs || []).concat([t]); }, "Tarif enregistré : il est dans la liste « Ajouter un tarif enregistré »").then(ok => { if (ok && S.doc){ const tfs = R().tarifs; $("d-add-tarif").hidden = false; $("d-add-tarif").innerHTML = '<option value="">+ Ajouter un tarif enregistré</option>' + LT.map(x => { const L = tfs.filter(y => (y.type || "service") === x.k); return L.length ? '<optgroup label="' + esc(x.l) + '">' + L.map(y => '<option value="' + esc(y.id) + '">' + esc(y.description + " · " + fmt(y.prix) + (y.unite ? " / " + y.unite : "")) + "</option>").join("") + "</optgroup>" : ""; }).join(""); } });
+    return; }
+  const b = e.target.closest("[data-rmline]"); if (!b) return; S.doc.lignes.splice(Number(b.dataset.rmline), 1); if (!S.doc.lignes.length) S.doc.lignes.push(ligneDe("service")); renderLines(); docRecalc(); });
 $("doc-form").addEventListener("click", e => {
   const p = e.target.closest("[data-dpay]"); if (p){ S.doc.pay = p.dataset.dpay; renderDocPay(); return; }
   const a = e.target.closest("[data-dact]"); if (!a) return; const act = a.dataset.dact, o = S.doc.orig, kind = S.doc.kind;
@@ -3924,9 +4123,10 @@ function syncFactureTx(d, f, pay){
   if (f.pdf){ t.recus = (t.recus || []).filter(r => r.fichier !== f.pdf); t.recus.push({fichier:f.pdf, nom:f.numero + ".pdf"}); }
 }
 $("d-save-pdf").addEventListener("click", () => { S.doc.withPdf = true; $("doc-form").requestSubmit(); });
+$("d-save-send").addEventListener("click", () => { S.doc.withSend = true; $("doc-form").requestSubmit(); });
 $("doc-form").addEventListener("submit", async e => {
   e.preventDefault(); const err = $("d-err"); err.hidden = true;
-  const withPdf = S.doc.withPdf; S.doc.withPdf = false;
+  const withPdf = S.doc.withPdf, withSend = S.doc.withSend; S.doc.withPdf = false; S.doc.withSend = false;
   const fail = (m, focus) => { err.textContent = m; err.hidden = false; if (focus) $(focus).focus(); };
   const kind = S.doc.kind, o = S.doc.orig, isF = kind === "facture", list = isF ? S.d.factures : S.d.devis, now = new Date().toISOString();
   const client = $("d-client").value.trim(), date = $("d-date").value;
@@ -3934,10 +4134,12 @@ $("doc-form").addEventListener("submit", async e => {
   if (!date) return fail("Choisis la date.", "d-date");
   const numero = $("d-num").value.trim() || nextNum(kind, date);
   if (list.some(x => x.numero === numero && (!o || x.id !== o.id))) return fail("Le numéro " + numero + " est déjà utilisé. Prends le suivant : " + nextNum(kind, date) + ".", "d-num");
-  const lignes = S.doc.lignes.map(l => { const x = {description:String(l.description || "").trim(), qte: Number(l.qte) || 0, prix: r2(l.prix)}; if (l.produit) x.produit = l.produit; return x; }).filter(l => l.description || l.prix);
+  const lignes = S.doc.lignes.map(l => { const x = {type: ligneType(l), description:String(l.description || "").trim(), qte: Number(l.qte) || 0, unite: String(l.unite || "").trim(), prix: r2(l.prix)}; if (l.produit) x.produit = l.produit; return x; }).filter(l => l.description || l.prix);
   if (!lignes.length) return fail("Ajoute au moins une ligne avec une description et un prix.");
   if (lignes.some(l => !l.description)) return fail("Chaque ligne doit avoir une description.");
-  const doc = Object.assign({}, o || {id: uid(isF ? "fa" : "dv"), creeLe: now}, {numero, date, echeance: $("d-ech").value && $("d-ech").value >= date ? $("d-ech").value : date, client, lignes, codeTaxe: $("d-code").value, projet: $("d-proj").value, message: $("d-msg").value.trim(), note: $("d-note").value.trim(), modifieLe: now});
+  const doc = Object.assign({}, o || {id: uid(isF ? "fa" : "dv"), creeLe: now}, {numero, date, echeance: $("d-ech").value && $("d-ech").value >= date ? $("d-ech").value : date, client, lignes, codeTaxe: $("d-code").value, projet: $("d-proj").value, message: $("d-msg").value.trim(), note: $("d-note").value.trim(), modifieLe: now,
+    taxesIncluses: !!S.doc.ttc, travaux: $("d-travaux").value.trim(), lieu: $("d-lieu").value.trim(), dateTravaux: $("d-dtrav").value || ""});
+  if (!doc.taxesIncluses) delete doc.taxesIncluses; ["travaux","lieu","dateTravaux"].forEach(k => { if (!doc[k]) delete doc[k]; });
   if (isF){ doc.categorie = $("d-cat").value; doc.statut = o ? (o.statut || "emise") : "emise"; }
   else doc.statut = o && o.statut === "facture" ? "facture" : $("d-etat").value;
   const tt = docTotals(doc); Object.assign(doc, {sousTotal: tt.st, tps: tt.tx, tvq: tt.tq, total: tt.total});
@@ -3949,11 +4151,13 @@ $("doc-form").addEventListener("submit", async e => {
     if (fromDevis && isF){ doc.devis = fromDevis; const v = d.devis.find(x => x.id === fromDevis); if (v){ v.statut = "facture"; v.facture = doc.id; } }
     const L = isF ? d.factures : d.devis, i = L.findIndex(x => x.id === doc.id); if (i >= 0) L[i] = doc; else L.push(doc);
     if (isF) syncFactureTx(d, doc, pay);
+    if (docV2() && !!d.reglages.docTTC !== !!doc.taxesIncluses) d.reglages.docTTC = !!doc.taxesIncluses;
   }, o ? (isF ? "Facture " : "Devis ") + numero + " modifié" + (isF ? "e" : "") : (isF ? "Facture " + numero + " créée" + (pay ? " et payée" : ", à encaisser") : "Devis " + numero + " créé"));
   if (!ok) return;
   closeDoc();
   if (S.view !== "ventes" && !withPdf) go("ventes", () => { S.vt = isF ? "factures" : "devis"; });
   else if (S.view === "ventes"){ S.vt = isF ? "factures" : "devis"; renderVentes(); }
+  if (withSend){ await shareDoc(kind, doc.id); return; }
   if (withPdf || doc.pdf) await makeDocPDF(kind, doc.id, withPdf);
 });
 async function makeDocPDF(kind, id, open, quiet){
@@ -3969,6 +4173,41 @@ async function makeDocPDF(kind, id, open, quiet){
     else if (!quiet) toast("PDF enregistré : " + winPath(path));
     return path;
   } catch(e){ console.error(e); toast("Création du PDF impossible : " + (e.message || e)); return null; }
+}
+/* Envoyer une facture ou une soumission : PDF ou image par le partage du téléphone ou de Windows, courriel, texte à copier */
+async function shareDoc(kind, id){
+  const isF = kind === "facture", doc = (isF ? S.d.factures : S.d.devis).find(x => x.id === id); if (!doc) return;
+  const G = docGenre(kind), c = clientOf(doc) || {}, msg = docMessage(kind, doc), canShare = !!(navigator.canShare && navigator.share);
+  const tel = String(c.telephone || "").replace(/[^\d+]/g, ""), mail = String(c.courriel || "").replace(/[^\w.@+-]/g, "");
+  const opt = (k, icon, t, s) => '<button type="button" class="send-opt" data-send="' + k + '">' + ico(icon) + "<span><b>" + esc(t) + "</b><small>" + esc(s) + "</small></span></button>";
+  openForm("Envoyer " + G.la + " " + doc.numero, '<p class="muted small">' + esc(doc.client) + " · " + esc(fmt(docTotals(doc).total)) + '</p><label class="field full"><span>Message</span><textarea id="snd-msg" class="ctl" rows="7">' + esc(msg) + "</textarea></label>" +
+    '<div class="send-opts">' + (canShare ? opt("pdf", "i-pdf", "Envoyer le PDF", "Courriel, Messenger, WhatsApp, Outlook…") + opt("img", "i-image", "Envoyer en image", "Texto, Snapchat, Messenger, Instagram…") : "") +
+    (mail ? opt("mail", "i-mail", "Courriel à " + c.courriel, CLOUD ? "Le PDF est joint par le partage" : "Ton logiciel de courriel s'ouvre ; joins le PDF") : opt("mail", "i-mail", "Courriel", "Ton logiciel de courriel s'ouvre avec le message")) +
+    (tel && CLOUD ? opt("sms", "i-phone", "Texto à " + c.telephone, "Le message seulement, sans pièce jointe") : "") +
+    opt("copy", "i-copy", "Copier le message", "Pour le coller où tu veux") + opt("files", "i-download", "Télécharger le PDF et l'image", "Pour les joindre toi-même") + "</div>", null,
+    {cancel:"Fermer", wide:true, ready: f => {
+      f.onclick = async e => {
+        const b = e.target.closest("[data-send]"); if (!b) return; const how = b.dataset.send, text = $("snd-msg").value, subj = docTitre(kind) + " " + doc.numero + (R().nom ? " · " + R().nom : "");
+        const mark = () => mutate(d => { const x = (isF ? d.factures : d.devis).find(y => y.id === id); if (!x) return false; const t = today(); if ((isF ? x.envoyeeLe : x.envoyeLe) === t) return false; if (isF) x.envoyeeLe = t; else x.envoyeLe = t; });
+        try {
+          b.disabled = true; const logo = await loadLogo(), name = fileSafe(doc.numero + " " + (doc.client || ""));
+          if (how === "copy"){ await navigator.clipboard.writeText(text); toast("Message copié"); return; }
+          if (how === "sms"){ location.href = "sms:" + tel + "?body=" + encodeURIComponent(text); mark(); return; }
+          if (how === "pdf" || how === "img" || (how === "mail" && CLOUD && canShare)){
+            const files = how === "img" ? await docImages(kind, doc, logo) : [new File([docPDF(kind, doc, logo)], name + ".pdf", {type:"application/pdf"})];
+            if (how === "mail" && mail){ try { await navigator.clipboard.writeText(c.courriel); toast("Courriel du client copié : colle-le dans « À »"); } catch(er){} }
+            if (!navigator.canShare({files})) throw new Error("ce navigateur ne partage pas les fichiers");
+            await navigator.share({files, title: subj, text}); mark(); closeForm(); return;
+          }
+          if (how === "mail"){ const path = await makeDocPDF(kind, id, false, true); location.href = "mailto:" + mail + "?subject=" + encodeURIComponent(subj) + "&body=" + encodeURIComponent(text); mark();
+            if (path && !CLOUD) toast("Joins le PDF : dossier " + winPath(path.split("/").slice(0, -1).join("/")) + ", fichier " + path.split("/").pop()); return; }
+          if (how === "files"){ const all = [new File([docPDF(kind, doc, logo)], name + ".pdf", {type:"application/pdf"}), ...await docImages(kind, doc, logo)];
+            all.forEach((f, k) => setTimeout(() => { const u = URL.createObjectURL(f), a = document.createElement("a"); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }, k * 400));
+            toast("PDF et image enregistrés dans Téléchargements"); return; }
+        } catch(er){ if (er && er.name === "AbortError") return; toast("Envoi impossible : " + ((er && er.message) || er)); }
+        finally { b.disabled = false; }
+      };
+    }});
 }
 async function mailDoc(kind, id){
   const isF = kind === "facture", doc = (isF ? S.d.factures : S.d.devis).find(x => x.id === id); if (!doc) return;
@@ -4654,7 +4893,7 @@ function renderStock(){
   const L = S.d.produits.slice().sort((a, b) => a.nom.localeCompare(b.nom, "fr")), fr = fyRange(S.year);
   if (!L.length){ put($("iv-stock"), '<div class="empty">' + ico("i-box") + "<p>Ajoute les produits que tu achètes pour les revendre ou les installer. La quantité baisse toute seule quand tu factures le produit, et l'accueil t'avertit quand le stock est bas.</p>" + '<div class="actions"><button class="btn primary" type="button" data-pr-new>' + ico("i-plus") + "Ajouter un produit</button></div></div>"); return; }
   let val = 0, low = 0, salesAmt = 0;
-  S.d.factures.forEach(f => { if (f.statut !== "annulee" && f.date >= fr.start && f.date <= fr.end) (f.lignes || []).forEach(l => { if (l.produit) salesAmt += r2((Number(l.qte) || 0) * (Number(l.prix) || 0)); }); });
+  S.d.factures.forEach(f => { if (f.statut !== "annulee" && f.date >= fr.start && f.date <= fr.end) (f.lignes || []).forEach(l => { if (l.produit) salesAmt += ligneHT(f, l); }); });
   const rows = L.map(p => { const q = stockOf(p), v = Math.max(0, q) * (Number(p.cout) || 0), s = p.seuil !== "" && p.seuil != null && isFinite(Number(p.seuil)) ? Number(p.seuil) : null, cls = q <= 0 ? "out" : s != null && q <= s ? "low" : ""; val += v; if (cls) low++;
     const sold = S.d.factures.filter(f => f.statut !== "annulee" && f.date >= fr.start && f.date <= fr.end).reduce((t, f) => t + (f.lignes || []).filter(l => l.produit === p.id).reduce((u, l) => u + (Number(l.qte) || 0), 0), 0);
     return "<tr><td><b>" + esc(p.nom) + "</b>" + (p.code ? '<br><small class="muted fig">' + esc(p.code) + "</small>" : "") + '</td><td class="num"><span class="qty ' + cls + '">' + fq(q) + "</span> " + esc(p.unite || "") + (cls ? '<br><span class="chip ' + (cls === "out" ? "late" : "due") + '">' + (cls === "out" ? "Rupture" : "Stock bas") + "</span>" : "") + '</td><td class="num hide-sm">' + (s != null ? fq(s) : "—") + '</td><td class="num hide-sm">' + (p.cout ? fmt(p.cout) : "—") + '</td><td class="num">' + (p.prix ? fmt(p.prix) : "—") + '</td><td class="num hide-sm">' + fmt(v) + '</td><td class="num hide-sm">' + fq(sold) + '</td><td><div class="rowacts"><button class="btn sm" type="button" data-mv="' + esc(p.id) + '">Entrée ou sortie</button><button class="btn link" type="button" data-pr-hist="' + esc(p.id) + '">' + (S.prodOpen === p.id ? "Masquer" : "Historique") + '</button><button class="btn link" type="button" data-pr-edit="' + esc(p.id) + '">Modifier</button></div></td></tr>'; }).join("");
@@ -4731,7 +4970,7 @@ function nextNumIn(d, kind, date){
   return P + "-" + y + "-" + String(max + 1).padStart(3, "0");
 }
 /* Changements que cette version de l'application sait appliquer (écrit dans registre.json pour le téléphone) */
-const OPS_CONNUS = ["evenement","evenement-suppr","evenement-fait","obligation","operation","photo","trajet","lieu","lieu-suppr","paiement","facture","devis","devis-statut","envoye","entretien","odometre","client","patch","fichier","deplacer","fichier-suppr"];
+const OPS_CONNUS = ["evenement","evenement-suppr","evenement-fait","obligation","operation","photo","trajet","lieu","lieu-suppr","paiement","facture","devis","devis-statut","envoye","entretien","odometre","client","patch","fichier","deplacer","fichier-suppr","doc-v2"];
 /* Chemin de fichier accepté venant du téléphone : un seul niveau, dans un dossier connu */
 function safePath(p){ p = String(p || ""); return /^(recus|a-traiter|documents|exports)\/[^\/\\:*?"<>|]+$/.test(p) && !/\.\./.test(p) ? p : ""; }
 function applyOp(d, op){
@@ -4876,6 +5115,8 @@ function renderReglages(){
   $("r-notps").value = r.noTPS || (/RT\d{4}/i.test(r.numero || "") ? r.numero : ""); $("r-notvq").value = r.noTVQ || "";
   $("r-termes").value = String(r.termes != null ? r.termes : 30); if (!$("r-termes").value) $("r-termes").value = "30";
   $("r-validite").value = String(r.validiteDevis || 30); $("r-msg").value = r.messageFacture || "";
+  $("r-slogan").value = r.slogan || ""; $("r-neq").value = r.neq || ""; $("r-paiement").value = r.modePaiement || ""; $("r-titredevis").value = r.titreDevis === "Soumission" ? "Soumission" : "Devis"; $("r-condev").value = r.conditionsDevis || "";
+  setOptions($("r-tf-type"), LT.map(t => [t.k, t.l])); renderTarifsReglages();
   $("r-logo-st").textContent = r.logo ? "Logo : " + r.logo.split("/").pop() : "Aucun logo"; $("r-logo-rm").hidden = !r.logo;
 }
 $("r-logo").addEventListener("change", async e => {
@@ -4885,6 +5126,19 @@ $("r-logo").addEventListener("change", async e => {
   catch(er){ toast("Impossible d'enregistrer le logo : " + (er.message || er)); }
 });
 $("r-logo-rm").addEventListener("click", () => mutate(d => { d.reglages.logo = ""; }, "Logo retiré"));
+/* Tarifs enregistrés */
+const tarifTxt = t => (LTM[t.type] || LTM.service).l + " · " + t.description + " · " + fmt(t.prix) + (t.unite ? " / " + t.unite : "") + (t.ttc ? " (taxes incl.)" : "");
+function renderTarifsReglages(){
+  const T = R().tarifs || [];
+  put($("r-tarifs"), T.length ? T.map(t => '<div class="tarif"><span>' + esc(tarifTxt(t)) + '</span><button class="btn link" type="button" data-tf-del="' + esc(t.id) + '">Retirer</button></div>').join("") : '<p class="muted small">Aucun tarif pour l\'instant.</p>');
+}
+$("r-tarifs").addEventListener("click", e => { const b = e.target.closest("[data-tf-del]"); if (!b) return; const id = b.dataset.tfDel; mutate(d => { d.reglages.tarifs = (d.reglages.tarifs || []).filter(t => t.id !== id); }, "Tarif retiré"); });
+$("r-tf-ok").addEventListener("click", () => {
+  const desc = $("r-tf-desc").value.trim(), prix = num($("r-tf-prix").value), type = $("r-tf-type").value;
+  if (!desc || !isFinite(prix) || prix <= 0) return toast("Entre la description et le prix du tarif.");
+  const t = {id: uid("tf"), type, description: desc, unite: $("r-tf-unite").value.trim() || (LTM[type] || {}).u || "", prix: r2(prix), ttc: $("r-tf-ttc").checked};
+  mutate(d => { d.reglages.tarifs = (d.reglages.tarifs || []).concat([t]); }, "Tarif ajouté").then(ok => { if (ok){ $("r-tf-desc").value = ""; $("r-tf-prix").value = ""; $("r-tf-unite").value = ""; } });
+});
 $("cfg-form").addEventListener("submit", e => {
   e.preventDefault(); const err = $("cfg-err"); err.hidden = true;
   const tps = num($("r-tps").value), tvqr = num($("r-tvq").value), tvh = num($("r-tvh").value), k1 = num($("r-km1").value), k2 = num($("r-km2").value), tv = num($("r-tvhouv").value), cap = num($("r-cap").value);
@@ -4895,7 +5149,8 @@ $("cfg-form").addEventListener("submit", e => {
   const y = String(new Date().getFullYear());
   mutate(d => { const r = d.reglages; Object.assign(r, {nom:$("r-nom").value.trim() || "Mon entreprise", numero:$("r-ne").value.trim(), structure:$("r-structure").value, regime:$("r-regime").value, dateConstitution:$("r-const").value, finExercice:Number($("r-fin").value), exerciceConfirme:true,
     inscritTVH:$("r-inscrit").checked, inscritTVQ:$("r-inscritq").checked, province:$("r-prov").value, tauxTPS:tps, tauxTVQ:tvqr, tauxTVH:tvh, frequence:$("r-freq").value, dateOuverture:$("r-ouv").value, tvhOuverture: isFinite(tv) ? r2(tv) : 0, capitalActions: isFinite(cap) ? r2(cap) : 0, compteKm:$("r-kmcpt").value,
-    adresse:$("r-adresse").value.trim(), telephone:$("r-tel").value.trim(), courriel:$("r-courriel").value.trim(), noTPS:$("r-notps").value.trim(), noTVQ:$("r-notvq").value.trim(), termes:Number($("r-termes").value) || 0, validiteDevis: Math.max(1, Math.round(num($("r-validite").value)) || 30), messageFacture:$("r-msg").value.trim()});
+    adresse:$("r-adresse").value.trim(), telephone:$("r-tel").value.trim(), courriel:$("r-courriel").value.trim(), noTPS:$("r-notps").value.trim(), noTVQ:$("r-notvq").value.trim(), termes:Number($("r-termes").value) || 0, validiteDevis: Math.max(1, Math.round(num($("r-validite").value)) || 30), messageFacture:$("r-msg").value.trim(),
+    slogan:$("r-slogan").value.trim(), neq:$("r-neq").value.trim(), modePaiement:$("r-paiement").value.trim(), titreDevis:$("r-titredevis").value, conditionsDevis:$("r-condev").value.trim()});
     r.tauxKm = Object.assign({}, r.tauxKm, {[y]: [k1, k2]}); }, "Réglages enregistrés").then(ok => { if (ok){ S.year = fyOf(today()); document.activeElement.blur(); render(); } });
 });
 $("btn-reload").addEventListener("click", async () => { try { S.lastMod = -1; await reloadIfChanged(true); toast("Livres rechargés"); } catch(e){ toast("Rechargement impossible : " + (e.message || e)); } });
