@@ -1,5 +1,5 @@
-/* Comptabilité : garde l'application dans le téléphone pour qu'elle s'ouvre sans réseau. Version ed1da28912 */
-const CACHE = "compta-ed1da28912";
+/* Comptabilité : garde l'application dans le téléphone pour qu'elle s'ouvre sans réseau. Version 047ec5b986 */
+const CACHE = "compta-047ec5b986";
 const SHELL = ["./", "complet.html", "envoi.html", "signer.html", "manifest.webmanifest", "icon-feuille-192.png", "icon-feuille-512.png", "icon-feuille-maskable.png", "apple-touch-icon-feuille.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -12,6 +12,13 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const r = e.request; if (r.method !== "GET") return;
   const u = new URL(r.url); if (u.origin !== self.location.origin) return;
+  /* Pages d'envoi Gmail et de signature : toujours la dernière version du site (la copie du téléphone seulement sans réseau) */
+  if (r.mode === "navigate" && /(envoi|signer)\.html$/.test(u.pathname)){
+    const k = u.pathname.match(/(envoi|signer)\.html$/)[0];
+    e.respondWith(fetch(r.url, {cache: "no-store", credentials: "same-origin"}).then(res => { if (res && res.ok){ const cp = res.clone(); caches.open(CACHE).then(c => c.put(k, cp)); } return res; })
+      .catch(() => caches.open(CACHE).then(c => c.match(k, {ignoreSearch: true})).then(h => h || new Response("Hors réseau", {status: 503, headers: {"Content-Type": "text/plain; charset=utf-8"}}))));
+    return;
+  }
   const key = r.mode === "navigate" ? ((u.pathname.match(/(complet|envoi|signer)\.html$/) || [])[0] || "./") : r;
   e.respondWith(caches.open(CACHE).then(async c => {
     const hit = await c.match(key, {ignoreSearch: true});

@@ -12,6 +12,13 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const r = e.request; if (r.method !== "GET") return;
   const u = new URL(r.url); if (u.origin !== self.location.origin) return;
+  /* Pages d'envoi Gmail et de signature : toujours la dernière version du site (la copie du téléphone seulement sans réseau) */
+  if (r.mode === "navigate" && /(envoi|signer)\.html$/.test(u.pathname)){
+    const k = u.pathname.match(/(envoi|signer)\.html$/)[0];
+    e.respondWith(fetch(r.url, {cache: "no-store", credentials: "same-origin"}).then(res => { if (res && res.ok){ const cp = res.clone(); caches.open(CACHE).then(c => c.put(k, cp)); } return res; })
+      .catch(() => caches.open(CACHE).then(c => c.match(k, {ignoreSearch: true})).then(h => h || new Response("Hors réseau", {status: 503, headers: {"Content-Type": "text/plain; charset=utf-8"}}))));
+    return;
+  }
   const key = r.mode === "navigate" ? ((u.pathname.match(/(complet|envoi|signer)\.html$/) || [])[0] || "./") : r;
   e.respondWith(caches.open(CACHE).then(async c => {
     const hit = await c.match(key, {ignoreSearch: true});
