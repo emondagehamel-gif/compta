@@ -249,7 +249,8 @@ async function send(){
       break;
     } catch(e){ r = null; why = (e && e.message) || String(e); }
   }
-  if (!r){ setBusy(false); return err("Gmail ne répond pas", "Vérifie la connexion Internet, puis réessaie." + (why ? ' <small style="color:var(--muted)">(' + esc(why) + ")</small>" : ""), B("renvoyer", "Réessayer", true) + B("manuel", "Méthode manuelle")); }
+  if (!r){ setBusy(false); return err("Gmail ne répond pas", "Vérifie la connexion Internet, puis réessaie. Si ça continue, vérifie que l'API Gmail est bien activée (bouton bleu « Gérer » sur la page Google Cloud)." + (why ? ' <small style="color:var(--muted)">(' + esc(why) + ")</small>" : ""),
+    B("renvoyer", "Réessayer", true) + '<a class="btn" href="' + CONSOLE + '" target="_blank" rel="noopener">Vérifier l\'API Gmail</a>' + B("manuel", "Méthode manuelle")); }
   if (r.status === 401){ LS.set("tok", null); return goAuth(false); }
   if (!r.ok){
     let j = {}; try { j = await r.json(); } catch(e){}
