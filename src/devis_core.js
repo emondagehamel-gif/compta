@@ -160,10 +160,11 @@ function docLayoutOrigine(kind, doc, logo, sigs){
     y += 8;
     const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, lien && x === rx2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
       T(x, y + 67, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 80, pied, {size:7.5, italic:true, color:C.mut}); };
-    bloc(M, nom, sigs.cie || null, sigs.cie ? doc.date : "", "");
+    const sc = doc.signatureCie && doc.signatureCie.nom ? doc.signatureCie : null;
+    bloc(M, nom, sigs.cie || null, sc ? sc.date : (sigs.cie ? doc.date : ""), sc ? "Signé pour l'entreprise par " + sc.nom : "");
     bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
     if (lien) sigBoutonPDF(P, rx2 + 4, y + 9, lien, C.g);
-    y += sg ? 84 : 72;
+    y += sg || sc ? 84 : 72;
   }
   /* Remerciements */
   const msg = String(doc.message || "").trim(), extra = msg && !/^merci de votre confiance\s*[.!]?$/i.test(msg) ? wrapText(msg, 9, false, W - 40) : [];

@@ -66,6 +66,10 @@ input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border
 @keyframes sp{to{transform:rotate(360deg)}}
 .done{width:60px;height:60px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
 .foot{color:var(--muted);font-size:.8rem;text-align:center;margin:0}
+.pages{display:flex;flex-direction:column;gap:10px}
+.pages img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#FFFFFF;box-shadow:0 1px 3px rgba(16,40,24,.08)}
+.card h2{font-family:var(--font-d);font-size:1.02rem;margin:0}
+.copie{width:100%}
 </style>
 </head>
 <body>
@@ -85,6 +89,8 @@ input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border
     <p class="note">Le détail des travaux et des prix est dans le PDF joint au courriel.</p>
   </section>
 
+  <section class="card" id="apercu" hidden><h2>Votre soumission</h2><div class="pages" id="pages"></div></section>
+
   <section class="card" id="st"><div class="status"><div class="spin"></div><b>Ouverture de la soumission…</b></div></section>
 
   <form class="card" id="f" hidden novalidate>
@@ -98,10 +104,13 @@ input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border
     <button type="submit" class="btn prim" id="go" disabled>Signer et accepter</button>
   </form>
 
-  <section class="card" id="fini" hidden><div class="status"><div class="done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><b id="fini-b">Merci, c'est signé!</b><p id="fini-t"></p></div></section>
+  <section class="card" id="fini" hidden><div class="status"><div class="done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><b id="fini-b">Merci, c'est signé!</b><p id="fini-t"></p><a class="btn copie" id="copie" hidden>Télécharger ma copie signée (PDF)</a></div></section>
 
   <p class="foot" id="pied">Signature électronique sécurisée. Votre signature est transmise uniquement à l'entreprise.</p>
 </main>
+<script>
+/*__CORE__*/
+</script>
 <script>
 (function(){
 "use strict";
@@ -144,9 +153,26 @@ $("ok-t").textContent = "J'accepte " + quoi + " " + L.n + (L.en ? (/^[aeiouyàâ
 
 /* État : déjà signée, expirée, lien valide ? */
 const qs = new URLSearchParams({a:"etat", s:L.s, i:L.i, n:L.n, c:L.c, t:L.t, e:L.e, en:L.en, k:L.k}).toString();
-fetch(URL_S + "?" + qs, {cache:"no-store"}).then(r => r.json()).then(r => {
+let DOC = null, LOGO = null, CIE = null;
+const blobDe = u => { const m = String(u || "").match(/^data:([^;]+);base64,(.*)$/); if (!m) return null; const s = atob(m[2]), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return new Blob([b], {type:m[1]}); };
+const b64 = bytes => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); };
+const lireFichier = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+/* Montre la soumission telle qu'imprimée (mêmes calculs et même mise en page que l'application) */
+async function apercu(r){
+  if (typeof CORE === "undefined" || !r.doc) return;
+  try {
+    CORE.S.d = {reglages:r.reglages || {}, clients:r.client ? [r.client] : [], devis:[r.doc], factures:[], transactions:[], comptes:[], equipements:[], km:[], agenda:[]};
+    const bl = blobDe(r.logo), bc = blobDe(r.sigCie);
+    LOGO = bl ? await CORE.jpegObj(bl).catch(() => null) : null; CIE = bc ? await CORE.jpegObj(bc).catch(() => null) : null;
+    DOC = r.doc;
+    const pages = await CORE.docImages("devis", DOC, LOGO, {cie:CIE});
+    $("pages").innerHTML = ""; pages.forEach((f, i) => { const im = new Image(); im.alt = "Page " + (i + 1) + " de la soumission"; im.src = URL.createObjectURL(f); $("pages").appendChild(im); });
+    $("apercu").hidden = false; $("resume").querySelector(".note").hidden = true;
+  } catch(e){ DOC = null; console.warn("aperçu", e); }
+}
+fetch(URL_S + "?" + qs, {cache:"no-store"}).then(r => r.json()).then(async r => {
   if (r && r.tel) tel = r.tel;
-  if (r && r.ok) return pret();
+  if (r && r.ok){ await apercu(r); return pret(); }
   if (!(r && erreur(r) !== null)) pret();
 }).catch(() => pret());
 
@@ -178,10 +204,22 @@ function image(){
 $("f").addEventListener("submit", async e => {
   e.preventDefault(); if (busy || $("go").disabled) return;
   busy = true; $("go").disabled = true; $("go").textContent = "Envoi de la signature…"; $("err").hidden = true;
-  let r = null;
-  try { const res = await fetch(URL_S, {method:"POST", body:JSON.stringify(Object.assign({a:"signer"}, L, {nom:$("nom").value.trim(), sig:image()}))}); r = await res.json(); } catch(er){ r = null; }
+  let r = null, copie = null;
+  const nom = $("nom").value.trim(), sig = image(), corps = {a:"signer", nom, sig};
+  if (DOC){
+    try {
+      const now = new Date(), p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {timeZone:"America/Toronto", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23"}).formatToParts(now).map(x => [x.type, x.value]));
+      const sdoc = Object.assign({}, DOC, {statut:"accepte", signature:{nom, date:p.year + "-" + p.month + "-" + p.day, heure:p.hour + ":" + p.minute, signeLe:now.toISOString(), appareil:"en ligne"}});
+      const sigs = {client:await CORE.jpegObj(blobDe(sig)), cie:CIE}, pdf = CORE.docPDF("devis", sdoc, LOGO, sigs);
+      copie = new Blob([pdf], {type:"application/pdf"}); corps.pdf = "data:application/pdf;base64," + b64(pdf);
+      corps.pages = []; for (const f of (await CORE.docImages("devis", sdoc, LOGO, sigs)).slice(0, 4)) corps.pages.push(await lireFichier(f));
+    } catch(er){ console.warn("copie", er); copie = null; delete corps.pdf; delete corps.pages; }
+  }
+  try { const res = await fetch(URL_S, {method:"POST", body:JSON.stringify(Object.assign({}, L, corps))}); r = await res.json(); } catch(er){ r = null; }
   busy = false; $("go").textContent = "Signer et accepter";
   if (r && r.ok){
+    if (copie){ const a = $("copie"); a.href = URL.createObjectURL(copie); a.download = "Soumission " + L.n + " signée.pdf"; a.hidden = false; }
+    $("apercu").hidden = true;
     $("fini-t").innerHTML = esc(L.en || "L'entreprise") + " a bien reçu votre signature pour " + quoi + " " + esc(L.n) + " (" + esc(argent(L.t)) + "), le " + dLong(r.date) + " à " + heure(r.heure) + ".<br>Vous pouvez fermer cette page.";
     $("resume").hidden = true; show("fini"); return;
   }

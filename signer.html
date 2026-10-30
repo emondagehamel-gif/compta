@@ -66,6 +66,10 @@ input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border
 @keyframes sp{to{transform:rotate(360deg)}}
 .done{width:60px;height:60px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
 .foot{color:var(--muted);font-size:.8rem;text-align:center;margin:0}
+.pages{display:flex;flex-direction:column;gap:10px}
+.pages img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#FFFFFF;box-shadow:0 1px 3px rgba(16,40,24,.08)}
+.card h2{font-family:var(--font-d);font-size:1.02rem;margin:0}
+.copie{width:100%}
 </style>
 </head>
 <body>
@@ -85,6 +89,8 @@ input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border
     <p class="note">Le détail des travaux et des prix est dans le PDF joint au courriel.</p>
   </section>
 
+  <section class="card" id="apercu" hidden><h2>Votre soumission</h2><div class="pages" id="pages"></div></section>
+
   <section class="card" id="st"><div class="status"><div class="spin"></div><b>Ouverture de la soumission…</b></div></section>
 
   <form class="card" id="f" hidden novalidate>
@@ -98,10 +104,1123 @@ input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border
     <button type="submit" class="btn prim" id="go" disabled>Signer et accepter</button>
   </form>
 
-  <section class="card" id="fini" hidden><div class="status"><div class="done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><b id="fini-b">Merci, c'est signé!</b><p id="fini-t"></p></div></section>
+  <section class="card" id="fini" hidden><div class="status"><div class="done"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><b id="fini-b">Merci, c'est signé!</b><p id="fini-t"></p><a class="btn copie" id="copie" hidden>Télécharger ma copie signée (PDF)</a></div></section>
 
   <p class="foot" id="pied">Signature électronique sécurisée. Votre signature est transmise uniquement à l'entreprise.</p>
 </main>
+<script>
+const CORE = (function(){
+"use strict";
+const S = {d:null, tmap:{}};
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const r2 = x => Math.round((Number(x) || 0) * 100) / 100;
+const money = new Intl.NumberFormat("fr-CA", {style:"currency", currency:"CAD"});
+const fmt = x => money.format(r2(x) || 0);
+const fmtK = x => { const v = Math.abs(x); return v >= 1000 ? (x / 1000).toLocaleString("fr-CA", {maximumFractionDigits: v >= 10000 ? 0 : 1}) + " k$" : Math.round(x) + " $"; };
+function num(v){
+  if (typeof v === "number") return v;
+  let s = String(v == null ? "" : v).trim(); if (!s) return NaN;
+  let neg = false;
+  if (/^\(.*\)$/.test(s)){ neg = true; s = s.slice(1, -1); }
+  s = s.replace(/[\s  $]/g, "").replace(/CAD/i, "");
+  if (/-$/.test(s)){ neg = !neg; s = s.slice(0, -1); }
+  if (s.includes(",") && s.includes(".")){ if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", "."); else s = s.replace(/,/g, ""); }
+  else s = s.replace(",", ".");
+  const n = parseFloat(s); return isFinite(n) ? (neg ? -n : n) : NaN;
+}
+const n2s = x => r2(x).toFixed(2).replace(".", ",");
+const pad = n => String(n).padStart(2, "0");
+const iso = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const today = () => iso(new Date());
+const MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const MOIS_C = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+const dLong = s => { const [y,m,d] = String(s).split("-").map(Number); return y && m ? d + " " + MOIS[m-1] + " " + y : "—"; };
+const dShort = s => { const [y,m,d] = String(s || "").split("-").map(Number); return y && m ? d + " " + MOIS_C[m-1] + (String(y) !== String(new Date().getFullYear()) ? " " + y : "") : "—"; };
+const lastDay = (y, m) => new Date(y, m + 1, 0); // m : 0-11, débordements permis
+const addDays = (s, n) => { const [y,m,d] = s.split("-").map(Number); return iso(new Date(y, m - 1, d + n)); };
+const uid = p => p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+const clone = o => JSON.parse(JSON.stringify(o));
+function toast(msg, action){ const t = $("toast"); t.innerHTML = "<span>" + esc(msg) + "</span>" + (action ? '<button type="button" class="toast-a">' + esc(action.label) + "</button>" : ""); t.hidden = false; if (action) t.querySelector("button").onclick = () => { t.hidden = true; action.fn(); }; clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, action ? 7000 : 3400); }
+function put(el, html){
+  if (!el) return;
+  if (el._html === html) return;
+  const a = document.activeElement;
+  if (a && a !== document.body && el.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== "checkbox" && a.type !== "button"){
+    el._pending = html;
+    if (!el._hooked){ el._hooked = true; el.addEventListener("focusout", () => setTimeout(() => { if (el._pending != null && !el.contains(document.activeElement)){ const h = el._pending; el._pending = null; el.innerHTML = h; el._html = h; } }, 0)); }
+    return;
+  }
+  el.innerHTML = html; el._html = html; el._pending = null;
+}
+function setOptions(sel, opts, keep){
+  const cur = keep !== undefined ? keep : sel.value;
+  const html = opts.map(o => typeof o === "string" ? o : '<option value="' + esc(o[0]) + '">' + esc(o[1]) + "</option>").join("");
+  if (sel._html !== html){ sel.innerHTML = html; sel._html = html; }
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+const CATS = {
+  revenu: [
+    {k:"ventes", l:"Ventes de biens et services", code:"8000", grp:"rev", tax:true},
+    {k:"autres-revenus", l:"Autres revenus", code:"8230", grp:"rev", tax:true},
+    {k:"placements", l:"Revenus de placement (intérêts)", code:"8090", grp:"rev", tax:false},
+    {k:"subventions", l:"Subventions", code:"8242", grp:"rev", tax:false}
+  ],
+  depense: [
+    {k:"achats", l:"Achats et coût des matières", code:"8320", grp:"cv", tax:true},
+    {k:"sous-traitance", l:"Sous-traitance", code:"8360", grp:"cv", tax:true},
+    {k:"publicite", l:"Publicité", code:"8521", grp:"exp", tax:true},
+    {k:"repas", l:"Repas et représentation", code:"8523", grp:"exp", tax:true, cti:0.5},
+    {k:"assurances", l:"Assurances", code:"8690", grp:"exp", tax:false},
+    {k:"interets", l:"Intérêts et frais bancaires", code:"8710", grp:"exp", tax:false},
+    {k:"permis", l:"Taxes d'affaires, permis et cotisations", code:"8760", grp:"exp", tax:false},
+    {k:"bureau", l:"Frais de bureau", code:"8810", grp:"exp", tax:true},
+    {k:"fournitures", l:"Fournitures de bureau", code:"8811", grp:"exp", tax:true},
+    {k:"honoraires", l:"Honoraires professionnels", code:"8860", grp:"exp", tax:true},
+    {k:"comptabilite", l:"Honoraires comptables", code:"8862", grp:"exp", tax:true},
+    {k:"gestion", l:"Frais de gestion et d'administration", code:"8871", grp:"exp", tax:true},
+    {k:"loyer", l:"Location", code:"8910", grp:"exp", tax:true},
+    {k:"entretien", l:"Réparations et entretien", code:"8960", grp:"exp", tax:true},
+    {k:"salaires", l:"Salaires", code:"9060", grp:"exp", tax:false},
+    {k:"informatique", l:"Logiciels et frais informatiques", code:"9150", grp:"exp", tax:true},
+    {k:"deplacements", l:"Frais de déplacement", code:"9200", grp:"exp", tax:true},
+    {k:"services-publics", l:"Services publics", code:"9220", grp:"exp", tax:true},
+    {k:"carburant", l:"Carburant", code:"9224", grp:"exp", tax:true},
+    {k:"telephone", l:"Téléphone et télécommunications", code:"9225", grp:"exp", tax:true},
+    {k:"livraison", l:"Livraison et transport", code:"9275", grp:"exp", tax:true},
+    {k:"vehicule", l:"Frais de véhicule", code:"9281", grp:"exp", tax:true},
+    {k:"km", l:"Allocations de kilométrage", code:"9281", grp:"exp", tax:false},
+    {k:"autres", l:"Autres dépenses", code:"9270", grp:"exp", tax:true},
+    {k:"equipement", l:"Machines et matériel (immobilisation)", code:"1740", grp:"immo", tax:true},
+    {k:"equipement-info", l:"Matériel informatique (immobilisation)", code:"1774", grp:"immo", tax:true}
+  ]
+};
+const cat = (type, k) => (CATS[type] || []).find(c => c.k === k) || null;
+const SORTES = {
+  banque: {l:"Compte bancaire", actif:true, code:"1002"},
+  caisse: {l:"Petite caisse", actif:true, code:"1001"},
+  carte: {l:"Carte de crédit", actif:false, code:"2707"},
+  actionnaire: {l:"Prêt de l'actionnaire", actif:false, code:"2780"},
+  emprunt: {l:"Emprunt ou marge de crédit", actif:false, code:"2700"}
+};
+const TYPES = {depense:"Dépense", revenu:"Revenu", transfert:"Transfert", tvh:"TPS/TVH", dividende:"Dividende"};
+const DEF_REGLAGES = {nom:"Mon entreprise", numero:"", structure:"societe", province:"QC", regime:"federal", dateConstitution:"", obligations:{}, finExercice:12, exerciceConfirme:false, inscritTVH:true, inscritTVQ:true, tauxTPS:5, tauxTVQ:9.975, tauxTVH:13, frequence:"trimestrielle",
+  dateOuverture:"2026-01-01", tvhOuverture:0, capitalActions:0, tauxKm:{"2025":[0.72,0.66], "2026":[0.73,0.67]}, compteKm:"c-actionnaire", declarations:{},
+  adresse:"", telephone:"", courriel:"", noTPS:"", noTVQ:"", termes:30, validiteDevis:30, messageFacture:"Merci de votre confiance!", logo:"",
+  slogan:"", neq:"", modePaiement:"", signatureCie:"", signerUrl:"", signerCle:"", signataire:"", signatureStyle:"elegante", styleDoc:"nature", titreDevis:"Devis", conditionsDevis:"Paiement dû à la fin des travaux (sauf entente différente).", tarifs:[], docTTC:false};
+const COLLECTIONS = ["comptes","transactions","fournisseurs","projets","km","rapprochements","clients","factures","devis","agenda","equipements","produits","lieux"];
+function normalize(d){
+  d = d && typeof d === "object" ? d : {};
+  COLLECTIONS.forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
+  d.equipements.forEach(e => { if (!Array.isArray(e.entretiens)) e.entretiens = []; });
+  d.produits.forEach(p => { if (!Array.isArray(p.mouvements)) p.mouvements = []; });
+  ["factures","devis"].forEach(k => d[k].forEach(x => { if (!Array.isArray(x.lignes)) x.lignes = []; }));
+  d.reglages = Object.assign({}, DEF_REGLAGES, d.reglages || {});
+  if (!d.reglages.tauxKm || typeof d.reglages.tauxKm !== "object") d.reglages.tauxKm = clone(DEF_REGLAGES.tauxKm);
+  if (!d.reglages.declarations || typeof d.reglages.declarations !== "object") d.reglages.declarations = {};
+  if (!d.reglages.obligations || typeof d.reglages.obligations !== "object") d.reglages.obligations = {};
+  if (!Array.isArray(d.reglages.tarifs)) d.reglages.tarifs = [];
+  if (!d.reglages.onboarding || typeof d.reglages.onboarding !== "object") d.reglages.onboarding = {};
+  if (!d.reglages.fiscal || typeof d.reglages.fiscal !== "object") d.reglages.fiscal = {};
+  d.format = d.format || "comptabilite-v1"; d.rev = Number(d.rev) || 1;
+  return d;
+}
+const R = () => S.d.reglages;
+const inscrit = () => R().inscritTVH !== false;
+const inscritQ = () => R().inscritTVQ === true;
+const pct = v => String(r2(v * 1000) / 1000).replace(".", ",") + " %";
+function taxRates(code){ const r = R(); return code === "QC" ? [Number(r.tauxTPS) || 0, Number(r.tauxTVQ) || 0] : code === "ON" ? [Number(r.tauxTVH) || 0, 0] : code === "TPS" ? [Number(r.tauxTPS) || 0, 0] : [0, 0]; }
+function taxLabel(code){ const [a, b] = taxRates(code); return code === "QC" ? "Québec : TPS " + pct(a) + " + TVQ " + pct(b) : code === "ON" ? "Ontario : TVH " + pct(a) : code === "TPS" ? "TPS seulement (" + pct(a) + ")" : "Aucune taxe"; }
+const TAXCODES = ["QC","ON","TPS","AUCUNE"];
+const defCode = () => R().province === "ON" ? "ON" : "QC";
+const quebec = () => R().province !== "ON";
+const MENU_TEL = [
+  ["Au quotidien", [["transactions","c","i-list","Opérations","Dépenses, revenus, recherche"], ["documents","c","i-docs","Documents","Reçus à classer, envoi au comptable"]]],
+  ["Achats et biens", [["fournisseurs","c","i-store","Fournisseurs","Factures à payer"], ["inventaire","c","i-box","Inventaire","Camion, équipement, entretiens, stock"]]],
+  ["Argent et taxes", [["banque","c","i-bank","Banque","Soldes, rapprochement, relevés"], ["tvh","c","i-percent","Taxes de vente","TPS et TVQ à produire"], ["km","c","i-car","Kilométrage","Trajets, allocation, registre"], ["impots","c","i-calc","Impôts de fin d'année","T2, CO-17, amortissement, impôt estimé"]]],
+  ["Analyse", [["projets","c","i-folder","Projets","Rentabilité par chantier"], ["rapports","c","i-chart","Rapports","Résultats, bilan, sommaire IGRF"]]],
+  ["Application", [["reglages","c","i-sliders","Réglages","Entreprise, taxes, comptes, logo"], ["plus","t","i-refresh","Synchronisation","Envois en attente, compte Google"]]]
+];
+const ADD_TEL2 = [["transfert","i-transfer","Transfert entre comptes"], ["tvh","i-percent","Paiement de taxes"], ["dividende","i-coins","Dividende"], ["releve","i-upload","Relevé bancaire"]];
+function menuTelBadges(){
+  const d = S.d, b = {}; if (!d) return b;
+  const ap = d.transactions.filter(t => t.type === "depense" && unpaid(t)).length; if (ap) b.fournisseurs = ap + " facture" + (ap > 1 ? "s" : "") + " à payer";
+  const v = d.transactions.filter(t => t.aVerifier).length; if (v) b.transactions = v + " à vérifier";
+  const km = d.km.filter(k => !k.alloc && kmPerso(k)).length; if (km) b.km = km + " trajet" + (km > 1 ? "s" : "") + " à inscrire";
+  return b;
+}
+function menuTelHtml(here, b){
+  b = b || {};
+  return MENU_TEL.map(([h, items]) => '<div class="mt-h">' + esc(h) + '</div><div class="mt-grid">' + items.filter(([k, p]) => !(p === here && k === "plus")).map(([k, p, ic, l, sub]) =>
+    '<a class="mt-tile' + (b[k] ? " on" : "") + '" data-mt="' + k + '" href="' + (p === here ? "#" + k : (here === "t" ? "complet.html#" : "./#") + k) + '"><span class="mt-ic">' + ico(ic) + "</span><b>" + esc(l) + "</b><small>" + esc(b[k] || sub) + "</small>" + (b[k] ? '<i class="mt-dot"></i>' : "") + "</a>").join("") + "</div>").join("");
+}
+const finM = () => Math.min(12, Math.max(1, Number(R().finExercice) || 12));
+function fyRange(Y){ const M = finM(); const end = lastDay(Y, M - 1); const start = M === 12 ? new Date(Y, 0, 1) : new Date(Y - 1, M, 1); return {start: iso(start), end: iso(end)}; }
+function fyOf(s){ const [y, m] = String(s).split("-").map(Number); const M = finM(); return (M === 12 || m <= M) ? y : y + 1; }
+function fyLabel(Y){ const r = fyRange(Y); return finM() === 12 ? "Exercice " + Y : "Exercice " + r.start.slice(0, 4) + "-" + Y; }
+function periods(Y){
+  const f = R().frequence, r = fyRange(Y), [sy, sm] = r.start.split("-").map(Number), out = [];
+  if (f === "annuelle"){
+    const [ey, em] = r.end.split("-").map(Number);
+    out.push({key: Y + "-A", label: fyLabel(Y), start: r.start, end: r.end, due: iso(lastDay(ey, em - 1 + 3))});
+  } else {
+    const step = f === "mensuelle" ? 1 : 3, n = 12 / step;
+    for (let i = 0; i < n; i++){
+      const s = new Date(sy, sm - 1 + i * step, 1), e = lastDay(sy, sm - 1 + i * step + step - 1), due = lastDay(sy, sm - 1 + i * step + step);
+      const label = step === 1 ? MOIS[s.getMonth()].charAt(0).toUpperCase() + MOIS[s.getMonth()].slice(1) + " " + s.getFullYear()
+        : "T" + (i + 1) + " (" + MOIS_C[s.getMonth()].replace(".", "") + " à " + MOIS_C[e.getMonth()].replace(".", "") + " " + e.getFullYear() + ")";
+      out.push({key: Y + (step === 1 ? "-M" + pad(i + 1) : "-T" + (i + 1)), label, start: iso(s), end: iso(e), due: iso(due)});
+    }
+  }
+  return out;
+}
+function quarters(Y){ const r = fyRange(Y), [sy, sm] = r.start.split("-").map(Number), out = [];
+  for (let i = 0; i < 4; i++){ const s = new Date(sy, sm - 1 + i * 3, 1), e = lastDay(sy, sm - 1 + i * 3 + 2); out.push({key:"T" + (i + 1), label:"T" + (i + 1) + " " + fyLabel(Y).replace("Exercice ", ""), start: iso(s), end: iso(e)}); }
+  return out; }
+function entries(t){
+  const E = [], d = t.date, m = Number(t.montant) || 0, x = Number(t.taxe) || 0, q = Number(t.tvq) || 0, tot = m + x + (t.type === "tvh" ? 0 : q), ins = inscrit(), insQ = inscritQ();
+  const settle = sign => {
+    const k = t.type === "revenu" ? "ar" : "ap";
+    if (t.paiement && t.paiement.compte){ const pd = t.paiement.date || d; E.push({d, a:k, v:sign * tot}, {d:pd, a:k, v:-sign * tot}, {d:pd, a:"cpt:" + t.paiement.compte, v:sign * tot}); }
+    else if (t.statut === "a-payer" || t.statut === "a-recevoir") E.push({d, a:k, v:sign * tot});
+    else E.push({d, a:"cpt:" + (t.compte || "_inconnu"), v:sign * tot});
+  };
+  if (t.type === "revenu"){
+    E.push({d, a:"rev:" + (t.categorie || "ventes"), v: -(m + (ins ? 0 : x) + (insQ ? 0 : q))});
+    if (ins && x) E.push({d, a:"tvh", v:-x});
+    if (insQ && q) E.push({d, a:"tvq", v:-q});
+    settle(1);
+  } else if (t.type === "depense"){
+    const c = cat("depense", t.categorie) || {grp:"exp"};
+    const f = c.cti == null ? 1 : c.cti, cti = ins ? x * f : 0, rti = insQ ? q * f : 0;
+    E.push({d, a:(c.grp === "immo" ? "immo:" : "dep:") + (t.categorie || "autres"), v: tot - cti - rti});
+    if (cti) E.push({d, a:"tvh", v: cti});
+    if (rti) E.push({d, a:"tvq", v: rti});
+    settle(-1);
+  } else if (t.type === "transfert"){
+    E.push({d, a:"cpt:" + (t.compte || "_inconnu"), v:-m}, {d, a:"cpt:" + (t.compteDest || "_inconnu"), v:m});
+  } else if (t.type === "tvh"){
+    const s = t.sens === "remboursement" ? -1 : 1;
+    E.push({d, a:"tvh", v:s * m}, {d, a:"cpt:" + (t.compte || "_inconnu"), v:-s * (m + q)});
+    if (q) E.push({d, a:"tvq", v:s * q});
+  } else if (t.type === "dividende"){
+    E.push({d, a:"div", v:m}, {d, a:"cpt:" + (t.compte || "_inconnu"), v:-m});
+  }
+  return E;
+}
+const isActif = id => { const c = S.cmap[id]; return c ? !!(SORTES[c.sorte] || {}).actif : true; };
+const natural = (id, v) => isActif(id) ? v : -v;
+function rebuild(){
+  const d = S.d;
+  S.cmap = {}; d.comptes.forEach(c => S.cmap[c.id] = c);
+  S.pmap = {}; d.projets.forEach(p => S.pmap[p.id] = p);
+  S.fmap = {}; d.fournisseurs.forEach(f => S.fmap[norm(f.nom)] = f);
+  S.tmap = {}; d.transactions.forEach(t => S.tmap[t.id] = t);
+  const E = [], d0 = "0000-01-01"; let open = 0;
+  d.comptes.forEach(c => { const v = isActif(c.id) ? (Number(c.solde) || 0) : -(Number(c.solde) || 0); if (v){ E.push({d:d0, a:"cpt:" + c.id, v}); open += v; } });
+  const tv = -(Number(R().tvhOuverture) || 0); if (tv){ E.push({d:d0, a:"tvh", v:tv}); open += tv; }
+  if (open) E.push({d:d0, a:"eq", v:-open});
+  d.transactions.forEach(t => entries(t).forEach(e => { e.t = t; E.push(e); }));
+  S.E = E;
+  S.cleared = {}; d.rapprochements.forEach(r => { const s = S.cleared[r.compte] || (S.cleared[r.compte] = new Set()); (r.ids || []).forEach(i => s.add(i)); });
+}
+function balancesAt(D){ const B = {}; for (const e of S.E){ if (e.d <= D) B[e.a] = (B[e.a] || 0) + e.v; } return B; }
+function pnl(a, b){
+  const o = {rev:{}, cv:{}, exp:{}, totRev:0, totCv:0, totExp:0};
+  for (const e of S.E){
+    if (e.d < a || e.d > b) continue;
+    if (e.a.startsWith("rev:")){ const k = e.a.slice(4); o.rev[k] = (o.rev[k] || 0) - e.v; o.totRev -= e.v; }
+    else if (e.a.startsWith("dep:")){ const k = e.a.slice(4); const g = (cat("depense", k) || {}).grp === "cv" ? "cv" : "exp"; o[g][k] = (o[g][k] || 0) + e.v; if (g === "cv") o.totCv += e.v; else o.totExp += e.v; }
+  }
+  o.marge = o.totRev - o.totCv; o.net = o.marge - o.totExp; o.repasND = (o.exp.repas || 0) * 0.5;
+  return o;
+}
+function divBetween(a, b){ let s = 0; for (const e of S.E) if (e.a === "div" && e.d >= a && e.d <= b) s += e.v; return s; }
+function tvhPeriod(p){
+  let v101 = 0, v103 = 0, v106 = 0, v203 = 0, v206 = 0, n = 0;
+  S.d.transactions.forEach(t => {
+    if (t.date < p.start || t.date > p.end) return;
+    if (t.type === "revenu"){ v101 += Number(t.montant) || 0; v103 += Number(t.taxe) || 0; v203 += Number(t.tvq) || 0; n++; }
+    else if (t.type === "depense"){ const c = cat("depense", t.categorie) || {}, f = c.cti == null ? 1 : c.cti; v106 += (Number(t.taxe) || 0) * f; v206 += (Number(t.tvq) || 0) * f; n++; }
+  });
+  const o = {v101:r2(v101), v103:r2(v103), v106:r2(v106), v203:r2(v203), v206:r2(v206), n};
+  o.net109 = r2(o.v103 - o.v106); o.net209 = inscritQ() ? r2(o.v203 - o.v206) : 0; o.net = r2(o.net109 + o.net209);
+  return o;
+}
+function perStatus(p, n){
+  const t = today(), done = R().declarations[p.key];
+  if (done) return {cls:"ok", txt:"Produite le " + dShort(done)};
+  if (t <= p.end) return {cls:"open", txt:"En cours"};
+  if (!n) return {cls:"open", txt:"Aucune opération"};
+  if (t <= p.due) return {cls:"due", txt:"À produire"};
+  return {cls:"late", txt:"En retard"};
+}
+function registerLines(id){
+  return S.E.filter(e => e.a === "cpt:" + id && e.t).map(e => ({id:e.t.id, d:e.d, t:e.t, n:natural(id, e.v)})).sort((a, b) => a.d.localeCompare(b.d) || String(a.t.creeLe || "").localeCompare(String(b.t.creeLe || "")));
+}
+function compteSolde(id, D){ const B = balancesAt(D || "9999-12-31"); return natural(id, B["cpt:" + id] || 0); }
+const compteNom = id => id === "_inconnu" || !id ? "Non précisé" : (S.cmap[id] ? S.cmap[id].nom : "Compte supprimé");
+const catLabel = t => t.type === "transfert" ? "Transfert vers " + compteNom(t.compteDest) : t.type === "tvh" ? (t.sens === "remboursement" ? "Remboursement de taxes de vente" : "Paiement de taxes de vente") : t.type === "dividende" ? "Dividende" : ((cat(t.type, t.categorie) || {}).l || t.categorie || "Non classée");
+const txTotal = t => (Number(t.montant) || 0) + (Number(t.taxe) || 0) + (Number(t.tvq) || 0);
+const txTaxes = t => (Number(t.taxe) || 0) + (Number(t.tvq) || 0);
+const unpaid = t => (t.statut === "a-payer" || t.statut === "a-recevoir") && !(t.paiement && t.paiement.compte);
+function needsGST(t){ if (t.type !== "depense" || t.categorie === "km" || !(txTaxes(t) > 0) || txTotal(t) < 100) return false; const f = S.fmap[norm(t.tiers)]; return !f || (Number(t.taxe) > 0 && !f.noTPS) || (Number(t.tvq) > 0 && !f.noTVQ); }
+const needsReceipt = t => t.type === "depense" && txTotal(t) >= 100 && !(t.recus && t.recus.length) && !["km","salaires","interets"].includes(t.categorie);
+const ico = (id, cls) => '<svg class="ic' + (cls ? " " + cls : "") + '"><use href="#' + id + '"/></svg>';
+const SORTE_IC = {banque:"i-bank", caisse:"i-wallet", carte:"i-card", actionnaire:"i-user", emprunt:"i-bank"};
+function kmRates(y){ const t = R().tauxKm || {}; if (t[y]) return t[y]; const ks = Object.keys(t).map(Number).filter(k => k <= y).sort((a, b) => b - a); return t[ks[0]] || [0.73, 0.67]; }
+const KM_PERSO = "perso";
+const kmPerso = k => !k.vehicule || k.vehicule === KM_PERSO;
+function kmCalc(y){
+  const [r1, r2v] = kmRates(y); let cum = 0;
+  return S.d.km.filter(k => String(k.date).slice(0, 4) === String(y)).sort((a, b) => a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id))).map(k => {
+    if (!kmPerso(k)) return Object.assign({}, k, {mt:0, cum, cie:true});
+    const km = Number(k.km) || 0, a1 = Math.max(0, Math.min(km, 5000 - cum)), a2 = km - a1; cum += km; return Object.assign({}, k, {mt: r2(a1 * r1 + a2 * r2v), cum}); });
+}
+function kmVehNom(v){ if (!v || v === KM_PERSO) return "Auto personnelle"; const e = S.d.equipements.find(q => q.id === v); return e ? e.nom : "Véhicule de la compagnie"; }
+function kmVehicules(){ return [[KM_PERSO, "Mon auto personnelle"], ...S.d.equipements.filter(e => e.statut !== "vendu" && (e.type === "vehicule" || e.type === "remorque")).map(e => [e.id, e.nom + " (compagnie)"])]; }
+function distGeo(a, b){ const rad = x => x * Math.PI / 180, dLa = rad(b[0] - a[0]), dLo = rad(b[1] - a[1]), h = Math.sin(dLa / 2) ** 2 + Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(dLo / 2) ** 2; return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h))); }
+function lieuPres(pt, max){ let best = null, bd = max || 0.3; (S.d.lieux || []).forEach(l => { if (l.lat == null || l.lng == null) return; const dd = distGeo(pt, [l.lat, l.lng]); if (dd <= bd){ bd = dd; best = l; } }); return best; }
+function kmFrequents(n){
+  const lim = addDays(today(), -400), m = new Map();
+  S.d.km.filter(k => k.date >= lim && k.destination && !k.exemple).forEach(k => { const key = norm(k.depart) + ">" + norm(k.destination) + ">" + (k.vehicule || KM_PERSO); const o = m.get(key) || {n:0, k:null}; o.n++; if (!o.k || k.date >= o.k.date) o.k = k; m.set(key, o); });
+  return [...m.values()].sort((a, b) => b.n - a.n || b.k.date.localeCompare(a.k.date)).slice(0, n || 6).map(o => Object.assign({fois:o.n}, o.k));
+}
+function kmLieuxNoms(){ const s = new Set(); (S.d.lieux || []).forEach(l => { if (l.nom) s.add(l.nom); }); S.d.km.slice(-300).forEach(k => { if (k.depart) s.add(k.depart); if (k.destination) s.add(k.destination); }); return [...s].sort((a, b) => a.localeCompare(b, "fr")); }
+const DOC_RE = /\.(pdf|jpe?g|png|webp|gif|heic|heif|tiff?)$/i;
+const extOf = p => ((String(p).match(/\.[a-z0-9]+$/i) || [""])[0]).toLowerCase();
+const slug = s => norm(s).replace(/ /g, "-").slice(0, 40);
+const fileSafe = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 ._,-]+/g, " ").trim().replace(/\s+/g, "-").slice(0, 60).replace(/[.-]+$/, "");
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const dFull = s => { const [y, m, d] = String(s).split("-").map(Number); return cap(new Date(y, m - 1, d).toLocaleDateString("fr-CA", {weekday:"long", day:"numeric", month:"long", year:"numeric"})); };
+const fmtKm = v => (Math.round(Number(v) || 0)).toLocaleString("fr-CA") + " km";
+const fq = q => (Number(q) || 0).toLocaleString("fr-CA", {maximumFractionDigits:2});
+const HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const HELVB = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+const WIN = {"€":128,"‚":130,"„":132,"…":133,"‘":145,"’":146,"“":147,"”":148,"•":149,"–":150,"—":151,"™":153,"œ":156,"Œ":140,"‹":139,"›":155};
+const WIN_W = {139:333,155:333,128:556,130:222,132:333,133:1000,140:1000,145:222,146:222,147:333,148:333,149:350,150:556,151:1000,153:1000,156:944,160:278,167:556,169:737,171:556,174:737,176:400,178:333,179:333,183:278,185:333,187:556,188:834,189:834,190:834,215:584,223:611,247:584};
+const pdfChars = s => String(s == null ? "" : s).normalize("NFC").replace(/[     ]/g, " ").replace(/−/g, "-").replace(/[\r\t]/g, " ");
+function winCode(ch){ const c = ch.charCodeAt(0); if (c < 128) return c >= 32 ? c : 32; if (c >= 160 && c <= 255) return c; return WIN[ch] || 63; }
+function charW(ch, bold){ const c = winCode(ch), T = bold ? HELVB : HELV; if (c < 127) return T[c - 32]; if (WIN_W[c]) return WIN_W[c]; const b = ch.normalize("NFD").charCodeAt(0); return b >= 32 && b < 127 ? T[b - 32] : 556; }
+function textW(s, size, bold){ let w = 0; for (const ch of pdfChars(s)) w += charW(ch, bold); return w * size / 1000; }
+function pdfStr(s){ let o = ""; for (const ch of pdfChars(s)){ const b = winCode(ch); if (b === 40 || b === 41 || b === 92) o += "\\" + String.fromCharCode(b); else if (b < 32 || b > 126) o += "\\" + b.toString(8).padStart(3, "0"); else o += String.fromCharCode(b); } return o; }
+function wrapText(s, size, bold, maxW){
+  const out = [];
+  pdfChars(s).split("\n").forEach(par => {
+    let line = "";
+    par.split(/ +/).filter(Boolean).forEach(w => {
+      while (textW(w, size, bold) > maxW && w.length > 1){ let k = 1; while (k < w.length - 1 && textW(w.slice(0, k + 1), size, bold) <= maxW) k++; if (line){ out.push(line); line = ""; } out.push(w.slice(0, k)); w = w.slice(k); }
+      const test = line ? line + " " + w : w;
+      if (textW(test, size, bold) <= maxW) line = test; else { out.push(line); line = w; }
+    });
+    out.push(line);
+  });
+  return out;
+}
+function PDF(){
+  const W = 612, H = 792, pages = [], imgs = [], draws = [], links = [];
+  let ops = null, cv = null, lk = null;
+  const n = v => String(Math.round(v * 100) / 100);
+  const col = c => { const h = String(c).replace("#", ""); return [0, 2, 4].map(i => n(parseInt(h.slice(i, i + 2), 16) / 255)).join(" "); };
+  const P = {
+    W, H, pages, draws,
+    page(){ ops = []; pages.push(ops); cv = []; draws.push(cv); lk = []; links.push(lk); return P; },
+    at(i){ ops = pages[i]; cv = draws[i]; lk = links[i]; return P; },
+    link(x, y, w, h, url){ if (lk && url) lk.push({x, y, w, h, url:String(url)}); },
+    text(x, y, s, o){ o = o || {}; const size = o.size || 10, bold = !!o.bold, ls = Number(o.ls) || 0, nc = [...pdfChars(s)].length, w = textW(s, size, bold) + (nc > 1 ? ls * (nc - 1) : 0); let tx = x; if (o.align === "right") tx = x - w; else if (o.align === "center") tx = x - w / 2;
+      ops.push((o.color ? col(o.color) + " rg " : "") + "BT /" + (bold ? "F2" : o.italic ? "F3" : "F1") + " " + n(size) + " Tf " + (ls ? n(ls) + " Tc " : "") + n(tx) + " " + n(H - y) + " Td (" + pdfStr(s) + ") Tj " + (ls ? "0 Tc " : "") + "ET" + (o.color ? " 0 0 0 rg" : ""));
+      cv.push({k:"t", x:tx, y, s:pdfChars(s), size, bold, italic:!!o.italic, ls, color:o.color || "#000000"}); return w; },
+    line(x1, y1, x2, y2, o){ o = o || {}; ops.push(col(o.color || "#000000") + " RG " + n(o.w || 0.6) + " w " + n(x1) + " " + n(H - y1) + " m " + n(x2) + " " + n(H - y2) + " l S"); cv.push({k:"l", x1, y1, x2, y2, color:o.color || "#000000", w:o.w || 0.6}); },
+    rect(x, y, w, h, color){ ops.push(col(color) + " rg " + n(x) + " " + n(H - y - h) + " " + n(w) + " " + n(h) + " re f 0 0 0 rg"); cv.push({k:"r", x, y, w, h, color}); },
+    path(cmds, o){ o = o || {}; let p = ""; cmds.forEach(c => { if (c[0] === "M") p += n(c[1]) + " " + n(H - c[2]) + " m "; else if (c[0] === "L") p += n(c[1]) + " " + n(H - c[2]) + " l "; else if (c[0] === "C") p += n(c[1]) + " " + n(H - c[2]) + " " + n(c[3]) + " " + n(H - c[4]) + " " + n(c[5]) + " " + n(H - c[6]) + " c "; else if (c[0] === "Z") p += "h "; });
+      ops.push((o.fill ? col(o.fill) + " rg " : "") + (o.stroke ? col(o.stroke) + " RG " + n(o.w || 0.8) + " w 1 J 1 j " : "") + p + (o.fill && o.stroke ? "B" : o.fill ? "f" : "S") + " 0 0 0 rg 0 0 0 RG 0 J 0 j");
+      cv.push({k:"p", cmds, fill:o.fill || null, stroke:o.stroke || null, w:o.w || 0.8}); },
+    rrect(x, y, w, h, r, o){ r = Math.max(0, Math.min(r, w / 2, h / 2)); const k = 0.5523 * r;
+      P.path([["M", x + r, y], ["L", x + w - r, y], ["C", x + w - r + k, y, x + w, y + r - k, x + w, y + r], ["L", x + w, y + h - r], ["C", x + w, y + h - r + k, x + w - r + k, y + h, x + w - r, y + h], ["L", x + r, y + h], ["C", x + r - k, y + h, x, y + h - r + k, x, y + h - r], ["L", x, y + r], ["C", x, y + r - k, x + r - k, y, x + r, y], ["Z"]], o); },
+    circle(cx, cy, r, o){ const k = 0.5523 * r; P.path([["M", cx + r, cy], ["C", cx + r, cy + k, cx + k, cy + r, cx, cy + r], ["C", cx - k, cy + r, cx - r, cy + k, cx - r, cy], ["C", cx - r, cy - k, cx - k, cy - r, cx, cy - r], ["C", cx + k, cy - r, cx + r, cy - k, cx + r, cy], ["Z"]], o); },
+    image(img, x, y, w, h){ if (!imgs.includes(img)) imgs.push(img); ops.push("q " + n(w) + " 0 0 " + n(h) + " " + n(x) + " " + n(H - y - h) + " cm /Im" + (imgs.indexOf(img) + 1) + " Do Q"); cv.push({k:"i", img, x, y, w, h}); },
+    bytes(){
+      const enc = new TextEncoder(), chunks = [], offs = []; let len = 0;
+      const push = x => { const b = typeof x === "string" ? enc.encode(x) : x; chunks.push(b); len += b.length; };
+      const obj = (num, parts) => { offs[num] = len; push(num + " 0 obj\n"); parts.forEach(push); push("\nendobj\n"); };
+      push("%PDF-1.4\n"); push(new Uint8Array([37, 226, 227, 207, 211, 10]));
+      const first = 6 + imgs.length;
+      obj(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
+      obj(2, ["<< /Type /Pages /Kids [" + pages.map((_, i) => (first + i * 2) + " 0 R").join(" ") + "] /Count " + pages.length + " >>"]);
+      obj(3, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"]);
+      obj(4, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"]);
+      obj(5, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>"]);
+      imgs.forEach((im, i) => obj(6 + i, ["<< /Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + im.data.length + " >>\nstream\n", im.data, "\nendstream"]));
+      const xo = imgs.length ? " /XObject << " + imgs.map((_, i) => "/Im" + (i + 1) + " " + (6 + i) + " 0 R").join(" ") + " >>" : "";
+      const annBase = first + pages.length * 2, ann = []; links.forEach((L, i) => L.forEach(l => ann.push({i, l})));
+      pages.forEach((o, i) => { const pn = first + i * 2, c = o.join("\n"), my = ann.map((a, k) => a.i === i ? (annBase + k) + " 0 R" : "").filter(Boolean);
+        obj(pn, ["<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>" + xo + " >>" + (my.length ? " /Annots [" + my.join(" ") + "]" : "") + " /Contents " + (pn + 1) + " 0 R >>"]);
+        obj(pn + 1, ["<< /Length " + c.length + " >>\nstream\n" + c + "\nendstream"]); });
+      ann.forEach((a, k) => { const l = a.l, u = l.url.replace(/[^\x21-\x7e]/g, ch => encodeURIComponent(ch)).replace(/[\\()]/g, "\\$&");
+        obj(annBase + k, ["<< /Type /Annot /Subtype /Link /Rect [" + [l.x, H - l.y - l.h, l.x + l.w, H - l.y].map(n).join(" ") + "] /Border [0 0 0] /F 4 /A << /Type /Action /S /URI /URI (" + u + ") >> >>"]); });
+      const total = annBase + ann.length, xref = len;
+      let x = "xref\n0 " + total + "\n0000000000 65535 f \n"; for (let i = 1; i < total; i++) x += String(offs[i]).padStart(10, "0") + " 00000 n \n";
+      push(x + "trailer\n<< /Size " + total + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF\n");
+      const out = new Uint8Array(len); let p = 0; chunks.forEach(c => { out.set(c, p); p += c.length; }); return out;
+    }
+  };
+  return P;
+}
+function taxLines(code, tot){ const [a, b] = taxRates(code), out = []; if (code === "ON") out.push(["TVH (" + pct(a) + ")", tot.tx]); else if (a) out.push(["TPS (" + pct(a) + ")", tot.tx]); if (b) out.push(["TVQ (" + pct(b) + ")", tot.tq]); return out; }
+const LT = [
+  ["service", "Service", "Main-d'œuvre et services", "h", "Ex. : Émondage de 3 érables, 2 hommes"],
+  ["location", "Location de matériel", "Location de matériel", "jour", "Ex. : Nacelle de 60 pi"],
+  ["outils", "Outils et équipement", "Outils et équipement", "jour", "Ex. : Déchiqueteuse à branches"],
+  ["deplacement", "Déplacement", "Déplacement", "km", "Ex. : Aller-retour au chantier"],
+  ["consommables", "Consommables", "Consommables", "forfait", "Ex. : Essence, huile à chaîne"],
+  ["materiaux", "Matériaux", "Matériaux", "unité", "Ex. : Haubans, paillis"],
+  ["disposition", "Ramassage et disposition", "Ramassage et disposition", "voyage", "Ex. : Ramassage et transport des branches"],
+  ["autre", "Autres frais", "Autres frais", "", "Ex. : Permis de coupe de la ville"],
+  ["rabais", "Rabais", "Rabais", "", "Ex. : Rabais client fidèle"]
+].map(([k, l, g, u, ph]) => ({k, l, g, u, ph}));
+const LTM = Object.fromEntries(LT.map(t => [t.k, t]));
+const LUNITES = [["", "—"], ["h", "heure (h)"], ["jour", "jour"], ["sem.", "semaine"], ["mois", "mois"], ["km", "km"], ["unité", "unité"], ["forfait", "forfait"], ["arbre", "arbre"], ["souche", "souche"], ["voyage", "voyage"], ["m³", "m³"], ["pi lin.", "pied linéaire"]];
+function uniteOptions(cur){ const c = String(cur || "").trim(), L = LUNITES.some(([v]) => v === c) ? LUNITES : LUNITES.concat([[c, c]]); return L.map(([v, l]) => '<option value="' + esc(v) + '"' + (v === c ? " selected" : "") + ">" + esc(l) + "</option>").join(""); }
+const ligneType = l => LTM[l && l.type] ? l.type : "service";
+const ligneMt = l => { const m = r2((Number(l.qte) || 0) * (Number(l.prix) || 0)); return l.type === "rabais" ? -Math.abs(m) : m; };
+const qteTxt = l => { const u = String(l.unite || "").trim(), pl = Number(l.qte) >= 2 && /^[a-zà-ÿ]{3,}$/i.test(u) && !/[sx]$/i.test(u); return fq(l.qte) + (u ? " " + u + (pl ? "s" : "") : ""); };
+function ligneHT(doc, l){ const m = ligneMt(l); if (!doc.taxesIncluses) return m; const [a, b] = taxRates(doc.codeTaxe || "AUCUNE"); return r2(m * 100 / (100 + a + b)); }
+function docTotals(doc){
+  const brut = r2((doc.lignes || []).reduce((s, l) => s + ligneMt(l), 0)), [a, b] = taxRates(doc.codeTaxe || "AUCUNE");
+  if (doc.taxesIncluses && (a || b)){ const k = 100 + a + b, tx = r2(brut * a / k), tq = r2(brut * b / k); return {st: r2(brut - tx - tq), tx, tq, total: brut, ttc: true}; }
+  const tx = r2(brut * a / 100), tq = r2(brut * b / 100); return {st: brut, tx, tq, total: r2(brut + tx + tq), ttc: false};
+}
+function ligneTaxes(doc){
+  const L = doc.lignes || [], tot = docTotals(doc), [a, b] = taxRates(doc.codeTaxe || "AUCUNE"), k = tot.ttc ? 100 + a + b : 100;
+  const part = (rate, cible) => { const raw = L.map(l => ligneMt(l) * rate / k), c = raw.map(v => Math.round(v * 100)); let diff = Math.round(cible * 100) - c.reduce((s, v) => s + v, 0);
+    const ord = raw.map((v, i) => [v * 100 - c[i], i]).sort((x, y) => diff > 0 ? y[0] - x[0] : x[0] - y[0]);
+    for (let j = 0; diff !== 0 && ord.length && j < ord.length * 3; j++){ c[ord[j % ord.length][1]] += diff > 0 ? 1 : -1; diff += diff > 0 ? -1 : 1; }
+    return c.map(v => v / 100); };
+  const tx = part(a, tot.tx), tq = part(b, tot.tq);
+  return L.map((l, i) => { const m = ligneMt(l); return tot.ttc ? {ht: r2(m - tx[i] - tq[i]), tx: tx[i], tq: tq[i], ttc: m} : {ht: m, tx: tx[i], tq: tq[i], ttc: r2(m + tx[i] + tq[i])}; });
+}
+function ligneTaxTxt(doc, t){
+  const [a, b] = taxRates(doc.codeTaxe || "AUCUNE"); if (!a && !b) return "";
+  const parts = [a ? (doc.codeTaxe === "ON" ? "TVH " : "TPS ") + fmt(t.tx) : "", b ? "TVQ " + fmt(t.tq) : ""].filter(Boolean).join(" · ");
+  return doc.taxesIncluses ? "Avant taxes " + fmt(t.ht) + " · " + parts : parts + " · Total avec taxes " + fmt(t.ttc);
+}
+function docGroupes(doc){
+  const out = []; LT.forEach(t => { const L = (doc.lignes || []).filter(l => ligneType(l) === t.k); if (L.length) out.push({t, lignes: L, mt: r2(L.reduce((s, l) => s + ligneMt(l), 0))}); }); return out;
+}
+function docMessage(kind, doc){
+  const r = R(), isF = kind === "facture", t = docTotals(doc), cli = String(doc.client || "").trim(), G = docGenre(kind), lien = isF ? "" : signLien(kind, doc);
+  return "Bonjour" + (cli ? " " + cli : "") + ",\n\nVoici " + G.la + " " + doc.numero + (r.nom ? (/^[aeiouyàâäéèêëîïôöûüù]/i.test(r.nom) ? " d'" : " de ") + r.nom : "") + " : " + fmt(t.total) + (t.tx || t.tq ? " taxes incluses" : "") +
+    (isF ? (doc.echeance && doc.echeance > doc.date ? ", payable d'ici le " + dLong(doc.echeance) : ", payable à réception") : ", valide jusqu'au " + dLong(doc.echeance)) + "." +
+    (lien ? "\n\nPour l'accepter, signez-" + (G.t === "Devis" ? "le" : "la") + " en ligne, avec le doigt (1 minute) :\n" + lien + "\n\nVous pouvez aussi simplement répondre à ce message." : !isF ? "\nPour l'accepter, répondez simplement à ce message." : "") + "\n\nMerci et bonne journée,\n" + (r.nom || "") + (r.telephone ? "\n" + r.telephone : "") + (r.courriel ? "\n" + r.courriel : "");
+}
+const DOC_COUL = {g:"#2F6B3B", tint:"#EDF4EE", ink:"#1E2622", mut:"#67716B", line:"#D2DBD4"};
+function docTitre(kind){ return kind === "facture" ? "Facture" : (R().titreDevis || "Devis"); }
+function docGenre(kind){ const t = docTitre(kind), f = t !== "Devis", m = t.toLowerCase(); return {t, m, la: (f ? "la " : "le ") + m, de: (f ? "de la " : "du ") + m, cette: (f ? "Cette " : "Ce ") + m, prep: f ? "préparée" : "préparé", presente: (f ? "la présente " : "le présent ") + m}; }
+function docLayoutOrigine(kind, doc, logo, sigs){
+  sigs = sigs || {}; const sg = doc.signature && doc.signature.nom ? doc.signature : null;
+  const r = R(), P = PDF(), C = DOC_COUL, M = 54, RX = P.W - M, W = RX - M, isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
+  const G = docGenre(kind), titre = G.t, nom = String(r.nom || "Mon entreprise").trim(), BOTTOM = P.H - 74, grp = docGroupes(doc), multi = grp.length > 1;
+  const XQ = M + 50, XP = RX - 168, XT = RX - 84, DW = XP - XQ - 16, TXL = doc.taxesLigne ? ligneTaxes(doc) : null;
+  let y = 0, inTable = false;
+  const T = (x, yy, s, o) => P.text(x, yy, s, Object.assign({color:C.ink}, o || {}));
+  const h2 = (s) => { T(M, y + 13, s, {size:12.5, bold:true, color:C.g}); y += 29; };
+  const label = (x, yy, s, w) => { T(x, yy, s.toUpperCase(), {size:7.8, bold:true, color:C.g, ls:1.1}); P.line(x, yy + 6, x + w, yy + 6, {color:C.line, w:0.8}); };
+  const tableHead = () => { P.rect(M, y, W, 22, C.g);
+    [["Qté", (M + XQ) / 2], ["Description", (XQ + XP) / 2], ["Prix unit." + (tot.ttc ? " (tx incl.)" : ""), (XP + XT) / 2], ["Total", (XT + RX) / 2]].forEach(([s, x]) => T(x, y + 14.5, s, {size:9, bold:true, color:"#FFFFFF", align:"center"}));
+    y += 22; };
+  const newPage = () => { P.page(); y = M; T(M, y + 10, nom.toUpperCase(), {size:10, bold:true, color:C.g, ls:0.8}); T(RX, y + 10, titre + " " + doc.numero + " (suite)", {size:9, color:C.mut, align:"right"}); y += 20; P.line(M, y, RX, y, {color:C.g, w:1}); y += 18; if (inTable) tableHead(); };
+  const need = h => { if (y + h > BOTTOM) newPage(); };
+  P.page();
+  /* En-tête : nom et slogan à gauche, coordonnées et numéros de taxes à droite */
+  let lx = M, ly = M + 18;
+  if (logo){ let h = 50, w = logo.w * h / logo.h; if (w > 140){ w = 140; h = logo.h * w / logo.w; } P.image(logo, M, M, w, h); lx = M + w + 14; ly = M + Math.max(18, h / 2 + 4); }
+  T(lx, ly, nom.toUpperCase(), {size:20, bold:true, color:C.g, ls:1}); ly += 17;
+  if (r.slogan){ T(lx, ly, r.slogan, {size:9.5, italic:true, color:C.mut}); ly += 13; }
+  String(r.adresse || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => { T(lx, ly, s, {size:8.8, color:C.mut}); ly += 11.5; });
+  let ry = M + 8;
+  if (r.telephone){ T(RX, ry, r.telephone, {size:10, align:"right"}); ry += 13; }
+  if (r.courriel){ T(RX, ry, r.courriel, {size:10, align:"right"}); ry += 14; }
+  [r.noTPS ? "TPS : " + r.noTPS : "", r.noTVQ && quebec() ? "TVQ : " + r.noTVQ : "", r.neq ? "NEQ : " + r.neq : ""].filter(Boolean).forEach(s => { T(RX, ry, s, {size:8, color:C.mut, align:"right"}); ry += 10.5; });
+  y = Math.max(ly, ry, logo ? M + 54 : 0) + 10; P.line(M, y, RX, y, {color:C.g, w:1.6});
+  /* Titre */
+  y += 36; T(P.W / 2, y, titre.toUpperCase(), {size:24, bold:true, color:C.g, align:"center", ls:3}); y += 26;
+  /* Client et détails */
+  const cw = (W - 30) / 2, rx2 = M + cw + 30, top = y;
+  label(M, y, isF ? "Facturé à" : titre + " " + G.prep + " pour", cw); label(rx2, y, "Détails " + G.de, cw);
+  let a = y + 24; T(M, a, doc.client || "", {size:11, bold:true}); a += 15;
+  String(cli.adresse || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => { T(M, a, s, {size:10}); a += 13; });
+  [cli.telephone, cli.courriel].filter(Boolean).forEach(s => { T(M, a, s, {size:9, color:C.mut}); a += 12; });
+  const det = [[titre + " n°", doc.numero], [isF ? "Date de facturation" : "Date", dLong(doc.date)]];
+  if (doc.dateTravaux) det.push([isF ? "Date des travaux" : "Date prévue des travaux", dLong(doc.dateTravaux)]);
+  det.push(isF ? ["Échéance", doc.echeance && doc.echeance > doc.date ? dLong(doc.echeance) : "À réception"] : ["Valide jusqu'au", dLong(doc.echeance)]);
+  if (isF && doc.devis){ const v = S.d.devis.find(x => x.id === doc.devis); if (v) det.push(["Selon " + docGenre("devis").la + " n°", v.numero]); }
+  let b = y + 24; det.forEach(([k, v]) => { const w = T(rx2, b, k + " :", {size:10, bold:true}); T(rx2 + w + 4, b, v, {size:10}); b += 15; });
+  if (String(doc.lieu || "").trim()){ const w = T(rx2, b, "Lieu des travaux :", {size:10, bold:true}); const L = wrapText(String(doc.lieu).trim(), 10, false, cw - w - 4); L.forEach((s, i) => T(rx2 + w + 4, b + i * 13, s, {size:10})); b += L.length * 13 + 2; }
+  y = Math.max(a, b) + 8;
+  /* Description des travaux (texte libre) */
+  if (String(doc.travaux || "").trim()){ const L = wrapText(String(doc.travaux).trim(), 10, false, W); need(36 + Math.min(L.length, 6) * 13); y += 6; h2("Description des travaux"); L.forEach(s => { need(14); T(M, y, s, {size:10}); y += 13; }); }
+  /* Détail des travaux */
+  need(31 + 22 + 30); y += 8; h2("Détail des travaux"); y -= 8; inTable = true; tableHead();
+  const rowLines = (x1, x2) => { P.line(M, x1, M, x2, {color:C.line, w:0.6}); [XQ, XP, XT].forEach(x => P.line(x, x1, x, x2, {color:C.line, w:0.6})); P.line(RX, x1, RX, x2, {color:C.line, w:0.6}); P.line(M, x2, RX, x2, {color:C.line, w:0.6}); };
+  const hdr = multi && grp.some(g => g.lignes.length > 1);
+  grp.forEach(g => {
+    if (hdr){ need(20 + 30); P.rect(M, y, W, 20, C.tint); T(XQ + 8, y + 13.5, g.t.g.toUpperCase(), {size:7.8, bold:true, color:C.g, ls:0.8}); T(RX - 8, y + 13.5, (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)), {size:8.8, bold:true, color:C.g, align:"right"}); P.line(M, y, M, y + 20, {color:C.line, w:0.6}); P.line(RX, y, RX, y + 20, {color:C.line, w:0.6}); P.line(M, y + 20, RX, y + 20, {color:C.line, w:0.6}); y += 20; }
+    g.lignes.forEach(l => {
+      const parts = String(l.description || "").split(/\r?\n/), main = wrapText(parts[0] || "", 10, false, DW), sub = parts.slice(1).join("\n").trim() ? wrapText(parts.slice(1).join("\n").trim(), 8.8, false, DW) : [];
+      const lt = TXL ? ligneTaxTxt(doc, TXL[doc.lignes.indexOf(l)]) : "", cap = multi && !hdr ? 10.5 : 0, h = cap + Math.max(1, main.length) * 12.5 + sub.length * 11 + (lt ? 11 : 0) + 10, mt = ligneMt(l), yb = y + 14 + cap;
+      need(h); const y0 = y;
+      if (cap) T(XQ + 8, y + 12, g.t.g.toUpperCase(), {size:6.8, bold:true, color:C.g, ls:0.7});
+      main.forEach((s, i) => T(XQ + 8, yb + i * 12.5, s, {size:10}));
+      sub.forEach((s, i) => T(XQ + 8, yb + main.length * 12.5 + i * 11 - 1, s, {size:8.8, italic:true, color:C.mut}));
+      if (lt) T(XQ + 8, yb + main.length * 12.5 + sub.length * 11 - 1, lt, {size:7.8, color:C.mut});
+      T((M + XQ) / 2, yb, qteTxt(l), {size:10, align:"center"});
+      T(XT - 8, yb, fmt(l.prix), {size:10, align:"right"});
+      T(RX - 8, yb, (mt < 0 ? "−" : "") + fmt(Math.abs(mt)), {size:10, align:"right", color: mt < 0 ? C.g : C.ink});
+      y += h; rowLines(y0, y);
+    });
+  });
+  inTable = false;
+  /* Sommaire */
+  const t = isF && doc.transaction ? S.tmap[doc.transaction] : null, paid = t && !unpaid(t);
+  const rows = [["Sous-total", tot.st], ...taxLines(doc.codeTaxe, tot)], bw = 240, bx = RX - bw, rh = 21;
+  need(16 + rows.length * rh + 26 + (paid ? rh : 0)); y += 16; const sTop = y;
+  const cell = (k, v, o) => { o = o || {}; if (o.fill) P.rect(bx, y, bw, o.h || rh, o.fill); P.line(bx, y, RX, y, {color:C.line, w:0.6}); P.line(bx, y, bx, y + (o.h || rh), {color:C.line, w:0.6}); P.line(RX - 96, y, RX - 96, y + (o.h || rh), {color:C.line, w:0.6}); P.line(RX, y, RX, y + (o.h || rh), {color:C.line, w:0.6});
+    T(RX - 104, y + (o.h || rh) / 2 + 3.5, k + " :", {size:o.size || 10, bold:!!o.bold, align:"right", color:o.kc || C.ink}); T(RX - 8, y + (o.h || rh) / 2 + 3.5, v, {size:o.size || 10, bold:!!o.bold, align:"right", color:o.vc || C.ink}); y += o.h || rh; };
+  rows.forEach(([k, v]) => cell(k, fmt(v)));
+  cell(isF ? "Total à payer" : "Total", fmt(tot.total), {fill:C.tint, bold:true, size:12, vc:C.g, h:26});
+  if (isF && paid) cell("Payée le " + dShort((t.paiement && t.paiement.date) || t.date) + " · Solde", fmt(0), {size:9.5, vc:C.g});
+  P.line(bx, y, RX, y, {color:C.line, w:0.6});
+  /* À gauche du sommaire : rappel des taxes incluses */
+  let ny = sTop + 14; if (tot.ttc) wrapText((isF ? "Montant total convenu avec le client" : "Prix forfaitaire convenu avec le client") + ", taxes incluses.", 8.5, false, bx - M - 24).forEach(s => { T(M, ny, s, {size:8.5, italic:true, color:C.mut}); ny += 11; });
+  y = Math.max(y, ny);
+  /* Modalités */
+  const pay = String(r.modePaiement || "").trim();
+  const bullet = (parts) => { const full = parts.map(p => p[0]).join(""); const L = wrapText(full, 10, false, W - 16); need(L.length * 13 + 2); T(M + 4, y, "•", {size:10});
+    if (L.length === 1 && parts.length > 1){ let x = M + 16; parts.forEach(([s, bo]) => { x += T(x, y, s, {size:10, bold:!!bo}); }); y += 13; } else { L.forEach(s => { T(M + 16, y, s, {size:10}); y += 13; }); } };
+  if (isF){
+    need(60); y += 18; h2("Modalités de paiement");
+    const txt = paid ? "Cette facture a été payée le " + dLong((t.paiement && t.paiement.date) || t.date) + ". Merci!" : (doc.dateTravaux ? "Les travaux décrits ci-dessus ont été complétés le " + dLong(doc.dateTravaux) + ". " : "") + (doc.echeance && doc.echeance > doc.date ? "Le solde est payable d'ici le " + dLong(doc.echeance) + "." : "Le solde est payable à réception de la présente facture.");
+    wrapText(txt, 10, false, W).forEach(s => { need(13); T(M, y, s, {size:10}); y += 13; });
+    if (pay && !paid){ y += 3; const w = T(M, y, "Mode de paiement :", {size:10, bold:true}); T(M + w + 4, y, pay, {size:10}); y += 13; }
+    if (sg){
+      need(116); y += 14; h2("Confirmation du client");
+      wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
+      y += 6; const cw2 = (W - 30) / 2; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw2 - 8, 32); P.line(M, y + 34, M + cw2, y + 34, {color:"#8A948E", w:0.7});
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5, color:C.ink}); T(M, y + 58, "Signé électroniquement" + sigVia(sg), {size:7.5, italic:true, color:C.mut}); y += 62;
+    }
+  } else {
+    need(70); y += 14; h2("Modalités");
+    String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
+    const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
+    if (pay) bullet([["Mode de paiement : "], [pay, true]]);
+    /* Acceptation */
+    const lien = sg ? "" : signLien(kind, doc);
+    need(120); y += 8; h2("Acceptation " + G.de);
+    wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
+    y += 8;
+    const bloc = (x, titre, img, date, pied) => { T(x, y, titre, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); P.line(x, y + 40, x + cw, y + 40, {color:"#8A948E", w:0.7}); T(x, y + 52, lien && x === rx2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
+      T(x, y + 67, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 80, pied, {size:7.5, italic:true, color:C.mut}); };
+    const sc = doc.signatureCie && doc.signatureCie.nom ? doc.signatureCie : null;
+    bloc(M, nom, sigs.cie || null, sc ? sc.date : (sigs.cie ? doc.date : ""), sc ? "Signé pour l'entreprise par " + sc.nom : "");
+    bloc(rx2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
+    if (lien) sigBoutonPDF(P, rx2 + 4, y + 9, lien, C.g);
+    y += sg || sc ? 84 : 72;
+  }
+  /* Remerciements */
+  const msg = String(doc.message || "").trim(), extra = msg && !/^merci de votre confiance\s*[.!]?$/i.test(msg) ? wrapText(msg, 9, false, W - 40) : [];
+  if (y + 30 + extra.length * 12 > P.H - 56) newPage(); y += 16; T(P.W / 2, y, "Merci de votre confiance.", {size:11, bold:true, color:C.g, align:"center"}); y += 15;
+  extra.forEach(s => { T(P.W / 2, y, s, {size:9, italic:true, color:C.mut, align:"center"}); y += 12; });
+  /* Pied de page */
+  const pied = [nom, r.telephone, r.courriel].filter(Boolean).join("  |  ");
+  P.pages.forEach((_, i) => { P.at(i); P.line(M, P.H - 50, RX, P.H - 50, {color:C.line, w:0.6}); T(P.W / 2, P.H - 36, pied + (P.pages.length > 1 ? "   ·   Page " + (i + 1) + " de " + P.pages.length : ""), {size:8.5, color:C.mut, align:"center"}); });
+  return P;
+}
+const DOC_STYLES = {origine: "Modèle d'origine", nature: "Nature : doux et rassurant", moderne: "Moderne : bandeau vert", epure: "Épuré : sobre et aéré"};
+function docLayout(kind, doc, logo, sigs){ const st = R().styleDoc; return DOC_STYLES[st] && st !== "origine" ? docLayoutStyle(kind, doc, logo, sigs, st) : docLayoutOrigine(kind, doc, logo, sigs); }
+function docEmbleme(P, cx, cy, R0, fond, feuille){
+  /* Même feuille que le logo de l'application (dessin sur 100 unités, centré sur 48,52) */
+  P.circle(cx, cy, R0, {fill: fond});
+  const k = R0 / 50 * 1.02, X = u => cx + (u - 48) * k, Y = v => cy + (v - 52) * k;
+  P.path([["M", X(30), Y(70)], ["C", X(17.6), Y(40), X(55.9), Y(29.9), X(74), Y(26)], ["C", X(70.1), Y(44.1), X(60), Y(82.4), X(30), Y(70)], ["Z"]], {fill: feuille});
+  P.path([["M", X(30.5), Y(69.5)], ["L", X(21), Y(79)]], {stroke: feuille, w: 4.6 * k});
+  P.path([["M", X(33), Y(67)], ["C", X(44), Y(56), X(55), Y(45), X(66.5), Y(33.5)]], {stroke: fond, w: 3.2 * k});
+}
+function docLayoutStyle(kind, doc, logo, sigs, st){
+  sigs = sigs || {}; const sg = doc.signature && doc.signature.nom ? doc.signature : null, MOD = st === "moderne", EPU = st === "epure";
+  const C = Object.assign({g:"#2F6B3B", g2:"#4C8B57", tint:"#EDF5EE", soft:"#F7FAF7", ink:"#1E2622", mut:"#68736C", line:"#DCE4DE", pale:"#CFE3D3"},
+    MOD ? {g:"#235C37", tint:"#E8F2EA", soft:"#F5F9F6"} : EPU ? {tint:"#F3F5F3", soft:"#FAFBFA", line:"#E2E5E3", ink:"#1B1E1C"} : {});
+  const r = R(), P = PDF(), M = 50, RX = P.W - M, W = RX - M, isF = kind === "facture", tot = docTotals(doc), cli = clientOf(doc) || {};
+  const G = docGenre(kind), titre = G.t, nom = String(r.nom || "Mon entreprise").trim(), grp = docGroupes(doc), multi = grp.length > 1, TXL = doc.taxesLigne ? ligneTaxes(doc) : null;
+  const BOTTOM = P.H - (MOD ? 62 : 66), XD = M + 10, XQ = RX - 196, XP = RX - 92, DW = XQ - 34 - XD;
+  let y = 0, inTable = false, zebra = 0;
+  const T = (x, yy, s, o) => P.text(x, yy, s, Object.assign({color:C.ink}, o || {}));
+  const h2 = s => { if (EPU){ T(M, y + 10, s.toUpperCase(), {size:8.5, bold:true, color:C.g, ls:1.6}); y += 23; } else { T(M, y + 12, s, {size:12.5, bold:true, color:C.g}); y += 25; } };
+  const caps = (x, yy, s, col) => T(x, yy, s.toUpperCase(), {size:7.4, bold:true, color:col || (EPU ? C.mut : C.g), ls:1.1});
+  const tableHead = () => {
+    if (EPU){ caps(XD, y + 12, "Description", C.mut); T(XQ, y + 12, "QTÉ", {size:7.4, bold:true, color:C.mut, ls:1.1, align:"center"}); T(XP, y + 12, (tot.ttc ? "Prix (tx incl.)" : "Prix unit.").toUpperCase(), {size:7.4, bold:true, color:C.mut, ls:1.1, align:"right"}); T(RX - 10, y + 12, "TOTAL", {size:7.4, bold:true, color:C.mut, ls:1.1, align:"right"}); P.line(M, y + 19, RX, y + 19, {color:C.ink, w:0.9}); y += 22; }
+    else { const fill = MOD ? C.tint : C.g, tc = MOD ? C.g : "#FFFFFF"; P.rrect(M, y, W, 24, 5, {fill});
+      T(XD, y + 15.5, "Description", {size:9, bold:true, color:tc}); T(XQ, y + 15.5, "Qté", {size:9, bold:true, color:tc, align:"center"}); T(XP, y + 15.5, tot.ttc ? "Prix (tx incl.)" : "Prix unit.", {size:9, bold:true, color:tc, align:"right"}); T(RX - 10, y + 15.5, "Total", {size:9, bold:true, color:tc, align:"right"}); y += 26; }
+    zebra = 0; };
+  const newPage = () => { P.page(); y = M; T(M, y + 10, nom.toUpperCase(), {size:9.5, bold:true, color:C.g, ls:0.9}); T(RX, y + 10, titre + " " + doc.numero + " (suite)", {size:9, color:C.mut, align:"right"}); y += 18; P.line(M, y, RX, y, {color:EPU ? C.line : C.g, w:0.8}); y += 18; if (inTable) tableHead(); };
+  const need = h => { if (y + h > BOTTOM) newPage(); };
+  P.page();
+  /* ---------- En-tête ---------- */
+  const contact = [r.telephone, r.courriel].filter(Boolean), nos = [r.noTPS ? "TPS " + r.noTPS : "", r.noTVQ && quebec() ? "TVQ " + r.noTVQ : "", r.neq ? "NEQ " + r.neq : ""].filter(Boolean);
+  if (MOD){
+    const BH = 98; P.rect(0, 0, P.W, BH, C.g);
+    let lx = M; if (logo){ let h = 46, w = logo.w * h / logo.h; if (w > 120){ w = 120; h = logo.h * w / logo.w; } P.rrect(M - 4, BH / 2 - h / 2 - 4, w + 8, h + 8, 6, {fill:"#FFFFFF"}); P.image(logo, M, BH / 2 - h / 2, w, h); lx = M + w + 18; }
+    else { docEmbleme(P, M + 24, BH / 2, 24, "#FFFFFF", C.g); lx = M + 62; }
+    T(lx, BH / 2 + 1, nom.toUpperCase(), {size:20, bold:true, color:"#FFFFFF", ls:1.2}); if (r.slogan) T(lx, BH / 2 + 17, r.slogan, {size:9.5, italic:true, color:C.pale});
+    let ry = BH / 2 - (contact.length * 13 + nos.length * 10.5) / 2 + 9; contact.forEach(s => { T(RX, ry, s, {size:10, bold:true, color:"#FFFFFF", align:"right"}); ry += 13; }); ry += 2; nos.forEach(s => { T(RX, ry, s, {size:7.8, color:C.pale, align:"right"}); ry += 10.5; });
+    y = BH + 36;
+  } else {
+    let lx = M, top = M - 6;
+    if (logo){ let h = 46, w = logo.w * h / logo.h; if (w > 130){ w = 130; h = logo.h * w / logo.w; } P.image(logo, M, top, w, h); lx = M + w + 14; }
+    else if (EPU){ docEmbleme(P, M + 12, top + 15, 12, C.g, "#FFFFFF"); lx = M + 32; }
+    else { docEmbleme(P, M + 23, top + 23, 23, C.g, "#FFFFFF"); lx = M + 58; }
+    T(lx, top + (EPU ? 20 : 21), nom.toUpperCase(), {size:EPU ? 15 : 19, bold:true, color:EPU ? C.ink : C.g, ls:EPU ? 2.4 : 0.9});
+    if (r.slogan) T(lx, top + (EPU ? 34 : 37), r.slogan, {size:9.2, italic:!EPU, color:C.mut});
+    let ry = top + 8; contact.forEach(s => { T(RX, ry, s, {size:9.8, align:"right"}); ry += 12.5; }); ry += 1; nos.forEach(s => { T(RX, ry, s, {size:7.6, color:C.mut, align:"right"}); ry += 10; });
+    y = Math.max(top + 50, ry) + 10;
+    if (EPU) P.line(M, y, RX, y, {color:C.line, w:0.8}); else { P.line(M, y, RX, y, {color:C.g, w:1.4}); }
+    y += 32;
+  }
+  /* ---------- Titre et détails ---------- */
+  const det = [[isF ? "Date de facturation" : "Date", dLong(doc.date)]];
+  if (doc.dateTravaux) det.push([isF ? "Date des travaux" : "Travaux prévus le", dLong(doc.dateTravaux)]);
+  det.push(isF ? ["Échéance", doc.echeance && doc.echeance > doc.date ? dLong(doc.echeance) : "À réception"] : ["Valide jusqu'au", dLong(doc.echeance)]);
+  if (isF && doc.devis){ const v = S.d.devis.find(x => x.id === doc.devis); if (v) det.push(["Selon " + docGenre("devis").la, v.numero]); }
+  const cw = (W - 18) / 2, x2 = M + cw + 18, lieu = String(doc.lieu || "").trim();
+  const cliL = [[doc.client || "", {size:11.5, bold:true, h:15}]].concat(String(cli.adresse || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).map(s => [s])).concat([cli.telephone, cli.courriel].filter(Boolean).map(s => [s, {size:9, color:C.mut, h:12}]));
+  const lieuL = lieu ? wrapText(lieu, 10, false, cw - 28) : [];
+  if (EPU){
+    caps(M, y - 8, titre, C.g); T(M, y + 14, doc.numero, {size:22, bold:true}); let dy = y - 8;
+    det.forEach(([k, v]) => { T(RX - 150, dy, k, {size:8.8, color:C.mut, align:"right"}); T(RX, dy, v, {size:9.2, bold:true, align:"right"}); dy += 13.5; });
+    y = Math.max(y + 32, dy + 8);
+    const col = (x, label, lignes) => { P.line(x, y, x + cw, y, {color:C.line, w:0.8}); caps(x, y + 15, label); let yy = y + 30; lignes.forEach(([s, o]) => { T(x, yy, s, Object.assign({size:10}, o || {})); yy += (o && o.h) || 13; }); return yy - y; };
+    const ha = col(M, isF ? "Facturé à" : titre + " " + G.prep + " pour", cliL), hb = lieu ? col(x2, "Lieu des travaux", lieuL.map(s => [s])) : 0;
+    y += Math.max(ha, hb) + 12;
+  } else {
+    /* Titre, numéro et montant total bien en vue */
+    if (MOD){ T(M, y, titre, {size:26, bold:true}); const tw = textW(titre, 26, true), no = "N° " + doc.numero, nw = textW(no, 10, true) + 20; P.rrect(M + tw + 12, y - 16, nw, 21, 10.5, {fill:C.tint}); T(M + tw + 12 + nw / 2, y - 2, no, {size:10, bold:true, color:C.g, align:"center"}); }
+    else { T(M, y, titre.toUpperCase(), {size:24, bold:true, color:C.g, ls:2.4}); T(M, y + 16, "N° " + doc.numero, {size:10.5, bold:true, color:C.mut}); }
+    T(RX, y - 17, (isF ? "Total à payer" : "Montant total").toUpperCase(), {size:7.4, bold:true, color:C.mut, ls:1.1, align:"right"}); T(RX, y + 4, fmt(tot.total), {size:20, bold:true, color:C.g, align:"right"});
+    y += MOD ? 18 : 30;
+    /* Deux cartes : client (et lieu des travaux), détails */
+    const hc = 30 + cliL.reduce((t, [, o]) => t + ((o && o.h) || 13), 0) + (lieu ? 22 + lieuL.length * 13 : 0), hd = 30 + det.length * 15, h = Math.max(hc, hd);
+    const fond = (x, w) => { if (MOD){ P.rrect(x, y, w, h, 8, {fill:C.soft}); P.rect(x, y + 8, 3, h - 16, C.g2); } else P.rrect(x, y, w, h, 8, {fill:C.soft, stroke:C.line, w:0.6}); };
+    fond(M, cw); caps(M + 14, y + 17, isF ? "Facturé à" : titre + " " + G.prep + " pour"); let yy = y + 33;
+    cliL.forEach(([s, o]) => { T(M + 14, yy, s, Object.assign({size:10}, o || {})); yy += (o && o.h) || 13; });
+    if (lieu){ yy += 6; caps(M + 14, yy, "Lieu des travaux"); yy += 14; lieuL.forEach(s => { T(M + 14, yy, s, {size:10}); yy += 13; }); }
+    if (MOD) P.rrect(x2, y, cw, h, 8, {fill:C.tint}); else P.rrect(x2, y, cw, h, 8, {fill:C.tint});
+    caps(x2 + 14, y + 17, "Détails " + G.de); let dy = y + 34;
+    det.forEach(([k, v]) => { T(x2 + 14, dy, k, {size:9.2, color:C.mut}); T(x2 + cw - 14, dy, v, {size:9.6, bold:true, align:"right"}); dy += 15; });
+    y += h + 16;
+  }
+  /* ---------- Description des travaux ---------- */
+  if (String(doc.travaux || "").trim()){
+    const L = wrapText(String(doc.travaux).trim(), 10, false, W - 16); need(30 + Math.min(L.length, 6) * 13); h2("Description des travaux");
+    const y0 = y - 10; L.forEach(s => { need(14); T(M + (EPU ? 0 : 14), y, s, {size:10}); y += 13; }); if (!EPU) P.rect(M, y0, 3, y - y0 - 6, C.g2); y += 8;
+  }
+  /* ---------- Détail des travaux ---------- */
+  need(27 + 26 + 30); h2("Détail des travaux"); y -= 6; inTable = true; tableHead();
+  const hdr = multi && grp.some(g => g.lignes.length > 1);
+  grp.forEach(g => {
+    if (hdr){ need(22 + 30); y += 2; T(XD, y + 13, g.t.g.toUpperCase(), {size:7.6, bold:true, color:C.g, ls:0.9}); T(RX - 10, y + 13, (g.mt < 0 ? "−" : "") + fmt(Math.abs(g.mt)), {size:8.6, bold:true, color:C.g, align:"right"}); y += 19; P.line(M, y, RX, y, {color:C.pale, w:0.6}); zebra = 0; }
+    g.lignes.forEach(l => {
+      const parts = String(l.description || "").split(/\r?\n/), main = wrapText(parts[0] || "", 10, false, DW), sub = parts.slice(1).join("\n").trim() ? wrapText(parts.slice(1).join("\n").trim(), 8.8, false, DW) : [];
+      const lt = TXL ? ligneTaxTxt(doc, TXL[doc.lignes.indexOf(l)]) : "", cap = multi && !hdr ? 10.5 : 0, h = cap + Math.max(1, main.length) * 12.5 + sub.length * 11 + (lt ? 11 : 0) + 12, mt = ligneMt(l), yb = y + 15 + cap;
+      need(h); if (!EPU && zebra++ % 2 === 1) P.rect(M, y, W, h, C.soft);
+      if (cap) T(XD, y + 12, g.t.g.toUpperCase(), {size:6.8, bold:true, color:C.g, ls:0.7});
+      main.forEach((s, i) => T(XD, yb + i * 12.5, s, {size:10}));
+      sub.forEach((s, i) => T(XD, yb + main.length * 12.5 + i * 11 - 1, s, {size:8.8, italic:true, color:C.mut}));
+      if (lt) T(XD, yb + main.length * 12.5 + sub.length * 11 - 1, lt, {size:7.8, color:C.mut});
+      T(XQ, yb, qteTxt(l), {size:10, align:"center"}); T(XP, yb, fmt(l.prix), {size:10, align:"right"});
+      T(RX - 10, yb, (mt < 0 ? "−" : "") + fmt(Math.abs(mt)), {size:10, bold:!EPU, align:"right", color: mt < 0 ? C.g : C.ink});
+      y += h; P.line(M, y, RX, y, {color:C.line, w:0.6});
+    });
+  });
+  inTable = false;
+  /* ---------- Sommaire ---------- */
+  const t = isF && doc.transaction ? S.tmap[doc.transaction] : null, paid = t && !unpaid(t);
+  const rows = [["Sous-total", tot.st], ...taxLines(doc.codeTaxe, tot)], bw = 232, bx = RX - bw, rh = 19;
+  need(18 + rows.length * rh + 40 + (paid ? 18 : 0)); y += 18; const sTop = y;
+  if (MOD) P.rrect(bx, y - 4, bw, rows.length * rh + 52, 8, {fill:C.tint});
+  rows.forEach(([k, v]) => { T(bx + 14, y + 12, k, {size:9.5, color:C.mut}); T(RX - 12, y + 12, fmt(v), {size:10, align:"right"}); y += rh; });
+  y += 6; const lab = isF ? "Total à payer" : "Total";
+  if (EPU){ P.line(bx, y, RX, y, {color:C.ink, w:0.9}); T(bx + 14, y + 20, lab, {size:12, bold:true}); T(RX - 12, y + 20, fmt(tot.total), {size:14, bold:true, align:"right"}); P.rect(RX - 12 - textW(fmt(tot.total), 14, true), y + 25, textW(fmt(tot.total), 14, true), 2, C.g); y += 34; }
+  else if (MOD){ T(bx + 14, y + 20, lab, {size:12, bold:true, color:C.g}); T(RX - 12, y + 21, fmt(tot.total), {size:16, bold:true, color:C.g, align:"right"}); y += 40; }
+  else { P.rrect(bx, y, bw, 34, 7, {fill:C.g}); T(bx + 14, y + 22, lab.toUpperCase(), {size:10, bold:true, color:"#FFFFFF", ls:1}); T(RX - 12, y + 23, fmt(tot.total), {size:15, bold:true, color:"#FFFFFF", align:"right"}); y += 42; }
+  if (isF && paid){ T(RX - 12, y + 4, "Payée le " + dLong((t.paiement && t.paiement.date) || t.date) + " · solde : " + fmt(0), {size:9, bold:true, color:C.g, align:"right"}); y += 16; }
+  let ny = sTop + 12; if (tot.ttc) wrapText((isF ? "Montant total convenu avec le client" : "Prix forfaitaire convenu avec le client") + ", taxes incluses.", 8.5, false, bx - M - 24).forEach(s => { T(M, ny, s, {size:8.5, italic:true, color:C.mut}); ny += 11; });
+  y = Math.max(y, ny);
+  /* ---------- Modalités, acceptation, signatures ---------- */
+  const pay = String(r.modePaiement || "").trim();
+  const bullet = parts => { const full = parts.map(p => p[0]).join(""), L = wrapText(full, 10, false, W - 16); need(L.length * 13 + 2); T(M + 3, y, "•", {size:10, bold:true, color:C.g});
+    if (L.length === 1 && parts.length > 1){ let x = M + 15; parts.forEach(([s, bo]) => { x += T(x, y, s, {size:10, bold:!!bo}); }); y += 13.5; } else { L.forEach(s => { T(M + 15, y, s, {size:10}); y += 13.5; }); } };
+  const ligneSig = (x, yy, w) => P.line(x, yy, x + w, yy, {color:"#8A948E", w:0.7});
+  if (isF){
+    need(60); y += 8; h2("Modalités de paiement");
+    const txt = paid ? "Cette facture a été payée le " + dLong((t.paiement && t.paiement.date) || t.date) + ". Merci!" : (doc.dateTravaux ? "Les travaux décrits ci-dessus ont été complétés le " + dLong(doc.dateTravaux) + ". " : "") + (doc.echeance && doc.echeance > doc.date ? "Le solde est payable d'ici le " + dLong(doc.echeance) + "." : "Le solde est payable à réception de la présente facture.");
+    wrapText(txt, 10, false, W).forEach(s => { need(13); T(M, y, s, {size:10}); y += 13.5; });
+    if (pay && !paid){ y += 3; const w = T(M, y, "Mode de paiement :", {size:10, bold:true}); T(M + w + 4, y, pay, {size:10}); y += 13; }
+    if (sg){
+      need(112); y += 12; h2("Confirmation du client");
+      wrapText("Le client confirme que les travaux décrits dans la présente facture ont été effectués.", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
+      y += 6; if (sigs.client) sigImage(P, sigs.client, M + 4, y, cw - 8, 32); ligneSig(M, y + 34, cw);
+      T(M, y + 46, sg.nom + " · " + dLong(sg.date) + (sg.heure ? " à " + hmTxt(sg.heure) : ""), {size:8.5}); T(M, y + 58, "Signé électroniquement" + sigVia(sg), {size:7.5, italic:true, color:C.mut}); y += 62;
+    }
+  } else {
+    need(64); y += 8; h2("Modalités");
+    String(r.conditionsDevis || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(s => bullet([[s]]));
+    const nj = daysBetween(doc.date, doc.echeance || doc.date); if (nj > 0) bullet([[G.cette + " est valide pour " + nj + " jours, soit jusqu'au " + dLong(doc.echeance) + "."]]);
+    if (pay) bullet([["Mode de paiement : "], [pay, true]]);
+    const lien = sg ? "" : signLien(kind, doc);
+    need(114); y += 6; h2("Acceptation " + G.de);
+    wrapText("En signant ci-dessous, le client accepte les travaux et le prix décrits dans " + G.presente + ".", 10, false, W).forEach(s => { T(M, y, s, {size:10}); y += 13; });
+    y += 8;
+    const bloc = (x, tt, img, date, pied) => { T(x, y, tt, {size:10, bold:true}); if (img) sigImage(P, img, x + 4, y + 6, cw - 8, 32); ligneSig(x, y + 40, cw); T(x, y + 52, lien && x === x2 ? "Signature (à la main, ou touchez « Signer en ligne »)" : "Signature", {size:8.5, color:C.mut});
+      T(x, y + 66, "Date : " + (date ? dLong(date) : "______________________"), {size:8.5, color: date ? C.ink : C.mut}); if (pied) T(x, y + 79, pied, {size:7.5, italic:true, color:C.mut}); };
+    const sc = doc.signatureCie && doc.signatureCie.nom ? doc.signatureCie : null;
+    bloc(M, nom, sigs.cie || null, sc ? sc.date : (sigs.cie ? doc.date : ""), sc ? "Signé pour l'entreprise par " + sc.nom : "");
+    bloc(x2, sg ? "Client : " + sg.nom : "Client", sg && sigs.client ? sigs.client : null, sg ? sg.date : "", sg ? sigPied(sg) : "");
+    if (lien) sigBoutonPDF(P, x2 + 4, y + 9, lien, C.g);
+    y += sg || sc ? 84 : 72;
+  }
+  /* ---------- Remerciements ---------- */
+  const msg = String(doc.message || "").trim(), extra = msg && !/^merci de votre confiance\s*[.!]?$/i.test(msg) ? wrapText(msg, 9, false, W - 40) : [];
+  if (y + 26 + extra.length * 12 > P.H - (MOD ? 44 : 52)) newPage(); y += 12;
+  T(P.W / 2, y, "Merci de votre confiance.", {size:11, bold:true, color:C.g, align:"center"}); y += 14; extra.forEach(s => { T(P.W / 2, y, s, {size:9, italic:true, color:C.mut, align:"center"}); y += 12; });
+  /* ---------- Pied de page ---------- */
+  const pied = [nom, r.telephone, r.courriel].filter(Boolean).join("   |   ");
+  P.pages.forEach((_, i) => { P.at(i); const pg = P.pages.length > 1 ? "Page " + (i + 1) + " de " + P.pages.length : "";
+    if (MOD){ P.rect(0, P.H - 34, P.W, 34, C.g); T(P.W / 2, P.H - 14, pied, {size:8.5, color:"#FFFFFF", align:"center"}); if (pg) T(RX, P.H - 14, pg, {size:7.5, color:C.pale, align:"right"}); }
+    else { if (!EPU) P.line(M, P.H - 46, RX, P.H - 46, {color:C.pale, w:0.8}); T(P.W / 2, P.H - 30, pied, {size:8.3, color:C.mut, align:"center"}); if (pg) T(RX, P.H - 30, pg, {size:7.5, color:C.mut, align:"right"}); } });
+  return P;
+}
+const SIGN_PAGE = (typeof window !== "undefined" && window.__SIGNER) || "https://emondagehamel-gif.github.io/compta/signer.html";
+const SCRIPT_BASE = (typeof window !== "undefined" && window.__SCRIPT) || "https://script.google.com/macros/s/";
+const SHA256 = (() => {
+  const primes = []; for (let n = 2; primes.length < 64; n++){ if (primes.every(p => n % p)) primes.push(n); }
+  const frac = x => (x - Math.floor(x)) * 4294967296 >>> 0;
+  const K = primes.map(p => frac(Math.cbrt(p))), H0 = primes.slice(0, 8).map(p => frac(Math.sqrt(p)));
+  return bytes => {
+    const l = bytes.length, nb = ((l + 9 + 63) >> 6) << 6, m = new Uint8Array(nb); m.set(bytes); m[l] = 0x80;
+    const dv = new DataView(m.buffer); dv.setUint32(nb - 4, (l * 8) >>> 0); dv.setUint32(nb - 8, Math.floor(l / 536870912));
+    const h = H0.slice(), w = new Uint32Array(64), r = (x, k) => (x >>> k) | (x << (32 - k));
+    for (let o = 0; o < nb; o += 64){
+      for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+      for (let i = 16; i < 64; i++){ const a = w[i - 15], b = w[i - 2]; w[i] = (w[i - 16] + (r(a, 7) ^ r(a, 18) ^ (a >>> 3)) + w[i - 7] + (r(b, 17) ^ r(b, 19) ^ (b >>> 10))) >>> 0; }
+      let [a, b, c, d, e, f, g, hh] = h;
+      for (let i = 0; i < 64; i++){
+        const t1 = (hh + (r(e, 6) ^ r(e, 11) ^ r(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) >>> 0, t2 = ((r(a, 2) ^ r(a, 13) ^ r(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+        hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      [a, b, c, d, e, f, g, hh].forEach((v, i) => { h[i] = (h[i] + v) >>> 0; });
+    }
+    const out = new Uint8Array(32), ov = new DataView(out.buffer); h.forEach((v, i) => ov.setUint32(i * 4, v)); return out;
+  };
+})();
+function hmacHex(key, msg){
+  const enc = new TextEncoder(); let k = enc.encode(key); if (k.length > 64) k = SHA256(k);
+  const kb = new Uint8Array(64); kb.set(k); const m = enc.encode(msg), a = new Uint8Array(64 + m.length), b = new Uint8Array(96);
+  a.set(kb.map(x => x ^ 0x36)); a.set(m, 64); b.set(kb.map(x => x ^ 0x5c)); b.set(SHA256(a), 64);
+  return Array.from(SHA256(b), x => x.toString(16).padStart(2, "0")).join("");
+}
+function signerId(url){
+  const u = String(url == null ? R().signerUrl || "" : url).trim(), b = SCRIPT_BASE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = u.match(new RegExp("^" + b + "([\\w-]{20,200})/exec/?(?:[?#].*)?$")); return m ? m[1] : "";
+}
+const signerPret = () => !!(signerId() && /^[0-9a-f]{32,}$/.test(String(R().signerCle || "")));
+const signMsg = o => ["v1", o.i, o.n, encodeURIComponent(o.c), o.t, o.e, encodeURIComponent(o.en)].join("|");
+function signLien(kind, doc){
+  if (kind !== "devis" || !doc || !doc.id || doc.signature || ["facture", "refuse"].includes(doc.statut) || !signerPret()) return "";
+  const r = R(), o = {i: String(doc.id), n: String(doc.numero || ""), c: String(doc.client || "").trim(), t: String(Math.round(docTotals(doc).total * 100)), e: String(doc.echeance || ""), en: String(r.nom || "").trim()};
+  const q = new URLSearchParams({s: signerId(), i: o.i, n: o.n, c: o.c, t: o.t, e: o.e, en: o.en, k: hmacHex(String(r.signerCle), signMsg(o)).slice(0, 32)});
+  return SIGN_PAGE + "#" + q.toString();
+}
+const sigVia = sg => sg && sg.appareil ? (sg.appareil === "en ligne" ? " en ligne" : ", sur " + sg.appareil) : "";
+const sigPied = sg => "Signé électroniquement" + (sg.appareil === "en ligne" ? " en ligne" : "") + (sg.heure ? " à " + hmTxt(sg.heure) : "") + (sg.appareil && sg.appareil !== "en ligne" ? ", sur " + sg.appareil : "");
+function sigBoutonPDF(P, x, y, url, g){
+  const w = 152, h = 26;
+  P.rrect(x, y, w, h, 6, {fill: g}); P.text(x + w / 2, y + 17, "Signer en ligne  ›", {size: 10.5, bold: true, color: "#FFFFFF", align: "center"}); P.link(x, y, w, h, url);
+}
+const SIG_FONTS = {};
+const SIG_STYLES = {elegante: "Élégante", classique: "Classique", simple: "Simple"};
+const SIG_ENCRE = "#22356F";
+const sigPolicesOK = new Set();
+async function sigPolice(style){
+  const st = SIG_FONTS[style] ? style : "elegante", fam = "Signature " + SIG_STYLES[st];
+  if (!sigPolicesOK.has(st)){ const ff = new FontFace(fam, "url(data:font/woff2;base64," + SIG_FONTS[st] + ")"); await ff.load(); document.fonts.add(ff); sigPolicesOK.add(st); }
+  return fam;
+}
+async function sigNomImage(nom, style){
+  const fam = await sigPolice(style), size = 110, c = document.createElement("canvas"), m = c.getContext("2d"); m.font = size + "px '" + fam + "'";
+  /* cadre serré autour de l'écriture (les boucles dépassent un peu de la mesure de la police) */
+  const tm = m.measureText(nom), asc = Math.max(tm.actualBoundingBoxAscent || size * 0.8, size * 0.6), desc = Math.max(tm.actualBoundingBoxDescent || size * 0.3, size * 0.15), pad = size * 0.12;
+  const left = Math.max(tm.actualBoundingBoxLeft || 0, 0) + pad, w = Math.ceil(left + Math.max(tm.width, tm.actualBoundingBoxRight || 0) + pad * 2), h = Math.ceil(asc + desc + pad * 2); c.width = w; c.height = h;
+  const g = c.getContext("2d"); g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, w, h); g.font = size + "px '" + fam + "'"; g.fillStyle = SIG_ENCRE; g.textBaseline = "alphabetic"; g.fillText(nom, left, pad + asc);
+  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.92));
+  return {blob, img: {w, h, data: new Uint8Array(await blob.arrayBuffer())}};
+}
+function sigNomPad(o){
+  o = o || {};
+  return new Promise(async resolve => {
+    const st0 = SIG_FONTS[o.style] ? o.style : "elegante";
+    const ov = document.createElement("div"); ov.className = "sig-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", o.titre || "Signature de l'entreprise");
+    ov.innerHTML = '<div class="sig-box"><div class="sig-h"><b>' + esc(o.titre || "Signature de l'entreprise") + '</b><button type="button" class="sig-x" aria-label="Fermer">×</button></div>' +
+      (o.texte ? '<p class="sig-t">' + esc(o.texte) + "</p>" : "") +
+      '<label class="sig-n"><span>Ton nom, comme il doit apparaître</span><input type="text" maxlength="60" autocomplete="name" value="' + esc(o.nom || "") + '" placeholder="Prénom Nom"></label>' +
+      '<div class="sig-styles" role="radiogroup" aria-label="Style d\'écriture" style="display:grid;gap:8px;margin:10px 0 4px">' +
+      Object.keys(SIG_STYLES).map(k => '<button type="button" role="radio" class="sig-style" data-style="' + k + '" aria-checked="' + (k === st0) + '" style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:8px 14px;border-radius:10px;border:2px solid ' + (k === st0 ? "#2F6B3B" : "#D6DED8") + ';background:#FFFFFF;color:' + SIG_ENCRE + ';cursor:pointer;min-height:64px;text-align:left">' +
+        '<span class="sig-apercu" style="font-size:34px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span><small style="color:#68736C;font:600 .78rem system-ui,sans-serif;flex:none">' + SIG_STYLES[k] + "</small></button>").join("") + "</div>" +
+      '<div class="sig-f"><span style="flex:1"></span><button type="button" class="sig-b sig-cancel">Annuler</button><button type="button" class="sig-b sig-ok" disabled>' + esc(o.ok || "Signer") + "</button></div></div>";
+    document.body.appendChild(ov); document.body.classList.add("sig-open");
+    const nomI = ov.querySelector(".sig-n input"), okB = ov.querySelector(".sig-ok"); let style = st0;
+    const maj = () => { const v = nomI.value.trim() || "Ton nom"; ov.querySelectorAll(".sig-style").forEach(b => { b.querySelector(".sig-apercu").textContent = v; const on = b.dataset.style === style; b.setAttribute("aria-checked", on); b.style.borderColor = on ? "#2F6B3B" : "#D6DED8"; }); okB.disabled = !nomI.value.trim(); };
+    const close = v => { document.removeEventListener("keydown", key, true); ov.remove(); document.body.classList.remove("sig-open"); resolve(v); };
+    const key = e => { if (e.key === "Escape"){ e.stopPropagation(); e.preventDefault(); close(null); } };
+    document.addEventListener("keydown", key, true);
+    ov.querySelector(".sig-x").onclick = () => close(null); ov.querySelector(".sig-cancel").onclick = () => close(null);
+    ov.querySelectorAll(".sig-style").forEach(b => { b.onclick = () => { style = b.dataset.style; maj(); }; });
+    nomI.addEventListener("input", maj); nomI.addEventListener("keydown", e => { if (e.key === "Enter" && !okB.disabled){ e.preventDefault(); okB.click(); } });
+    okB.onclick = async () => {
+      okB.disabled = true; const nom = nomI.value.replace(/\s+/g, " ").trim();
+      try { const r = await sigNomImage(nom, style), now = new Date(), pad2 = n => String(n).padStart(2, "0");
+        close(Object.assign(r, {nom, style, date: today(), heure: pad2(now.getHours()) + ":" + pad2(now.getMinutes()), signeLe: now.toISOString()})); }
+      catch(e){ okB.disabled = false; }
+    };
+    maj(); setTimeout(() => nomI.focus(), 30);
+    try { for (const k of Object.keys(SIG_STYLES)){ const fam = await sigPolice(k); const b = ov.querySelector('[data-style="' + k + '"] .sig-apercu'); if (b) b.style.fontFamily = "'" + fam + "', cursive"; } } catch(e){}
+  });
+}
+function docPDF(kind, doc, logo, sigs){ return docLayout(kind, doc, logo, sigs).bytes(); }
+function sigImage(P, img, x, y, w, h){ let iw = img.w, ih = img.h, k = Math.min(w / iw, h / ih); iw *= k; ih *= k; P.image(img, x, y + (h - ih), iw, ih); }
+const hmTxt = h => { const m = String(h || "").match(/^(\d{1,2}):(\d{2})/); return m ? Number(m[1]) + " h " + m[2] : ""; };
+async function jpegObj(blob){
+  const bm = await createImageBitmap(blob); let data;
+  if (blob.type === "image/jpeg") data = new Uint8Array(await blob.arrayBuffer());
+  else { const c = document.createElement("canvas"); c.width = bm.width; c.height = bm.height; const g = c.getContext("2d"); g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bm, 0, 0); data = new Uint8Array(await (await new Promise(r => c.toBlob(r, "image/jpeg", 0.9))).arrayBuffer()); }
+  return {w: bm.width, h: bm.height, data};
+}
+function sigPad(o){
+  o = o || {};
+  return new Promise(resolve => {
+    const ov = document.createElement("div"); ov.className = "sig-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", o.titre || "Signature");
+    ov.innerHTML = '<div class="sig-box"><div class="sig-h"><b>' + esc(o.titre || "Signature") + '</b><button type="button" class="sig-x" aria-label="Fermer">×</button></div>' + (o.texte ? '<p class="sig-t">' + esc(o.texte) + "</p>" : "") +
+      '<div class="sig-zone"><canvas></canvas><span class="sig-ph">Signez ici</span><span class="sig-l"></span></div>' +
+      (o.nom !== false ? '<label class="sig-n"><span>Nom de la personne qui signe</span><input type="text" maxlength="80" autocomplete="off" value="' + esc(o.nom || "") + '"></label>' : "") +
+      '<div class="sig-f"><button type="button" class="sig-b sig-clear">Effacer</button><span style="flex:1"></span><button type="button" class="sig-b sig-cancel">Annuler</button><button type="button" class="sig-b sig-ok" disabled>' + esc(o.ok || "Signer") + "</button></div></div>";
+    document.body.appendChild(ov); document.body.classList.add("sig-open");
+    const cv = ov.querySelector("canvas"), zone = ov.querySelector(".sig-zone"), g = cv.getContext("2d"), okB = ov.querySelector(".sig-ok"), nomI = ov.querySelector(".sig-n input"), dpr = Math.max(1, window.devicePixelRatio || 1);
+    let strokes = [], cur = null;
+    const draw = () => { g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#17244D"; g.lineWidth = 2.6;
+      strokes.forEach(st => { g.beginPath(); st.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); if (st.length === 1) g.lineTo(st[0][0] + 0.5, st[0][1] + 0.5); g.stroke(); });
+      ov.querySelector(".sig-ph").hidden = strokes.length > 0; okB.disabled = !strokes.length || (nomI ? !nomI.value.trim() : false); };
+    const size = () => { const r = zone.getBoundingClientRect(); cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr)); cv.style.width = r.width + "px"; cv.style.height = r.height + "px"; draw(); };
+    const pt = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.addEventListener("pointerdown", e => { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch(er){} cur = [pt(e)]; strokes.push(cur); draw(); });
+    cv.addEventListener("pointermove", e => { if (!cur) return; e.preventDefault(); cur.push(pt(e)); draw(); });
+    const up = () => { cur = null; }; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up); cv.addEventListener("lostpointercapture", up);
+    if (nomI) nomI.addEventListener("input", draw);
+    const close = v => { window.removeEventListener("resize", size); document.removeEventListener("keydown", key, true); ov.remove(); document.body.classList.remove("sig-open"); resolve(v); };
+    const key = e => { if (e.key === "Escape"){ e.stopPropagation(); e.preventDefault(); close(null); } };
+    document.addEventListener("keydown", key, true); window.addEventListener("resize", size);
+    ov.querySelector(".sig-x").onclick = () => close(null); ov.querySelector(".sig-cancel").onclick = () => close(null);
+    ov.querySelector(".sig-clear").onclick = () => { strokes = []; draw(); };
+    okB.onclick = async () => {
+      okB.disabled = true;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; strokes.forEach(st => st.forEach(([a, b]) => { x0 = Math.min(x0, a); y0 = Math.min(y0, b); x1 = Math.max(x1, a); y1 = Math.max(y1, b); }));
+      const pad = 6, k = Math.min(2, 900 / Math.max(1, x1 - x0 + pad * 2)), w = Math.max(1, Math.round((x1 - x0 + pad * 2) * k)), h = Math.max(1, Math.round((y1 - y0 + pad * 2) * k));
+      const c = document.createElement("canvas"); c.width = w; c.height = h; const gx = c.getContext("2d"); gx.fillStyle = "#FFFFFF"; gx.fillRect(0, 0, w, h);
+      gx.setTransform(k, 0, 0, k, (pad - x0) * k, (pad - y0) * k); gx.lineCap = "round"; gx.lineJoin = "round"; gx.strokeStyle = "#17244D"; gx.lineWidth = 2.6;
+      strokes.forEach(st => { gx.beginPath(); st.forEach((q, i) => i ? gx.lineTo(q[0], q[1]) : gx.moveTo(q[0], q[1])); if (st.length === 1) gx.lineTo(st[0][0] + 0.5, st[0][1] + 0.5); gx.stroke(); });
+      const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.88)); if (!blob){ okB.disabled = false; return; }
+      const now = new Date(), pad2 = n => String(n).padStart(2, "0");
+      close({blob, img: {w, h, data: new Uint8Array(await blob.arrayBuffer())}, nom: nomI ? nomI.value.trim() : "", date: today(), heure: pad2(now.getHours()) + ":" + pad2(now.getMinutes()), signeLe: now.toISOString()});
+    };
+    requestAnimationFrame(size);
+  });
+}
+function sigTexte(kind, doc){
+  const G = docGenre(kind), t = docTotals(doc);
+  return kind === "facture" ? "En signant, je confirme que les travaux décrits dans la facture " + doc.numero + " ont été effectués (total : " + fmt(t.total) + ")."
+    : "En signant, j'accepte les travaux et le prix décrits dans " + G.la + " " + doc.numero + " : total de " + fmt(t.total) + (t.tx || t.tq ? ", taxes incluses" : "") + ".";
+}
+async function pdfImages(P, scale){
+  scale = scale || 2.5; const out = [];
+  for (const list of P.draws){
+    const c = document.createElement("canvas"); c.width = Math.round(P.W * scale); c.height = Math.round(P.H * scale);
+    const g = c.getContext("2d"); g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, c.width, c.height); g.scale(scale, scale); g.textBaseline = "alphabetic";
+    for (const o of list){
+      if (o.k === "t"){ g.fillStyle = o.color || "#000000"; g.font = (o.italic ? "italic " : "") + (o.bold ? "bold " : "") + o.size + "px Helvetica, Arial, sans-serif"; g.textAlign = "left"; try { g.letterSpacing = (o.ls || 0) + "px"; } catch(e){} g.fillText(o.s, o.x, o.y); }
+      else if (o.k === "l"){ g.strokeStyle = o.color; g.lineWidth = o.w; g.beginPath(); g.moveTo(o.x1, o.y1); g.lineTo(o.x2, o.y2); g.stroke(); }
+      else if (o.k === "r"){ g.fillStyle = o.color; g.fillRect(o.x, o.y, o.w, o.h); }
+      else if (o.k === "p"){ g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); o.cmds.forEach(c => c[0] === "M" ? g.moveTo(c[1], c[2]) : c[0] === "L" ? g.lineTo(c[1], c[2]) : c[0] === "C" ? g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]) : g.closePath()); if (o.fill){ g.fillStyle = o.fill; g.fill(); } if (o.stroke){ g.strokeStyle = o.stroke; g.lineWidth = o.w; g.stroke(); } }
+      else if (o.k === "i"){ try { const bm = await createImageBitmap(new Blob([o.img.data], {type:"image/jpeg"})); g.drawImage(bm, o.x, o.y, o.w, o.h); } catch(e){} }
+    }
+    out.push(await new Promise(res => c.toBlob(res, "image/jpeg", 0.9)));
+  }
+  return out;
+}
+async function docImages(kind, doc, logo, sigs){
+  const P = docLayout(kind, doc, logo, sigs), blobs = await pdfImages(P), base = fileSafe(doc.numero + " " + (doc.client || ""));
+  return blobs.filter(Boolean).map((b, i) => new File([b], base + (blobs.length > 1 ? "-page-" + (i + 1) : "") + ".jpg", {type:"image/jpeg"}));
+}
+function clientOf(doc){ return S.d.clients.find(c => c.id === doc.clientId) || S.d.clients.find(c => norm(c.nom) === norm(doc.client)) || null; }
+function nextNum(kind, date){
+  const y = String(date || today()).slice(0, 4), P = kind === "facture" ? "F" : "D", list = kind === "facture" ? S.d.factures : S.d.devis; let max = 0;
+  list.forEach(x => { const m = String(x.numero || "").match(/^([A-Za-z]+)-(\d{4})-(\d+)$/); if (m && m[1].toUpperCase() === P && m[2] === y) max = Math.max(max, Number(m[3])); });
+  return P + "-" + y + "-" + String(max + 1).padStart(3, "0");
+}
+function facStatus(f){
+  if (f.statut === "annulee") return {k:"annulee", l:"Annulée", cls:"open"};
+  const t = S.tmap[f.transaction];
+  if (!t) return {k:"hors", l:"Absente des livres", cls:"late"};
+  if (!unpaid(t)) return {k:"payee", l:"Payée" + (t.paiement && t.paiement.date ? " le " + dShort(t.paiement.date) : ""), cls:"ok"};
+  if ((f.echeance || f.date) < today()) return {k:"retard", l:"En retard", cls:"late"};
+  return {k:"due", l: f.envoyeeLe ? "Envoyée, à encaisser" : "À encaisser", cls:"due"};
+}
+function devStatus(v){
+  if (v.statut === "facture"){ const f = S.d.factures.find(x => x.id === v.facture); return {k:"facture", l:"Facturé" + (f ? " (" + f.numero + ")" : ""), cls:"ok"}; }
+  if (v.statut === "accepte") return {k:"accepte", l:"Accepté", cls:"info"};
+  if (v.statut === "refuse") return {k:"refuse", l:"Refusé", cls:"open"};
+  if (v.echeance && v.echeance < today()) return {k:"expire", l:"Expiré", cls:"late"};
+  return {k:"ouvert", l: v.envoyeLe ? "Envoyé, en attente" : "En attente", cls:"due"};
+}
+const docTotal = (kind, x) => { if (kind === "facture"){ const t = S.tmap[x.transaction]; if (t && x.statut !== "annulee") return txTotal(t); } return docTotals(x).total; };
+const TERMS_F = [["0","Payable à réception"],["15","Dans 15 jours"],["30","Dans 30 jours"],["45","Dans 45 jours"],["60","Dans 60 jours"],["autre","Date choisie"]];
+const TERMS_D = [["15","Pendant 15 jours"],["30","Pendant 30 jours"],["60","Pendant 60 jours"],["90","Pendant 90 jours"],["autre","Jusqu'à une date choisie"]];
+const daysBetween = (a, b) => { const [y1, m1, d1] = a.split("-").map(Number), [y2, m2, d2] = b.split("-").map(Number); return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 864e5); };
+function syncFactureTx(d, f, pay){
+  let t = f.transaction ? d.transactions.find(x => x.id === f.transaction) : null;
+  if (f.statut === "annulee"){ if (t) d.transactions = d.transactions.filter(x => x.id !== t.id); return; }
+  const tt = docTotals(f), now = new Date().toISOString(), first = ((f.lignes || [])[0] || {}).description || "";
+  const base = {date:f.date, type:"revenu", description:"Facture " + f.numero + (first ? ", " + first : ""), tiers:f.client, categorie:f.categorie || "ventes", montant:tt.st, taxe:tt.tx, tvq:tt.tq, codeTaxe:f.codeTaxe || "AUCUNE", projet:f.projet || "", echeance:f.echeance || f.date, facture:f.id, modifieLe:now};
+  if (!t){
+    t = Object.assign({id: f.transaction || uid("t"), compte:"", statut:"a-recevoir", recus:[], note:"", aVerifier:false, source:"app", creeLe:now}, base);
+    if (pay){ t.compte = pay; t.statut = "regle"; }
+    d.transactions.push(t); f.transaction = t.id;
+  } else Object.assign(t, base);
+  if (f.pdf){ t.recus = (t.recus || []).filter(r => r.fichier !== f.pdf); t.recus.push({fichier:f.pdf, nom:f.numero + ".pdf"}); }
+}
+const AG_KINDS = {note:"Mes événements", obl:"Impôts et obligations", tax:"Taxes de vente", fac:"Factures et devis", ap:"Factures à payer", ent:"Entretiens"};
+const AG_COL = {obl:"var(--neg)", tax:"var(--warn)", fac:"var(--pos)", ap:"var(--line-strong)", ent:"var(--s2)", note:"var(--accent)"};
+const EVT = {
+  rdv:{l:"Rendez-vous", c:"var(--accent)", ph:"Ex. : Rencontre à la banque"},
+  soumission:{l:"Soumission", c:"var(--s3)", ph:"Ex. : Soumission pour l'abattage d'un érable"},
+  chantier:{l:"Chantier", c:"var(--s4)", ph:"Ex. : Élagage de la haie de cèdres"},
+  garage:{l:"Garage", c:"var(--s2)", ph:"Ex. : Changement d'huile du camion"},
+  note:{l:"Note ou rappel", c:"var(--muted)", ph:"Ex. : Rappeler le client pour le paiement"}
+};
+const evtOf = n => EVT[n && n.type] ? n.type : "note";
+const RAPPELS = [["0","Aucun rappel"],["15","15 min avant"],["30","30 min avant"],["60","1 h avant"],["120","2 h avant"],["1440","La veille"]];
+const toMin = h => { const [a, b] = String(h || "0:0").split(":").map(Number); return (a || 0) * 60 + (b || 0); };
+const fromMin = m => { m = Math.max(0, Math.min(Math.round(m), 1439)); return pad(Math.floor(m / 60)) + ":" + pad(m % 60); };
+const fmtH = h => { if (!h) return ""; const m = toMin(h), mm = m % 60; return Math.floor(m / 60) + " h" + (mm ? " " + pad(mm) : ""); };
+const fmtRange = (a, b) => a ? fmtH(a) + (b ? " à " + fmtH(b) : "") : "Toute la journée";
+const mapURL = q => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+function agendaEvents(a, b){
+  const ev = [], r = R(), d = S.d, obl = r.obligations || {};
+  const add = (date, kind, title, o) => { if (date && date >= a && date <= b) ev.push(Object.assign({date, kind, title, detail:"", done:false}, o || {})); };
+  const ya = Number(a.slice(0, 4)), yb = Number(b.slice(0, 4));
+  /* Taxes de vente */
+  if (inscrit() || inscritQ()){
+    for (let Y = fyOf(a) - 1; Y <= fyOf(b) + 1; Y++) periods(Y).forEach(p => {
+      if (p.due < a || p.due > b || p.end < (r.dateOuverture || "0000")) return;
+      const v = tvhPeriod(p), st = perStatus(p, v.n), [, sm] = p.start.split("-").map(Number);
+      const sl = /-T(\d)$/.test(p.key) ? "T" + p.key.slice(-1) : /-M\d\d$/.test(p.key) ? MOIS_C[sm - 1] : "annuelle";
+      add(p.due, "tax", "Déclaration de " + (quebec() && inscritQ() ? "TPS et TVQ" : "TPS/TVH") + " : " + p.label, {short:(quebec() ? "TPS-TVQ " : "TPS ") + sl,
+        detail:"Période du " + dLong(p.start) + " au " + dLong(p.end) + "." + (v.n ? " Selon tes livres : " + (v.net >= 0 ? fmt(v.net) + " à remettre." : fmt(-v.net) + " à te faire rembourser.") : "") + " Déclaration et paiement à " + (quebec() ? "Revenu Québec" : "l'ARC") + "." + (st.cls === "open" && p.end < today() ? " Aucune opération dans tes livres pour cette période : une déclaration à zéro reste à produire si tu étais inscrit." : ""), done: st.cls === "ok", late: st.cls === "late", quiet: st.cls === "open", key:"TVH-" + p.key, go:"tvh"});
+    });
+  }
+  /* Obligations annuelles de la société */
+  if (r.structure === "societe"){
+    const dc = r.dateConstitution || "";
+    for (let Y = fyOf(a) - 1; Y <= fyOf(b); Y++){
+      const fe = fyRange(Y).end; if (dc && fe < dc) continue;
+      const [ey, em] = fe.split("-").map(Number), d2 = iso(lastDay(ey, em + 1)), d3 = iso(lastDay(ey, em + 2)), d6 = iso(lastDay(ey, em + 5)), lbl = fyLabel(Y).toLowerCase();
+      add(fe, "info", "Fin de l'" + lbl, {short:"Fin d'exercice", detail:"Dernier jour de l'exercice. Les déclarations de revenus de la société sont dues 6 mois plus tard."});
+      add(d3, "obl", "Solde d'impôt de la société à payer, " + lbl, {short:"Solde d'impôt", key:"SOLDE-" + Y, detail:"À l'ARC et à Revenu Québec. Dû 3 mois après la fin de l'exercice pour une société privée sous contrôle canadien admissible à la déduction pour petite entreprise, sinon 2 mois (" + dLong(d2) + "). Des intérêts s'appliquent après l'échéance."});
+      add(d6, "obl", "Déclaration de revenus T2 (ARC), " + lbl, {short:"T2 (ARC)", key:"T2-" + Y, detail:"Avec les états financiers : le sommaire IGRF du menu Rapports donne les montants."});
+      if (quebec()){
+        add(d6, "obl", "Déclaration de revenus CO-17 (Revenu Québec), " + lbl, {short:"CO-17", key:"CO17-" + Y});
+        add(d6, "obl", "Mise à jour annuelle au Registraire des entreprises, " + lbl, {short:"Mise à jour REQ", key:"REQ-" + Y, detail:"Produite en même temps que la CO-17 (déclaration jumelée)."});
+      }
+    }
+    if (r.regime === "federal" && dc){
+      for (let y = ya - 1; y <= yb; y++){
+        const A = y + dc.slice(4); if (A <= dc) continue; const due = addDays(A, 60);
+        add(due, "obl", "Rapport annuel à Corporations Canada", {short:"Rapport fédéral", key:"CC-" + y, todoFrom:addDays(A, -30), detail:"À produire entre l'anniversaire de constitution (" + dLong(A) + ") et le " + dLong(due) + ", avec la mise à jour du registre des particuliers ayant un contrôle important. Frais de 12 $ en ligne."});
+      }
+    }
+  }
+  /* Salaires et dividendes : seulement s'il y en a dans les livres */
+  const paid = (k, y, m) => d.transactions.some(t => (k === "div" ? t.type === "dividende" : t.type === "depense" && t.categorie === "salaires") && t.date.slice(0, 4) === String(y) && (m == null || t.date.slice(5, 7) === pad(m)));
+  for (let y = ya; y <= yb; y++){
+    const feb = iso(lastDay(y, 1));
+    if (paid("sal", y - 1)){
+      add(feb, "obl", "Feuillets T4 et relevés 1 des salaires de " + (y - 1), {short:"T4 et RL-1", key:"T4-" + (y - 1), detail:"Production à l'ARC et à Revenu Québec, et remise des copies aux employés."});
+      add(y + "-03-15", "obl", "Déclaration des salaires " + (y - 1) + " à la CNESST", {short:"CNESST", key:"CNESST-" + (y - 1)});
+    }
+    if (paid("div", y - 1)) add(feb, "obl", "Feuillets T5 et relevés 3 des dividendes de " + (y - 1), {short:"T5 et RL-3", key:"T5-" + (y - 1), detail:"Production à l'ARC et à Revenu Québec, et remise d'une copie à chaque actionnaire qui a reçu un dividende."});
+  }
+  for (let k = new Date(ya, Number(a.slice(5, 7)) - 1, 15); iso(k) <= b; k = new Date(k.getFullYear(), k.getMonth() + 1, 15)){
+    const pm = new Date(k.getFullYear(), k.getMonth() - 1, 1), py = pm.getFullYear(), pmo = pm.getMonth() + 1;
+    if (paid("sal", py, pmo)) add(iso(k), "obl", "Retenues à la source (DAS) des salaires de " + MOIS[pmo - 1], {short:"DAS", key:"DAS-" + py + "-" + pad(pmo), detail:"Versement à Revenu Québec (impôt du Québec, RRQ, RQAP, FSS) et à l'ARC (impôt fédéral, assurance-emploi) au plus tard le 15, pour un remettant mensuel régulier."});
+  }
+  /* Factures, devis, factures à payer */
+  d.factures.forEach(f => { const s = facStatus(f); if (s.k !== "due" && s.k !== "retard") return; add(f.echeance || f.date, "fac", "Paiement attendu : facture " + f.numero + ", " + f.client + " (" + fmt(docTotal("facture", f)) + ")", {short:f.numero + " " + f.client, go:"fac:" + f.id}); });
+  d.devis.forEach(v => { const s = devStatus(v); if (s.k !== "ouvert") return; add(v.echeance, "fac", "Fin de validité du devis " + v.numero + ", " + v.client, {short:v.numero + " expire", go:"dev:" + v.id}); });
+  d.transactions.forEach(t => { if (t.type !== "depense" || !unpaid(t)) return; add(t.echeance || t.date, "ap", "À payer : " + (t.tiers || t.description) + " (" + fmt(txTotal(t)) + ")", {short:"Payer " + (t.tiers || t.description || ""), go:"tx:" + t.id}); });
+  /* Entretiens prévus */
+  d.equipements.forEach(e => { if (e.statut === "vendu") return; nextMaint(e).forEach(n => { if (n.date) add(n.date, "ent", n.type + " : " + e.nom, {short:n.type + ", " + e.nom, detail:n.km ? "Ou à " + fmtKm(n.km) + " (odomètre actuel : " + fmtKm(e.odometre) + ")." : "", go:"eq:" + e.id, eqId:e.id, mtype:n.type}); }); });
+  /* Événements et notes de l'utilisateur */
+  d.agenda.forEach(n => { const t = evtOf(n); add(n.date, "note", n.titre || EVT[t].l, {heure:n.heure || "", fin:n.heure ? n.fin || "" : "", etype:t, lieu:n.lieu || "", client:n.client || "", equipement:n.equipement || "", rappel:Number(n.rappel) || 0, detail:n.note || "", done:!!n.fait, id:n.id, go:"note:" + n.id}); });
+  ev.forEach(e => { if (e.key && !/^TVH-/.test(e.key)) e.done = !!obl[e.key]; });
+  const ord = {obl:0, tax:1, fac:2, ap:3, ent:4, note:5, info:6};
+  return ev.sort((x, y) => x.date.localeCompare(y.date) || (x.heure || "99").localeCompare(y.heure || "99") || ord[x.kind] - ord[y.kind]);
+}
+const evColor = e => e.kind === "note" ? EVT[e.etype || "note"].c : AG_COL[e.kind] || "var(--line-strong)";
+const EQ_TYPES = [["vehicule","Véhicule"],["remorque","Remorque"],["machine","Machine ou outil"],["informatique","Matériel informatique"],["autre","Autre"]];
+const EQ_IC = {vehicule:"i-truck", remorque:"i-truck", machine:"i-tool", informatique:"i-laptop", autre:"i-box"};
+const ENT_TYPES = ["Changement d'huile","Pneus","Freins","Inspection","Réparation","Lavage","Autre"];
+const isRoad = e => e && (e.type === "vehicule" || e.type === "remorque");
+function nextMaint(e){
+  const last = {}; (e.entretiens || []).forEach(en => { const k = en.type || "Entretien"; if (!last[k] || en.date > last[k].date || (en.date === last[k].date && String(en.id) > String(last[k].id))) last[k] = en; });
+  return Object.values(last).filter(en => en.prochaineDate || en.prochainKm).map(en => ({type:en.type || "Entretien", date:en.prochaineDate || "", km:Number(en.prochainKm) || 0, from:en}));
+}
+function maintState(e, n){
+  const t0 = today(), odo = Number(e.odometre) || 0;
+  if ((n.date && n.date < t0) || (n.km && odo && odo >= n.km)) return "late";
+  if ((n.date && n.date <= addDays(t0, 30)) || (n.km && odo && odo >= n.km - 1000)) return "due";
+  return "ok";
+}
+function maintTxt(e, n){ return n.type + (n.date ? " le " + dShort(n.date) : "") + (n.date && n.km ? " ou" : "") + (n.km ? " à " + fmtKm(n.km) : ""); }
+function stockOf(p, exceptFac){
+  let q = (p.mouvements || []).reduce((s, m) => s + (Number(m.qte) || 0), 0);
+  S.d.factures.forEach(f => { if (f.statut === "annulee" || f.id === exceptFac) return; (f.lignes || []).forEach(l => { if (l.produit === p.id) q -= Number(l.qte) || 0; }); });
+  return Math.round(q * 1000) / 1000;
+}
+function invAlerts(){
+  const out = [];
+  S.d.equipements.forEach(e => { if (e.statut === "vendu") return; nextMaint(e).forEach(n => { const s = maintState(e, n); if (s !== "ok") out.push({late: s === "late", txt: (s === "late" ? "Entretien en retard" : "Entretien à prévoir") + " : " + e.nom + ", " + maintTxt(e, n)}); }); });
+  S.d.produits.forEach(p => { if (p.seuil == null || p.seuil === "" || !isFinite(Number(p.seuil))) return; const q = stockOf(p); if (q <= Number(p.seuil)) out.push({late: q <= 0, txt: (q <= 0 ? "Rupture de stock" : "Stock bas") + " : " + p.nom + " (" + fq(q) + " " + (p.unite || "unité(s)") + ")"}); });
+  return out;
+}
+function entretienOf(tid){ for (const eq of S.d.equipements) for (const en of (eq.entretiens || [])) if (en.transaction === tid) return {eq, en}; return null; }
+function eqCosts(e, Y){
+  const fr = Y ? fyRange(Y) : null, inY = d => !fr || (d >= fr.start && d <= fr.end), ids = new Set();
+  let ent = 0, other = 0;
+  (e.entretiens || []).forEach(en => { const t = en.transaction ? S.tmap[en.transaction] : null; if (t) ids.add(t.id); if (inY(en.date)) ent += t ? txTotal(t) : (Number(en.montant) || 0); });
+  S.d.transactions.forEach(t => { if (t.equipement === e.id && !ids.has(t.id) && inY(t.date) && t.type === "depense") other += txTotal(t); });
+  return {ent, other, total: ent + other};
+}
+const UNITES = [["unité","unité"],["boîte","boîte"],["paquet","paquet"],["m","mètre"],["pi","pied"],["kg","kilogramme"],["L","litre"],["h","heure"]];
+function nextNumIn(d, kind, date){
+  const y = String(date || today()).slice(0, 4), P = kind === "facture" ? "F" : "D", list = kind === "facture" ? d.factures : d.devis; let max = 0;
+  list.forEach(x => { const m = String(x.numero || "").match(/^([A-Za-z]+)-(\d{4})-(\d+)$/); if (m && m[1].toUpperCase() === P && m[2] === y) max = Math.max(max, Number(m[3])); });
+  return P + "-" + y + "-" + String(max + 1).padStart(3, "0");
+}
+const OPS_CONNUS = ["evenement","evenement-suppr","evenement-fait","obligation","operation","photo","trajet","lieu","lieu-suppr","paiement","facture","devis","devis-statut","envoye","entretien","odometre","client","patch","fichier","deplacer","fichier-suppr","doc-v2","signature","signature-cie","signature-cie-suppr"];
+function safePath(p){ p = String(p || ""); return /^(recus|a-traiter|documents|exports|signatures)\/[^\/\\:*?"<>|]+$/.test(p) && !/\.\./.test(p) ? p : ""; }
+function applyOp(d, op){
+  const x = op.data || {}, now = op.creeLe || new Date().toISOString(), res = {msg:"", moves:[], removes:[], pdf:null, pdfs:[]};
+  const photos = (op.photos || []).filter(p => typeof p === "string" && /^[\w.-]+$/.test(p));
+  const toRecus = (date, who) => photos.map((p, k) => { const to = "recus/" + (date || today()) + "_" + (slug(who) || "recu") + "_" + String(op.id).slice(-4) + (k ? "-" + (k + 1) : "") + (extOf(p) || ".jpg"); res.moves.push({from:"telephone/" + p, to}); return {fichier:to, nom:p}; });
+  const upsert = (arr, doc) => { const i = arr.findIndex(e => e.id === doc.id); if (i >= 0) arr[i] = Object.assign({}, arr[i], doc); else arr.push(doc); return i >= 0 ? arr[i] : doc; };
+  switch (op.type){
+    case "evenement": { if (!x.id || !x.date) break; const e = upsert(d.agenda, Object.assign({}, x, {modifieLe: now})); if (!e.creeLe) e.creeLe = now; res.msg = "Agenda : " + (e.titre || ""); break; }
+    case "evenement-suppr": d.agenda = d.agenda.filter(e => e.id !== x.id); res.msg = "Événement retiré de l'agenda"; break;
+    case "evenement-fait": { const e = d.agenda.find(e => e.id === x.id); if (e) e.fait = !!x.fait; break; }
+    case "obligation": if (x.key){ if (x.fait) d.reglages.obligations[x.key] = x.date || now.slice(0, 10); else delete d.reglages.obligations[x.key]; } break;
+    case "operation": {
+      if (!x.id || d.transactions.some(t => t.id === x.id)) break;
+      const t = Object.assign({description:"", tiers:"", categorie:"", montant:0, taxe:0, tvq:0, codeTaxe:"", compte:"", statut:"regle", echeance:"", projet:"", note:"", aVerifier:false}, x, {source:"telephone", creeLe: now});
+      t.recus = toRecus(t.date, t.tiers || t.description);
+      d.transactions.push(t); res.msg = (t.type === "revenu" ? "Revenu" : "Dépense") + " : " + (t.tiers || t.description) + ", " + fmt(txTotal(t)); break; }
+    case "photo": photos.forEach(p => res.moves.push({from:"telephone/" + p, to:"a-traiter/" + p})); res.msg = photos.length + " photo" + (photos.length > 1 ? "s" : "") + " à traiter"; break;
+    case "trajet": if (x.id && !d.km.some(k => k.id === x.id)){ d.km.push(Object.assign({depart:"", destination:"", raison:"", km:0, projet:"", vehicule:"perso", alloc:""}, x)); res.msg = "Trajet : " + (x.destination || "") + ", " + x.km + " km"; } break;
+    case "lieu": { if (!x.nom) break; d.lieux = d.lieux || []; const l = d.lieux.find(e => (x.id && e.id === x.id) || norm(e.nom) === norm(x.nom)); if (l) Object.assign(l, x, {id: l.id}); else d.lieux.push(Object.assign({id: x.id || uid("l"), adresse:"", lat:null, lng:null}, x)); res.msg = "Lieu : " + x.nom; break; }
+    case "lieu-suppr": d.lieux = (d.lieux || []).filter(l => l.id !== x.id); break;
+    case "paiement": { const t = d.transactions.find(e => e.id === x.transaction); if (t && !(t.paiement && t.paiement.compte) && t.statut !== "regle"){ t.paiement = {date: x.date || now.slice(0, 10), compte: x.compte}; t.statut = "regle"; t.modifieLe = now; res.msg = "Paiement : " + (t.tiers || t.description); } break; }
+    case "facture": case "devis": {
+      const isF = op.type === "facture", L = isF ? d.factures : d.devis;
+      if (!x.id || !x.client || !Array.isArray(x.lignes)) break;
+      const doc = clone(x), info = doc.clientInfo, pay = doc.paye || ""; delete doc.clientInfo; delete doc.paye;
+      const old = L.find(e => e.id === doc.id);
+      if (!doc.numero || L.some(e => e.numero === doc.numero && e.id !== doc.id)){ const was = doc.numero; doc.numero = old ? old.numero : nextNumIn(d, op.type, doc.date); if (was && was !== doc.numero) res.msg = " (numéro " + was + " déjà pris : " + doc.numero + ")"; }
+      let c = d.clients.find(e => norm(e.nom) === norm(doc.client));
+      if (!c){ c = {id: uid("c"), nom: doc.client, courriel:"", telephone:"", adresse:"", note:""}; d.clients.push(c); }
+      if (info) ["courriel","telephone","adresse"].forEach(k => { if (info[k] != null && String(info[k]).trim()) c[k] = String(info[k]).trim(); });
+      doc.clientId = c.id; doc.modifieLe = now; if (!old) doc.creeLe = now;
+      if (op.type === "facture" && !doc.transaction) doc.transaction = old && old.transaction ? old.transaction : "t-" + doc.id;
+      if (isF){ doc.statut = old ? (old.statut || "emise") : "emise"; if (doc.devis){ const v = d.devis.find(e => e.id === doc.devis); if (v){ v.statut = "facture"; v.facture = doc.id; } } }
+      else doc.statut = old && old.statut === "facture" ? "facture" : (["ouvert","accepte","refuse"].includes(doc.statut) ? doc.statut : "ouvert");
+      const tt = docTotals(doc); Object.assign(doc, {sousTotal: tt.st, tps: tt.tx, tvq: tt.tq, total: tt.total});
+      const saved = upsert(L, doc);
+      if (isF) syncFactureTx(d, saved, old ? "" : pay);
+      res.pdf = [op.type, saved.id]; res.msg = (isF ? "Facture " : "Devis ") + saved.numero + ", " + saved.client + res.msg; break; }
+    case "devis-statut": { const v = d.devis.find(e => e.id === x.id); if (v && v.statut !== "facture" && ["ouvert","accepte","refuse"].includes(x.statut)){ v.statut = x.statut; res.msg = "Devis " + v.numero + " : " + x.statut; } break; }
+    case "envoye": { const L = x.kind === "devis" ? d.devis : d.factures, e = L.find(v => v.id === x.id); if (e){ if (x.kind === "devis") e.envoyeLe = x.date; else e.envoyeeLe = x.date; } break; }
+    case "entretien": {
+      const e = d.equipements.find(q => q.id === x.equipement), en = x.entretien; if (!e || !en || !en.id) break;
+      e.entretiens = e.entretiens || []; if (e.entretiens.some(q => q.id === en.id)) break;
+      const doc = Object.assign({description:"", odometre:0, fournisseur:"", montant:0, prochaineDate:"", prochainKm:0, note:""}, en, {recus: toRecus(en.date, en.fournisseur || en.type), creeLe: now});
+      const dep = x.depense;
+      if (dep && dep.id && !d.transactions.some(t => t.id === dep.id)){
+        doc.transaction = dep.id;
+        d.transactions.push(Object.assign({date: doc.date, type:"depense", description: doc.type + ", " + e.nom + (doc.description ? " (" + doc.description + ")" : ""), tiers: doc.fournisseur, categorie: isRoad(e) ? "vehicule" : "entretien", montant:0, taxe:0, tvq:0, codeTaxe:"QC", compte:"", statut:"regle", echeance:"", projet:"", note:"", aVerifier:false}, dep, {recus: clone(doc.recus), equipement: e.id, entretien: doc.id, source:"telephone", creeLe: now}));
+      }
+      e.entretiens.push(doc);
+      if (doc.odometre && doc.odometre > (Number(e.odometre) || 0)) e.odometre = doc.odometre;
+      res.msg = "Entretien : " + doc.type + ", " + e.nom; break; }
+    case "odometre": { const e = d.equipements.find(q => q.id === x.equipement); if (e && Number(x.km) > 0){ e.odometre = Math.round(Number(x.km)); e.odometreLe = x.date || now.slice(0, 10); res.msg = "Odomètre de " + e.nom + " : " + fmtKm(x.km); } break; }
+    case "client": { if (!x.nom) break; const c = d.clients.find(e => (x.id && e.id === x.id) || norm(e.nom) === norm(x.nom)); if (c) Object.assign(c, x, {id: c.id}); else d.clients.push(Object.assign({id: x.id || uid("c"), courriel:"", telephone:"", adresse:"", note:""}, x)); res.msg = "Client : " + x.nom; break; }
+    /* Modification faite dans la version complète du téléphone : champs changés, fiches ajoutées ou retirées */
+    case "patch": {
+      (Array.isArray(x.changes) ? x.changes : []).forEach(c => {
+        if (!c || typeof c !== "object") return;
+        if (c.col === "reglages"){ d.reglages = d.reglages || {}; Object.assign(d.reglages, clone(c.set || {})); (c.unset || []).forEach(k => { delete d.reglages[k]; }); return; }
+        if (!COLLECTIONS.includes(c.col) || !c.id || !Array.isArray(d[c.col])) return;
+        const L = d[c.col], i = L.findIndex(e => e && e.id === c.id);
+        if (c.suppr){ if (i >= 0) L.splice(i, 1); return; }
+        if (i < 0){ if (!c.doc || c.doc.id !== c.id) return; L.push(clone(c.doc)); }
+        else if (c.doc) L[i] = clone(c.doc);
+        else { Object.assign(L[i], clone(c.set || {})); (c.unset || []).forEach(k => { delete L[i][k]; }); }
+        if (c.col === "factures" || c.col === "devis") res.pdfs.push([c.col === "factures" ? "facture" : "devis", c.id]);
+      });
+      res.msg = x.msg || "Modification faite au téléphone"; break; }
+    case "signature": {
+      const L = x.kind === "devis" ? d.devis : d.factures, e = L.find(v => v.id === x.id), web = x.appareil === "en ligne";
+      if (!e && web && photos[0] && Date.now() - new Date(now).getTime() < 3 * 864e5){ res.attendre = true; break; }
+      if (!e || !photos[0]) break;
+      if (web && e.signature){ res.msg = "Signature en ligne ignorée : " + e.numero + " était déjà signée"; break; }
+      const to = "signatures/" + fileSafe(e.numero + " " + (e.client || "")) + "-" + String(op.id).slice(-4) + (extOf(photos[0]) || ".jpg");
+      res.moves.push({from:"telephone/" + photos[0], to});
+      e.signature = {fichier: to, nom: String(x.nom || e.client || "").trim().slice(0, 80), date: x.date || today(), heure: String(x.heure || "").slice(0, 5), signeLe: x.signeLe || now, appareil: web ? "en ligne" : "téléphone"};
+      if (x.kind === "devis" && (!e.statut || e.statut === "ouvert")) e.statut = "accepte";
+      res.pdfs.push([x.kind === "devis" ? "devis" : "facture", e.id]); res.msg = (web ? "Signée en ligne par le client : " : "Signature du client : ") + e.numero + " (" + e.signature.nom + ")"; break; }
+    case "signature-cie": {
+      const e = d.devis.find(v => v.id === x.id); if (!e || !photos[0]) break;
+      const to = "signatures/" + fileSafe(e.numero + " entreprise") + "-" + String(op.id).slice(-4) + (extOf(photos[0]) || ".jpg");
+      res.moves.push({from:"telephone/" + photos[0], to});
+      e.signatureCie = {fichier: to, nom: String(x.nom || "").trim().slice(0, 60), date: x.date || today(), heure: String(x.heure || "").slice(0, 5), style: String(x.style || "")};
+      if (e.signatureCie.nom){ d.reglages.signataire = e.signatureCie.nom; if (x.style) d.reglages.signatureStyle = String(x.style); }
+      res.pdfs.push(["devis", e.id]); res.msg = "Signature de l'entreprise : " + e.numero + " (" + e.signatureCie.nom + ")"; break; }
+    case "signature-cie-suppr": { const e = d.devis.find(v => v.id === x.id); if (e && e.signatureCie){ delete e.signatureCie; res.pdfs.push(["devis", e.id]); res.msg = "Signature de l'entreprise retirée : " + e.numero; } break; }
+    case "fichier": { const to = safePath(x.to); if (to && photos[0]) res.moves.push({from:"telephone/" + photos[0], to}); break; }
+    case "deplacer": { const a = safePath(x.from), b = safePath(x.to); if (a && b) res.moves.push({from:a, to:b}); break; }
+    case "fichier-suppr": { const p = safePath(x.path); if (p) res.removes.push(p); break; }
+    default: res.unknown = true;
+  }
+  return res;
+}
+
+return {S, docPDF, docImages, jpegObj};
+})();
+</script>
 <script>
 (function(){
 "use strict";
@@ -144,9 +1263,26 @@ $("ok-t").textContent = "J'accepte " + quoi + " " + L.n + (L.en ? (/^[aeiouyàâ
 
 /* État : déjà signée, expirée, lien valide ? */
 const qs = new URLSearchParams({a:"etat", s:L.s, i:L.i, n:L.n, c:L.c, t:L.t, e:L.e, en:L.en, k:L.k}).toString();
-fetch(URL_S + "?" + qs, {cache:"no-store"}).then(r => r.json()).then(r => {
+let DOC = null, LOGO = null, CIE = null;
+const blobDe = u => { const m = String(u || "").match(/^data:([^;]+);base64,(.*)$/); if (!m) return null; const s = atob(m[2]), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return new Blob([b], {type:m[1]}); };
+const b64 = bytes => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); };
+const lireFichier = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+/* Montre la soumission telle qu'imprimée (mêmes calculs et même mise en page que l'application) */
+async function apercu(r){
+  if (typeof CORE === "undefined" || !r.doc) return;
+  try {
+    CORE.S.d = {reglages:r.reglages || {}, clients:r.client ? [r.client] : [], devis:[r.doc], factures:[], transactions:[], comptes:[], equipements:[], km:[], agenda:[]};
+    const bl = blobDe(r.logo), bc = blobDe(r.sigCie);
+    LOGO = bl ? await CORE.jpegObj(bl).catch(() => null) : null; CIE = bc ? await CORE.jpegObj(bc).catch(() => null) : null;
+    DOC = r.doc;
+    const pages = await CORE.docImages("devis", DOC, LOGO, {cie:CIE});
+    $("pages").innerHTML = ""; pages.forEach((f, i) => { const im = new Image(); im.alt = "Page " + (i + 1) + " de la soumission"; im.src = URL.createObjectURL(f); $("pages").appendChild(im); });
+    $("apercu").hidden = false; $("resume").querySelector(".note").hidden = true;
+  } catch(e){ DOC = null; console.warn("aperçu", e); }
+}
+fetch(URL_S + "?" + qs, {cache:"no-store"}).then(r => r.json()).then(async r => {
   if (r && r.tel) tel = r.tel;
-  if (r && r.ok) return pret();
+  if (r && r.ok){ await apercu(r); return pret(); }
   if (!(r && erreur(r) !== null)) pret();
 }).catch(() => pret());
 
@@ -178,10 +1314,22 @@ function image(){
 $("f").addEventListener("submit", async e => {
   e.preventDefault(); if (busy || $("go").disabled) return;
   busy = true; $("go").disabled = true; $("go").textContent = "Envoi de la signature…"; $("err").hidden = true;
-  let r = null;
-  try { const res = await fetch(URL_S, {method:"POST", body:JSON.stringify(Object.assign({a:"signer"}, L, {nom:$("nom").value.trim(), sig:image()}))}); r = await res.json(); } catch(er){ r = null; }
+  let r = null, copie = null;
+  const nom = $("nom").value.trim(), sig = image(), corps = {a:"signer", nom, sig};
+  if (DOC){
+    try {
+      const now = new Date(), p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {timeZone:"America/Toronto", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23"}).formatToParts(now).map(x => [x.type, x.value]));
+      const sdoc = Object.assign({}, DOC, {statut:"accepte", signature:{nom, date:p.year + "-" + p.month + "-" + p.day, heure:p.hour + ":" + p.minute, signeLe:now.toISOString(), appareil:"en ligne"}});
+      const sigs = {client:await CORE.jpegObj(blobDe(sig)), cie:CIE}, pdf = CORE.docPDF("devis", sdoc, LOGO, sigs);
+      copie = new Blob([pdf], {type:"application/pdf"}); corps.pdf = "data:application/pdf;base64," + b64(pdf);
+      corps.pages = []; for (const f of (await CORE.docImages("devis", sdoc, LOGO, sigs)).slice(0, 4)) corps.pages.push(await lireFichier(f));
+    } catch(er){ console.warn("copie", er); copie = null; delete corps.pdf; delete corps.pages; }
+  }
+  try { const res = await fetch(URL_S, {method:"POST", body:JSON.stringify(Object.assign({}, L, corps))}); r = await res.json(); } catch(er){ r = null; }
   busy = false; $("go").textContent = "Signer et accepter";
   if (r && r.ok){
+    if (copie){ const a = $("copie"); a.href = URL.createObjectURL(copie); a.download = "Soumission " + L.n + " signée.pdf"; a.hidden = false; }
+    $("apercu").hidden = true;
     $("fini-t").innerHTML = esc(L.en || "L'entreprise") + " a bien reçu votre signature pour " + quoi + " " + esc(L.n) + " (" + esc(argent(L.t)) + "), le " + dLong(r.date) + " à " + heure(r.heure) + ".<br>Vous pouvez fermer cette page.";
     $("resume").hidden = true; show("fini"); return;
   }

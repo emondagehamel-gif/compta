@@ -7,8 +7,9 @@ const rj = (f, d) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } ca
 const signed = buf => Array.from(buf, b => b > 127 ? b - 256 : b);
 const iter = arr => { let i = 0; return {hasNext: () => i < arr.length, next: () => arr[i++]}; };
 const blob = (data, type, name) => ({data: typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(Array.from(data, b => (b + 256) % 256)), type, name,
-  getDataAsString(){ return this.data.toString("utf8"); }, getBytes(){ return signed(this.data); }, getName(){ return this.name; }});
-function File(p){ return {getId: () => p, getName: () => path.basename(p), getLastUpdated: () => fs.statSync(p).mtime, getBlob: () => blob(fs.readFileSync(p), "", path.basename(p)), isTrashed: () => false}; }
+  getDataAsString(){ return this.data.toString("utf8"); }, getBytes(){ return signed(this.data); }, getName(){ return this.name; }, getContentType(){ return this.type; }});
+const TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".json": "application/json", ".pdf": "application/pdf"};
+function File(p){ return {getId: () => p, getName: () => path.basename(p), getSize: () => fs.statSync(p).size, getLastUpdated: () => fs.statSync(p).mtime, getBlob: () => blob(fs.readFileSync(p), TYPES[path.extname(p).toLowerCase()] || "application/octet-stream", path.basename(p)), isTrashed: () => false}; }
 function Folder(p){
   const kids = () => fs.readdirSync(p).filter(n => !n.startsWith("."));
   return {getId: () => p, getName: () => path.basename(p), isTrashed: () => false,
@@ -23,6 +24,7 @@ const ctx = {
   Utilities: {
     computeHmacSha256Signature: (v, k) => signed(crypto.createHmac("sha256", k).update(v, "utf8").digest()),
     base64Decode: s => signed(Buffer.from(s, "base64")),
+    base64Encode: b => Buffer.from(Array.from(b, x => (x + 256) % 256)).toString("base64"),
     newBlob: blob,
     formatDate: (d, tz, f) => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"}).formatToParts(d).map(x => [x.type, x.value]));
       return f.replace("yyyy", p.year).replace("MM", p.month).replace("dd", p.day).replace("HH", p.hour).replace("mm", p.minute); }
@@ -31,7 +33,9 @@ const ctx = {
     setProperty: (k, v) => { const o = rj(PROPS, {}); o[k] = String(v); fs.writeFileSync(PROPS, JSON.stringify(o)); },
     deleteProperty: k => { const o = rj(PROPS, {}); delete o[k]; fs.writeFileSync(PROPS, JSON.stringify(o)); }})},
   LockService: {getScriptLock: () => ({tryLock: () => true, releaseLock(){}})},
-  MailApp: {sendEmail: o => { const L = rj(MAILS, []); L.push({to: o.to, subject: o.subject, body: o.body, name: o.name, attachments: (o.attachments || []).map(a => [a.name, a.type, a.data.length])}); fs.writeFileSync(MAILS, JSON.stringify(L, null, 1)); }, getRemainingDailyQuota: () => 100},
+  MailApp: {sendEmail: o => { const L = rj(MAILS, []); L.push({to: o.to, subject: o.subject, body: o.body, name: o.name, attachments: (o.attachments || []).map(a => [a.name, a.type, a.data.length]), html: o.htmlBody || "", inline: Object.fromEntries(Object.entries(o.inlineImages || {}).map(([k, a]) => [k, [a.type, a.data.length]]))});
+    for (const a of (o.attachments || [])) fs.writeFileSync(path.join(ROOT, ".mail-" + a.name), a.data);
+    for (const [k, a] of Object.entries(o.inlineImages || {})) fs.writeFileSync(path.join(ROOT, ".mail-" + k + ".jpg"), a.data); fs.writeFileSync(MAILS, JSON.stringify(L, null, 1)); }, getRemainingDailyQuota: () => 100},
   Session: {getEffectiveUser: () => ({getEmail: () => "emondagehamel@gmail.com"})},
   ContentService: {MimeType: {JSON: "json"}, createTextOutput: s => ({content: s, setMimeType(){ return this; }})}
 };

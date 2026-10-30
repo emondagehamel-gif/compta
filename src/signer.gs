@@ -1,9 +1,10 @@
-/* Comptabilité : signature en ligne des soumissions. Version 1.
+/* Comptabilité : signature en ligne des soumissions. Version 2.
    Ce petit service tourne dans TON compte Google. Quand un client signe une soumission sur la page
    « Signer en ligne », il dépose la signature dans ton dossier Comptabilite/telephone (Google Drive)
    et t'envoie un courriel. L'application Comptabilité ajoute ensuite la signature à la soumission.
-   Il ne fait rien d'autre : il lit registre.json pour vérifier le lien, et n'envoie qu'un avis à toi. */
-const VERSION = 1, TZ = "America/Toronto";
+   Il ne fait rien d'autre : il lit registre.json pour vérifier le lien et montrer la soumission au client,
+   et n'envoie qu'un avis à toi (avec la soumission signée en images et en PDF). */
+const VERSION = 2, TZ = "America/Toronto";
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
 function doGet(e){ return reponse(traiter((e && e.parameter) || {}, false)); }
@@ -56,7 +57,7 @@ function traiter(b, signer){
     return null;
   };
   let x = etat(); if (x) return x;
-  if (!signer) return {ok:true, etat:"ouvert", tel};
+  if (!signer){ const v = (reg.devis || []).filter(y => y && y.id === o.i)[0]; return Object.assign({ok:true, etat:"ouvert", tel}, v ? document_(d, reg, v) : {}); }
   const nom = String(b.nom || "").replace(/\s+/g, " ").trim().slice(0, 80), m = String(b.sig || "").match(/^data:image\/jpeg;base64,([A-Za-z0-9+\/=]+)$/);
   if (!nom || !m || m[1].length > 3000000) return {ok:false, err:"signature"};
   const lock = LockService.getScriptLock(); if (!lock.tryLock(25000)) return {ok:false, err:"occupe"};
@@ -70,20 +71,52 @@ function traiter(b, signer){
       data:{kind:"devis", id:o.i, numero:o.n, nom, date, heure, signeLe:now.toISOString(), appareil:"en ligne", total:Number(o.t) / 100}};
     dt.createFile(Utilities.newBlob(JSON.stringify(op), "application/json", opid + ".json"));
     P.setProperty("signe-" + o.i, JSON.stringify({nom, date, heure, op:opid}));
-    try { avis(R, o, nom, date, heure, img); } catch(er){ console.warn("avis : " + er); }
+    const pdf = donnees(b.pdf, "application/pdf", 8000000), pages = (Array.isArray(b.pages) ? b.pages : []).slice(0, 4).map(p => donnees(p, "image/jpeg", 3000000)).filter(Boolean);
+    try { avis(R, o, nom, date, heure, img, pdf && pdf[0] === 37 && pdf[1] === 80 ? pdf : null, pages); } catch(er){ console.warn("avis : " + er); }
     return {ok:true, etat:"signe", nom, date, heure};
   } finally { lock.releaseLock(); }
 }
 
-/* Courriel à l'entreprise : qui a signé, quand, et l'image de la signature */
-function avis(R, o, nom, date, heure, img){
+/* Fichier « data:…;base64,… » envoyé par la page de signature (PDF ou image), ou null */
+function donnees(s, type, max){
+  const m = String(s || "").match(/^data:([\w\/+.-]+);base64,([A-Za-z0-9+\/=]+)$/);
+  return m && m[1] === type && m[2].length <= max ? Utilities.base64Decode(m[2]) : null;
+}
+/* Fichier du dossier Comptabilite par son chemin (ex. « signatures/entreprise.jpg ») */
+function fichier(d, p){
+  const parts = String(p || "").split("/").filter(Boolean); if (!parts.length) return null; let f = d;
+  for (const x of parts.slice(0, -1)){ const it = f.getFoldersByName(x); if (!it.hasNext()) return null; f = it.next(); }
+  const it = f.getFilesByName(parts[parts.length - 1]); return it.hasNext() ? it.next() : null;
+}
+/* La soumission telle qu'elle est dans les livres, pour que le client la voie au complet avant de signer.
+   Seulement ce qui s'imprime sur la soumission : pas de clé, pas de chiffres d'impôts. */
+function document_(d, reg, v){
+  const R = reg.reglages || {}, r = {};
+  ["nom", "adresse", "telephone", "courriel", "slogan", "noTPS", "noTVQ", "neq", "numero", "modePaiement", "conditionsDevis", "titreDevis", "styleDoc", "messageFacture",
+   "tauxTPS", "tauxTVQ", "tauxTVH", "province", "inscritTVH", "inscritTVQ", "docTTC", "validiteDevis", "termes"].forEach(k => { if (R[k] !== undefined) r[k] = R[k]; });
+  const c = (reg.clients || []).filter(x => x && (x.id === v.clientId || String(x.nom || "").toLowerCase() === String(v.client || "").toLowerCase()))[0];
+  const img = p => { try { const f = fichier(d, p); if (!f || f.getSize() > 1500000) return ""; const b = f.getBlob(); return "data:" + b.getContentType() + ";base64," + Utilities.base64Encode(b.getBytes()); } catch(e){ return ""; } };
+  return {doc:v, reglages:r, client:c ? {id:c.id, nom:c.nom, courriel:c.courriel || "", telephone:c.telephone || "", adresse:c.adresse || ""} : null, logo:img(R.logo), sigCie:img(v.signatureCie ? v.signatureCie.fichier : R.signatureCie)};
+}
+
+/* Courriel à l'entreprise : qui a signé, quand, et la soumission signée (pages en images dans le courriel, PDF joint) */
+function avis(R, o, nom, date, heure, img, pdf, pages){
   const to = String(R.courriel || "").trim() || Session.getEffectiveUser().getEmail(); if (!to) return;
-  const titre = R.titreDevis || "Soumission";
-  MailApp.sendEmail({to, name:"Comptabilité", subject:titre + " " + o.n + " signée par " + nom,
-    body:nom + " a signé en ligne " + (titre === "Devis" ? "le devis " : "la soumission ") + o.n + (o.c && o.c.toLowerCase() !== nom.toLowerCase() ? " (client : " + o.c + ")" : "") +
-      ", au montant de " + argent(o.t) + ", le " + dLong(date) + " à " + heure.replace(":", " h ") + ".\n\n" +
-      "Elle passera à « acceptée » dans ton application Comptabilité, avec la signature sur le PDF, la prochaine fois que tu l'ouvriras.\n\nL'image de la signature est jointe.",
-    attachments:[Utilities.newBlob(img, "image/jpeg", "signature " + o.n + ".jpg")]});
+  const titre = R.titreDevis || "Soumission", la = titre === "Devis" ? "le devis " : "la soumission ";
+  const txt = nom + " a signé en ligne " + la + o.n + (o.c && o.c.toLowerCase() !== nom.toLowerCase() ? " (client : " + o.c + ")" : "") +
+    ", au montant de " + argent(o.t) + ", le " + dLong(date) + " à " + heure.replace(":", " h ") + ".";
+  const suite = "Elle passera à « acceptée » dans ton application Comptabilité, avec la signature sur le PDF, la prochaine fois que tu l'ouvriras.";
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;"}[c]));
+  const inline = {}, att = [];
+  pages.forEach((p, i) => { inline["page" + (i + 1)] = Utilities.newBlob(p, "image/jpeg", "page" + (i + 1) + ".jpg"); });
+  if (pdf) att.push(Utilities.newBlob(pdf, "application/pdf", titre + " " + o.n + " signée.pdf"));
+  if (!pages.length) inline.sig = Utilities.newBlob(img, "image/jpeg", "signature.jpg");
+  const html = '<div style="font-family:Segoe UI,Arial,sans-serif;font-size:15px;color:#16221D;max-width:820px">' +
+    '<p style="font-size:17px;margin:0 0 6px"><b>✓ ' + esc(titre + " " + o.n) + " signée par " + esc(nom) + "</b></p>" +
+    "<p style=\"margin:0 0 6px\">" + esc(txt) + "</p><p style=\"margin:0 0 16px;color:#5F6F67\">" + esc(suite) + (pdf ? " Le PDF signé est joint." : "") + "</p>" +
+    (pages.length ? pages.map((_, i) => '<img src="cid:page' + (i + 1) + '" alt="Page ' + (i + 1) + '" style="display:block;width:100%;max-width:820px;border:1px solid #DCE4DE;border-radius:6px;margin:0 0 14px">').join("")
+      : '<p style="margin:0 0 4px;color:#5F6F67">Signature :</p><img src="cid:sig" alt="Signature" style="max-width:260px;border:1px solid #DCE4DE;border-radius:6px">') + "</div>";
+  MailApp.sendEmail({to, name:"Comptabilité", subject:titre + " " + o.n + " signée par " + nom, body:txt + "\n\n" + suite, htmlBody:html, inlineImages:inline, attachments:att});
 }
 
 /* Pour vérifier l'installation dans l'éditeur : choisis « test » puis clique Exécuter. Google te demande les autorisations. */

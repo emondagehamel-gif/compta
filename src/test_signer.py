@@ -18,10 +18,14 @@ L = [{"type": "service", "description": "Abattage d'un frêne mort", "qte": 1, "
 reg["devis"] = [{"id": "dv-s1", "numero": "D-2026-020", "date": "2026-10-29", "echeance": "2099-11-28", "client": "Michel Auger", "clientId": "c-ma", "lignes": L, "codeTaxe": "QC", "taxesIncluses": False, "statut": "ouvert", "projet": "", "message": ""},
                 {"id": "dv-s3", "numero": "D-2026-021", "date": "2026-10-29", "echeance": "2099-11-28", "client": "Michel Auger", "clientId": "c-ma", "lignes": L[:1], "codeTaxe": "QC", "taxesIncluses": False, "statut": "ouvert", "projet": "", "message": "", "total": 1.0},
                 {"id": "dv-s2", "numero": "D-2026-005", "date": "2026-08-01", "echeance": "2026-08-31", "client": "Michel Auger", "clientId": "c-ma", "lignes": L[:1], "codeTaxe": "QC", "taxesIncluses": True, "statut": "ouvert", "projet": "", "message": ""}]
+reg["devis"][0]["signatureCie"] = {"fichier": "signatures/D-2026-020-entreprise-ab12.jpg", "nom": "Dimitry Hamel", "date": "2026-10-29", "heure": "09:00", "style": "elegante"}
+from PIL import Image, ImageDraw
+_im = Image.new("RGB", (520, 160), "white"); ImageDraw.Draw(_im).text((20, 60), "Dimitry Hamel (signature)", fill=(34, 53, 111)); import io as _io; _b = _io.BytesIO(); _im.save(_b, "JPEG"); SIGCIE = _b.getvalue()
 REG = json.dumps(reg)
 INIT = "window.__SCRIPT = %s; window.__SIGNER = %s;" % (json.dumps(GAS), json.dumps(PAGE))
 async def main():
-    D = tempfile.mkdtemp(); C = os.path.join(D, "Comptabilite"); os.makedirs(os.path.join(C, "telephone"))
+    D = tempfile.mkdtemp(); C = os.path.join(D, "Comptabilite"); os.makedirs(os.path.join(C, "telephone")); os.makedirs(os.path.join(C, "signatures"))
+    open(os.path.join(C, "signatures", "D-2026-020-entreprise-ab12.jpg"), "wb").write(SIGCIE)
     open(os.path.join(C, "registre.json"), "w", encoding="utf-8").write(REG)
     gas = subprocess.Popen(["node", "nuage/fake_gas.js", D, "8093"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True); print("0", gas.stdout.readline().strip())
     mock.reset(open("phone/fixture.json", encoding="utf-8").read()); mock.start()
@@ -33,7 +37,8 @@ async def main():
                 pg.on("console", lambda m: errs.append(tag + " console: " + m.text) if m.type == "error" else None)
             ctx = await b.new_context(viewport={"width": 1366, "height": 900}, accept_downloads=True, permissions=["clipboard-read", "clipboard-write"])
             await ctx.add_init_script(INIT); pg = await ctx.new_page(); watch(pg, "app")
-            await pg.add_init_script(STUB + "\n__fs['registre.json'] = {content:new Blob([" + json.dumps(REG) + "]), mod:1};")
+            await pg.add_init_script(STUB + "\n__fs['registre.json'] = {content:new Blob([" + json.dumps(REG) + "]), mod:1};" +
+                "{ const s = atob(%s), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); __fs['signatures/D-2026-020-entreprise-ab12.jpg'] = {content:new Blob([u], {type:'image/jpeg'}), mod:1}; }" % json.dumps(base64.b64encode(SIGCIE).decode()))
             await pg.goto("file://" + os.path.abspath("Comptabilite/Comptabilite.html"))
             await pg.click("#sp-pick"); await pg.wait_for_selector("#app:not([hidden])")
             # 1. Le message contient le lien de signature ; le PDF a un bouton cliquable
@@ -55,8 +60,11 @@ async def main():
             mob = await b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
             await mob.add_init_script(INIT); c = await mob.new_page(); watch(c, "client")
             await c.goto(lien); await c.wait_for_selector("#f:not([hidden])")
+            print("2a aperçu complet:", await c.is_visible("#apercu"), "| pages:", await c.locator("#pages img").count(), "| note PDF cachée:", not await c.is_visible("#resume .note"))
+            await c.screenshot(path=OUT + "/signer-apercu.png", full_page=True)
             print("2 résumé:", (await c.inner_text("#resume")).replace("\n", " | "))
             print("2b case:", await c.inner_text("#ok-t")); print("2c bouton actif au départ:", not await c.is_disabled("#go"))
+            await c.wait_for_function("[...document.querySelectorAll('#pages img')].every(i => i.complete && i.naturalWidth)"); await c.locator("#cv").scroll_into_view_if_needed(); await c.wait_for_timeout(200)
             box = await c.locator("#cv").bounding_box()
             pts = [(0.12, 0.6), (0.2, 0.3), (0.3, 0.7), (0.42, 0.35), (0.55, 0.65), (0.68, 0.3), (0.8, 0.62)]
             await c.mouse.move(box["x"] + box["width"] * pts[0][0], box["y"] + box["height"] * pts[0][1]); await c.mouse.down()
@@ -65,11 +73,15 @@ async def main():
             print("2d après la signature, sans la case:", await c.is_disabled("#go")); await c.check("#ok")
             await c.screenshot(path=OUT + "/signer-client.png", full_page=True)
             await c.click("#go"); await c.wait_for_selector("#fini:not([hidden])")
-            print("2e fini:", (await c.inner_text("#fini")).replace("\n", " | "))
+            print("2e fini:", (await c.inner_text("#fini")).replace("\n", " | "), "| copie:", await c.get_attribute("#copie", "download"))
+            async with c.expect_download() as dlc: await c.click("#copie")
+            cp = await dlc.value; await cp.save_as(OUT + "/signer-copie-client.pdf"); print("2e2 copie client:", cp.suggested_filename, open(OUT + "/signer-copie-client.pdf", "rb").read()[:5])
             await c.screenshot(path=OUT + "/signer-merci.png")
             tel = sorted(os.listdir(os.path.join(C, "telephone"))); print("2f drive telephone:", tel)
             op = json.load(open(os.path.join(C, "telephone", [f for f in tel if f.endswith(".json")][0]), encoding="utf-8")); print("2g op:", op["type"], json.dumps(op["data"], ensure_ascii=False))
-            mails = json.load(open(os.path.join(D, ".mails.json"), encoding="utf-8")); print("2h avis:", mails[0]["to"], "|", mails[0]["subject"], "|", mails[0]["body"][:150].replace("\n", " "), "|", mails[0]["attachments"])
+            mails = json.load(open(os.path.join(D, ".mails.json"), encoding="utf-8")); print("2h2 avis pièces:", mails[0]["attachments"], "| images dans le courriel:", mails[0]["inline"], "| html:", "cid:page1" in mails[0]["html"])
+            shutil.copy(os.path.join(D, ".mail-page1.jpg"), OUT + "/signer-avis-page1.jpg") if os.path.exists(os.path.join(D, ".mail-page1.jpg")) else None
+            print("2h avis:", mails[0]["to"], "|", mails[0]["subject"], "|", mails[0]["body"][:150].replace("\n", " "), "|", mails[0]["attachments"])
             # 3. Le même lien : déjà signée ; lien modifié ; soumission expirée ; lien incomplet
             await c.goto("about:blank"); await c.goto(lien); await c.wait_for_selector("#st b:not(:has(.spin))"); await c.wait_for_timeout(400)
             print("3 rouvert:", (await c.inner_text("#st")).replace("\n", " | "))

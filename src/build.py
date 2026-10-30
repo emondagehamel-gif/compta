@@ -48,7 +48,12 @@ os.makedirs('pwa/dist', exist_ok=True)
 open('pwa/dist/index.html', 'w', encoding='utf-8').write(html)
 open('pwa/dist/complet.html', 'w', encoding='utf-8').write(full)
 open('pwa/dist/envoi.html', 'w', encoding='utf-8').write(envoi)
-open('pwa/dist/signer.html', 'w', encoding='utf-8').write(signer)
+# Page de signature : avec les calculs et la mise en page des soumissions (aperçu complet et copie signée en PDF)
+import re
+core_sig = re.sub(r'(?m)^const SIG_FONTS = .*$', 'const SIG_FONTS = {};', open('phone/core.js', encoding='utf-8').read())   # pas besoin des polices pour signer
+core_bundle = 'const CORE = (function(){\n"use strict";\nconst S = {d:null, tmap:{}};\n' + core_sig + '\nreturn {S, docPDF, docImages, jpegObj};\n})();'
+assert '/*__CORE__*/' in signer
+open('pwa/dist/signer.html', 'w', encoding='utf-8').write(signer.replace('/*__CORE__*/', core_bundle.replace('</script', '<\\/script')))
 open('pwa/all.js', 'w', encoding='utf-8').write(js)
 manifest = {"name": "Comptabilité", "short_name": "Comptabilité", "description": "Comptabilité de l'entreprise sur le terrain : reçus, factures, devis, agenda, trajets et entretiens, même sans réseau.",
   "lang": "fr-CA", "id": "./", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "portrait",
