@@ -105,7 +105,9 @@ input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;bo
 /* Envoi d'une soumission ou d'une facture par Gmail, avec le PDF déjà joint.
    L'application de l'ordinateur ouvre cette page et lui passe le document. La connexion Google
    se fait par la page principale (seule adresse autorisée), puis revient ici. Rien ne part sans le bouton « Envoyer ». */
-const API = window.__GAPI || "https://www.googleapis.com", GMAIL = window.__GAPI ? [window.__GAPI] : ["https://gmail.googleapis.com", "https://www.googleapis.com"];
+const API = window.__GAPI || "https://www.googleapis.com";
+/* Envoi Gmail : d'abord la forme la plus courante (JSON { raw }), puis les autres adresses si le navigateur bloque la requête */
+const GMAIL = window.__GAPI ? [[window.__GAPI, "json"], [window.__GAPI, "media"]] : [["https://gmail.googleapis.com", "json"], ["https://www.googleapis.com", "json"], ["https://gmail.googleapis.com", "media"]];
 const MAIL_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 const CONSOLE = "https://console.cloud.google.com/apis/library/gmail.googleapis.com?project=comptabilite-513021";
 const $ = id => document.getElementById(id);
@@ -209,6 +211,7 @@ function parseTo(v){
 /* ----- Courriel au format standard (MIME), avec le PDF joint ----- */
 const enc = new TextEncoder();
 function b64(bytes){ let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+const b64url = s => b64(enc.encode(s)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const wrap = s => (s.match(/.{1,76}/g) || [""]).join("\r\n");
 const ascii = s => /^[\x20-\x7e]*$/.test(s);
 const word1 = s => ascii(s) ? s : "=?UTF-8?B?" + b64(enc.encode(s)) + "?=";
@@ -237,12 +240,16 @@ async function send(){
   const t = tok(); if (!t || !hasMail(t)) return goAuth(false);
   $("err").hidden = true; setBusy(true);
   const raw = mime({from:ACCT, name:DATA.nom, to:to.list, subject:DATA.subject, body:DATA.body, file:DATA.filename, bytes:DATA.pdf});
-  let r;
-  for (const host of GMAIL){
-    try { r = await fetch(host + "/upload/gmail/v1/users/me/messages/send?uploadType=media", {method:"POST", headers:{Authorization:"Bearer " + t.t, "Content-Type":"message/rfc822"}, body:raw}); break; }
-    catch(e){ r = null; }
+  let r = null, why = "";
+  for (const [host, mode] of GMAIL){
+    try {
+      r = mode === "json"
+        ? await fetch(host + "/gmail/v1/users/me/messages/send", {method:"POST", headers:{Authorization:"Bearer " + t.t, "Content-Type":"application/json"}, body:JSON.stringify({raw:b64url(raw)})})
+        : await fetch(host + "/upload/gmail/v1/users/me/messages/send?uploadType=media", {method:"POST", headers:{Authorization:"Bearer " + t.t, "Content-Type":"message/rfc822"}, body:raw});
+      break;
+    } catch(e){ r = null; why = (e && e.message) || String(e); }
   }
-  if (!r){ setBusy(false); return err("Gmail ne répond pas", "Vérifie la connexion Internet, puis réessaie.", B("renvoyer", "Réessayer", true) + B("manuel", "Méthode manuelle")); }
+  if (!r){ setBusy(false); return err("Gmail ne répond pas", "Vérifie la connexion Internet, puis réessaie." + (why ? ' <small style="color:var(--muted)">(' + esc(why) + ")</small>" : ""), B("renvoyer", "Réessayer", true) + B("manuel", "Méthode manuelle")); }
   if (r.status === 401){ LS.set("tok", null); return goAuth(false); }
   if (!r.ok){
     let j = {}; try { j = await r.json(); } catch(e){}

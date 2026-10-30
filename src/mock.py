@@ -98,6 +98,14 @@ class G(BaseHTTPRequestHandler):
             for f in STATE["files"].values():
                 if "tel1" in f.get("parents", []): f["trashed"] = True
             return self.out(200, {"ok": True})
+        if u.path == "/gmail/v1/users/me/messages/send":
+            if STATE["gmail"] == "json-cors":   # le navigateur bloque cette forme (pas d'en-tête CORS) : l'app doit essayer l'autre
+                self.send_response(500); self.end_headers(); return
+            if not self.authed(): return
+            if STATE["gmail"] == "disabled": return self.out(403, {"error": {"code": 403, "message": "Gmail API has not been used in project 426079109504 before or it is disabled.", "status": "PERMISSION_DENIED", "details": [{"reason": "SERVICE_DISABLED"}]}})
+            try: raw = base64.urlsafe_b64decode(json.loads(body)["raw"] + "==")
+            except Exception: return self.out(400, {"error": {"code": 400, "message": "raw invalide"}})
+            STATE["mails"].append(raw); return self.out(200, {"id": "msg%d" % len(STATE["mails"]), "threadId": "th1", "labelIds": ["SENT"]})
         if u.path == "/upload/gmail/v1/users/me/messages/send":
             if not self.authed(): return
             if STATE["gmail"] == "disabled": return self.out(403, {"error": {"code": 403, "message": "Gmail API has not been used in project 426079109504 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=426079109504 then retry.", "status": "PERMISSION_DENIED", "details": [{"reason": "SERVICE_DISABLED"}]}})
