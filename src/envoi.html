@@ -257,10 +257,10 @@ async function send(){
     const E = j.error || {}, m = E.message || ("Erreur " + r.status), why = m + " " + JSON.stringify(E.errors || E.details || "");
     setBusy(false);
     if (r.status === 403 && /accessNotConfigured|SERVICE_DISABLED|has not been used|is disabled/i.test(why))
-      return err("L'envoi par Gmail n'est pas encore activé", "Il faut l'activer une seule fois dans Google Cloud : ouvre la page ci-dessous, clique <b>Activer</b>, attends une minute, puis reviens cliquer « Réessayer ».",
+      return err("L'envoi par Gmail n'est pas encore activé", "Il faut l'activer une seule fois dans Google Cloud : ouvre la page ci-dessous, clique <b>Activer</b>, attends une ou deux minutes, puis reviens cliquer « Réessayer ». Si tu viens de l'activer, Google peut prendre jusqu'à 5 minutes." + ' <small style="color:var(--muted);display:block;margin-top:4px">Google : ' + esc(m.slice(0, 220)) + "</small>",
         '<a class="btn prim" href="' + CONSOLE + '" target="_blank" rel="noopener">Activer l\'API Gmail</a>' + B("renvoyer", "Réessayer") + B("manuel", "Méthode manuelle"));
     if (r.status === 403 && /insufficient|scope/i.test(why)){ if (!back || Date.now() - back > 90000) return goAuth(false); }
-    return err("Gmail a refusé l'envoi", esc(m), B("renvoyer", "Réessayer", true) + B("manuel", "Méthode manuelle"));
+    return err("Gmail a refusé l'envoi", esc(m) + ' <small style="color:var(--muted)">(code ' + r.status + ")</small>", B("renvoyer", "Réessayer", true) + B("manuel", "Méthode manuelle"));
   }
   let j = {}; try { j = await r.json(); } catch(e){}
   sent = true; DB.del("envoi");
