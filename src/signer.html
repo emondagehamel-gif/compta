@@ -86,7 +86,7 @@ input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border
       <div id="r-val-l"><dt>Valide jusqu'au</dt><dd id="r-val"></dd></div>
       <div class="total"><dt>Montant total</dt><dd id="r-tot"></dd></div>
     </dl>
-    <p class="note">Le détail des travaux et des prix est dans le PDF joint au courriel.</p>
+    <p class="note">Le détail des travaux et des prix est dans le PDF de la soumission.</p>
   </section>
 
   <section class="card" id="apercu" hidden><h2>Votre soumission</h2><div class="pages" id="pages"></div></section>
@@ -134,15 +134,15 @@ function erreur(r){
   const en = esc(L.en || "l'entreprise");
   if (r.err === "deja") return status("Cette soumission est déjà signée", "Signée par " + esc(r.nom) + (r.date ? " le " + dLong(r.date) + (r.heure ? " à " + heure(r.heure) : "") : "") + ". Merci! " + en + " a bien reçu la signature.");
   if (r.err === "expire") return status("Cette soumission est expirée", "Elle était valide jusqu'au " + dLong(r.e || L.e) + ". Communiquez avec " + en + " pour une soumission à jour." + appel(r.tel || tel));
-  if (r.err === "modifiee") return status("Cette soumission a été modifiée", "Le montant a changé depuis l'envoi de ce lien. Utilisez le lien du courriel le plus récent, ou communiquez avec " + en + "." + appel(r.tel || tel));
+  if (r.err === "modifiee") return status("Cette soumission a été modifiée", "Le montant a changé depuis l'envoi de ce lien. Utilisez le bouton « Signer en ligne » du PDF le plus récent, ou communiquez avec " + en + "." + appel(r.tel || tel));
   if (r.err === "ferme") return status("Cette soumission n'est plus ouverte", "Communiquez avec " + en + " pour en parler." + appel(r.tel || tel));
-  if (r.err === "lien") return status("Ce lien n'est pas valide", "Il a peut-être été coupé ou modifié. Ouvrez le lien directement depuis le courriel reçu, ou communiquez avec " + en + ".");
+  if (r.err === "lien") return status("Ce lien n'est pas valide", "Il a peut-être été coupé ou modifié. Ouvrez le PDF de la soumission reçu par courriel et touchez son bouton vert « Signer en ligne », ou communiquez avec " + en + ".");
   if (r.err === "dossier" || r.err === "config") return status("Signature en ligne indisponible", "Le service de signature de " + en + " n'est pas prêt. Communiquez avec l'entreprise, ou répondez au courriel pour accepter la soumission.");
   return null;
 }
 
 /* Résumé de la soumission (tiré du lien) */
-if (!URL_S || !L.i || !L.k || !/^\d+$/.test(L.t)){ status("Ce lien n'est pas complet", "Ouvrez le lien directement depuis le courriel reçu, ou utilisez le bouton « Signer en ligne » du PDF."); $("pied").hidden = true; return; }
+if (!URL_S || !L.i || !L.k || !/^\d+$/.test(L.t)){ status("Ce lien n'est pas complet", "Ouvrez le PDF de la soumission reçu par courriel et touchez son bouton vert « Signer en ligne »."); $("pied").hidden = true; return; }
 document.title = "Signer la soumission " + L.n;
 $("en").textContent = L.en; $("titre").textContent = "Signer la soumission";
 $("r-num").textContent = L.n; $("r-cli").textContent = L.c || "—"; $("r-tot").textContent = argent(L.t);

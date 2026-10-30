@@ -43,15 +43,14 @@ async def main():
             await pg.click("#sp-pick"); await pg.wait_for_selector("#app:not([hidden])")
             # 1. Le message contient le lien de signature ; le PDF a un bouton cliquable
             await pg.evaluate("location.hash='ventes'"); await pg.click('[data-vt="devis"]'); await pg.click('[data-dmail="dv-s1"]'); await pg.wait_for_selector("#ent-form .send-opts")
-            msg = await pg.input_value("#snd-msg"); lien = re.search(r"http\S+signer\.html#\S+", msg).group(0)
-            print("1 message:", msg.split("\n\n")[1].replace("\n", " / ")[:200]); print("1b lien:", len(lien), "car. |", lien[:110] + "…")
+            msg = await pg.input_value("#snd-msg"); print("1 message:", msg.split("\n\n")[2].replace("\n", " / ")[:220], "| adresse visible:", "signer.html" in msg)
             got = []
             async with pg.expect_download() as dl: await pg.click('[data-send="files"]')
             d = await dl.value; dest = OUT + "/signer-" + d.suggested_filename; await d.save_as(dest); got.append(dest)
             async with pg.expect_download() as dl2: pass
             d2 = await dl2.value; img = OUT + "/signer-" + d2.suggested_filename; await d2.save_as(img)
-            pdf = open(dest, "rb").read(); m = re.search(rb"/URI \((.*?)\) >>", pdf)
-            print("1c pdf:", d.suggested_filename, "| annotation:", b"/Subtype /Link" in pdf, "| même lien:", m and m.group(1).decode() == lien, "| image:", img)
+            pdf = open(dest, "rb").read(); m = re.search(rb"/URI \((.*?)\) >>", pdf); lien = m.group(1).decode()
+            print("1b lien du PDF:", len(lien), "car. |", lien[:110] + "…"); print("1c pdf:", d.suggested_filename, "| annotation:", b"/Subtype /Link" in pdf, "| image:", img)
             txt = subprocess.run(["pdftotext", "-layout", dest, "-"], capture_output=True, text=True).stdout
             print("1d texte:", [l.strip() for l in txt.split("\n") if "Signer en ligne" in l or "Touchez" in l])
             print("1e qpdf:", subprocess.run(["qpdf", "--check", dest], capture_output=True, text=True).stdout.strip().split("\n")[-1] if shutil.which("qpdf") else "(qpdf absent)")
@@ -87,11 +86,17 @@ async def main():
             print("3 rouvert:", (await c.inner_text("#st")).replace("\n", " | "))
             faux = lien.replace("&t=", "&t=1").replace("#s=", "#s=")
             await c.goto("about:blank"); await c.goto(faux); await c.wait_for_timeout(1200); print("3b montant changé:", (await c.inner_text("#st")).replace("\n", " | ")[:120])
-            await pg.click('[data-dmail="dv-s2"]'); await pg.wait_for_selector("#ent-form .send-opts"); m2 = await pg.input_value("#snd-msg"); l2 = re.search(r"http\S+signer\.html#\S+", m2); await pg.click("#e-cancel")
+            async def lien_pdf(i):
+                await pg.click('[data-dmail="%s"]' % i); await pg.wait_for_selector("#ent-form .send-opts")
+                async with pg.expect_download() as dlx: await pg.click('[data-send="files"]')
+                x = re.search(rb"/URI \((.*?)\) >>", open(await (await dlx.value).path(), "rb").read())
+                async with pg.expect_download() as dly: pass
+                await dly.value; await pg.click("#e-cancel"); return x.group(1).decode() if x else None
+            l2 = await lien_pdf("dv-s2"); l2 = re.search(r".+", l2) if l2 else None
             print("3c lien de la soumission expirée dans le message:", bool(l2))
             if l2:
                 await c.goto("about:blank"); await c.goto(l2.group(0)); await c.wait_for_timeout(1200); print("3d expirée:", (await c.inner_text("#st")).replace("\n", " | ")[:160])
-            await pg.click('[data-dmail="dv-s3"]'); await pg.wait_for_selector("#ent-form .send-opts"); l3 = re.search(r"http\S+signer\.html#\S+", await pg.input_value("#snd-msg")).group(0); await pg.click("#e-cancel")
+            l3 = await lien_pdf("dv-s3")
             await c.goto("about:blank"); await c.goto(l3); await c.wait_for_timeout(1200); print("3f modifiée depuis l'envoi:", (await c.inner_text("#st")).replace("\n", " | ")[:140])
             await c.goto("about:blank"); await c.goto(PAGE + "#i=x"); await c.wait_for_timeout(500); print("3e incomplet:", (await c.inner_text("#st")).replace("\n", " | ")[:90])
             # 4. L'ordinateur reçoit la signature (Google Drive synchronise le dossier telephone)
@@ -104,7 +109,7 @@ async def main():
             print("4 devis:", v["statut"], json.dumps(v.get("signature"), ensure_ascii=False), "| image rangée:", v.get("signature", {}).get("fichier") in fsk, "| telephone vide:", not [k for k in fsk if k.startswith("telephone/")])
             print("4b toast:", await pg.inner_text("#toast"))
             await pg.click('[data-dmail="dv-s1"]'); await pg.wait_for_selector("#ent-form .send-opts"); m3 = await pg.input_value("#snd-msg")
-            print("4c message après signature (plus de lien):", "signer.html" not in m3, "|", m3.split("\n\n")[1][:90].replace("\n", " / "))
+            print("4c message après signature (plus de bouton):", "Signer en ligne" not in m3, "|", m3.split("\n\n")[1][:90].replace("\n", " / "))
             async with pg.expect_download() as dl: await pg.click('[data-send="files"]')
             d = await dl.value; await d.save_as(OUT + "/signer-signee.pdf")
             async with pg.expect_download() as dl2: pass
